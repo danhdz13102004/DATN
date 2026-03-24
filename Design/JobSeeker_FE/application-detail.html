@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Application Detail — JobSeeker Portal</title>
+  <meta name="description" content="View application status and details" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">J</div>
+      <span>JobSeeker</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Main</div>
+      <a href="dashboard.html"><i class="fas fa-th-large"></i> Dashboard</a>
+      <a href="jobs.html"><i class="fas fa-briefcase"></i> Browse Jobs</a>
+      <a href="applications.html" class="active"><i class="fas fa-file-alt"></i> My Applications</a>
+      <a href="interviews.html"><i class="fas fa-calendar-check"></i> Interviews</a>
+      <div class="nav-label">Communication</div>
+      <a href="messages.html"><i class="fas fa-comments"></i> Messages</a>
+      <a href="notifications.html"><i class="fas fa-bell"></i> Notifications</a>
+      <div class="nav-label">Personal</div>
+      <a href="resumes.html"><i class="fas fa-file-pdf"></i> My Resumes</a>
+      <a href="profile.html"><i class="fas fa-user-circle"></i> Profile</a>
+    </nav>
+    <div class="sidebar-profile" style="cursor:pointer;" onclick="document.getElementById('pwdModal').classList.add('active')" title="Click to change password">
+      <div class="avatar">NM</div>
+      <div class="profile-info">
+        <div class="name">Nguyen Minh</div>
+        <div class="role">Job Seeker</div>
+      </div>
+      <i class="fas fa-key" style="color:var(--sidebar-text);font-size:0.75rem;opacity:0.5;"></i>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div class="breadcrumb">
+          <a href="applications.html">My Applications</a>
+          <i class="fas fa-chevron-right"></i>
+          <span>Senior Frontend Developer</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn"><i class="fas fa-bell"></i><span class="badge-dot"></span></button>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- Status Timeline -->
+      <div class="card mb-3">
+        <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:8px;">Application Progress</h3>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:12px;">Tracking your application for <strong>Senior Frontend Developer</strong> at <strong>TechViet Corp</strong></p>
+
+        <div class="status-timeline">
+          <div class="timeline-step completed">
+            <div class="step-dot"><i class="fas fa-check" style="font-size:0.7rem;"></i></div>
+            <div class="step-label">Applied</div>
+          </div>
+          <div class="timeline-connector completed"></div>
+          <div class="timeline-step completed">
+            <div class="step-dot"><i class="fas fa-check" style="font-size:0.7rem;"></i></div>
+            <div class="step-label">Screening</div>
+          </div>
+          <div class="timeline-connector completed"></div>
+          <div class="timeline-step active">
+            <div class="step-dot"><i class="fas fa-calendar" style="font-size:0.7rem;"></i></div>
+            <div class="step-label">Interview</div>
+          </div>
+          <div class="timeline-connector"></div>
+          <div class="timeline-step">
+            <div class="step-dot"><i class="fas fa-handshake" style="font-size:0.7rem;"></i></div>
+            <div class="step-label">Offer</div>
+          </div>
+          <div class="timeline-connector"></div>
+          <div class="timeline-step">
+            <div class="step-dot"><i class="fas fa-trophy" style="font-size:0.7rem;"></i></div>
+            <div class="step-label">Hired</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+        <!-- Left Column -->
+        <div>
+          <!-- Job Info -->
+          <div class="card mb-3">
+            <div class="card-header">
+              <h3>Job Information</h3>
+              <a href="job-detail.html" class="btn btn-ghost btn-sm">View Job <i class="fas fa-external-link-alt"></i></a>
+            </div>
+            <div class="d-flex align-center gap-2 mb-2">
+              <div class="avatar-circle" style="background:var(--primary-bg);color:var(--primary-dark);font-weight:700;">T</div>
+              <div>
+                <div style="font-weight:600;font-size:1.05rem;">Senior Frontend Developer</div>
+                <div style="color:var(--text-secondary);font-size:0.88rem;">TechViet Corp</div>
+              </div>
+            </div>
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="info-label">Location</div>
+                <div class="info-value">Ho Chi Minh City</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Job Type</div>
+                <div class="info-value">Full-time</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Salary</div>
+                <div class="info-value" style="color:var(--primary-dark);">$2,500 – $4,000</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Experience</div>
+                <div class="info-value">Senior</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resume Used -->
+          <div class="card">
+            <h3 style="font-size:1.05rem;font-weight:600;margin-bottom:16px;">Resume Submitted</h3>
+            <div class="d-flex align-center gap-2" style="padding:16px;background:var(--bg);border-radius:var(--radius-sm);">
+              <div style="width:44px;height:44px;background:var(--danger-bg);color:var(--danger);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;">
+                <i class="fas fa-file-pdf" style="font-size:1.2rem;"></i>
+              </div>
+              <div style="flex:1;">
+                <div style="font-weight:600;font-size:0.92rem;">Frontend_Resume_2026.pdf</div>
+                <div style="color:var(--text-muted);font-size:0.8rem;">Uploaded Mar 1, 2026 • 245 KB</div>
+              </div>
+              <button class="btn btn-ghost btn-sm"><i class="fas fa-download"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column -->
+        <div>
+          <!-- AI Score -->
+          <div class="card mb-3">
+            <h3 style="font-size:1.05rem;font-weight:600;margin-bottom:16px;">AI Match Score</h3>
+            <div class="text-center" style="padding:16px 0;">
+              <div class="score-value" style="font-size:3rem;">92%</div>
+              <p style="color:var(--text-muted);font-size:0.85rem;margin-top:4px;">Excellent match for this role</p>
+              <div class="score-bar mt-2" style="height:12px;max-width:300px;margin:12px auto 0;">
+                <div class="fill" style="width:92%"></div>
+              </div>
+            </div>
+            <div class="info-grid mt-2">
+              <div class="info-item">
+                <div class="info-label">Skills Match</div>
+                <div class="info-value" style="color:var(--primary-dark);">95%</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Experience Match</div>
+                <div class="info-value" style="color:var(--primary-dark);">89%</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Interview Info -->
+          <div class="card">
+            <div class="card-header">
+              <h3>Interview Scheduled</h3>
+              <span class="badge badge-warning">Pending</span>
+            </div>
+            <div class="info-grid mb-2">
+              <div class="info-item">
+                <div class="info-label">Date & Time</div>
+                <div class="info-value">Mar 10, 2026 — 10:00 AM</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Meeting Type</div>
+                <div class="info-value"><i class="fas fa-video" style="color:var(--info);margin-right:6px;"></i>Online</div>
+              </div>
+            </div>
+            <div style="padding:16px;background:var(--info-bg);border-radius:var(--radius-sm);margin-bottom:16px;">
+              <div style="font-size:0.82rem;font-weight:550;color:var(--info);margin-bottom:4px;"><i class="fas fa-link" style="margin-right:6px;"></i>Meeting Link</div>
+              <a href="#" style="font-size:0.88rem;word-break:break-all;">https://meet.google.com/abc-defg-hij</a>
+            </div>
+            <div style="color:var(--text-secondary);font-size:0.88rem;">
+              <strong>Note:</strong> Please join 5 minutes before the scheduled time. Prepare your portfolio and be ready to discuss your recent projects.
+            </div>
+            <div class="mt-2">
+              <a href="#" class="btn btn-primary"><i class="fas fa-video"></i> Join Meeting</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Application History -->
+      <div class="card mt-3">
+        <h3 style="font-size:1.05rem;font-weight:600;margin-bottom:16px;">Application History</h3>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Event</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Mar 8, 2026</td>
+                <td><span class="badge badge-warning">Interview Scheduled</span></td>
+                <td>Technical interview scheduled for Mar 10, 2026 at 10:00 AM</td>
+              </tr>
+              <tr>
+                <td>Mar 7, 2026</td>
+                <td><span class="badge badge-info">Screening Passed</span></td>
+                <td>Your resume passed the initial screening process</td>
+              </tr>
+              <tr>
+                <td>Mar 6, 2026</td>
+                <td><span class="badge badge-success">Application Submitted</span></td>
+                <td>Applied with Frontend_Resume_2026.pdf</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="pwdModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3><i class="fas fa-lock" style="color:var(--primary);margin-right:8px;"></i>Change Password</h3>
+      <button class="modal-close" onclick="document.getElementById('pwdModal').classList.remove('active')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="d-flex align-center gap-2 mb-3" style="padding:14px;background:var(--bg);border-radius:var(--radius-sm);">
+        <div class="avatar-circle" style="background:var(--primary);color:#fff;font-weight:600;">NM</div>
+        <div>
+          <div style="font-weight:600;">Nguyen Minh</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);">nguyen.minh@email.com</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Current Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="modal-current-pwd" placeholder="Enter your current password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePwdModal('modal-current-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>New Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="modal-new-pwd" placeholder="Enter a new password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePwdModal('modal-new-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+        <div class="form-hint">Minimum 8 characters with at least one uppercase letter and one number</div>
+      </div>
+      <div class="form-group">
+        <label>Confirm New Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="modal-confirm-pwd" placeholder="Re-enter new password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePwdModal('modal-confirm-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="document.getElementById('pwdModal').classList.remove('active')">Cancel</button>
+      <button class="btn btn-primary"><i class="fas fa-key"></i> Update Password</button>
+    </div>
+  </div>
+</div>
+<script>
+  function togglePwdModal(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
+    else { input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+  }
+</script>
+</body>
+</html>

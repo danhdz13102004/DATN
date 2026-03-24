@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jobs — Admin Panel</title>
+  <meta name="description" content="View all job postings across the platform" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">A</div>
+      <span>RecruitPro Admin</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Overview</div>
+      <a href="dashboard.html"><i class="fas fa-th-large"></i> Dashboard</a>
+      <div class="nav-label">Management</div>
+      <a href="users.html"><i class="fas fa-users"></i> Users</a>
+      <a href="companies.html"><i class="fas fa-building"></i> Companies</a>
+      <a href="jobs.html" class="active"><i class="fas fa-briefcase"></i> Jobs</a>
+      <a href="applications.html"><i class="fas fa-file-alt"></i> Applications</a>
+      <div class="nav-label">Finance</div>
+      <a href="subscriptions.html"><i class="fas fa-crown"></i> Subscriptions</a>
+      <a href="payments.html"><i class="fas fa-credit-card"></i> Payments</a>
+      <div class="nav-label">System</div>
+      <a href="skills.html"><i class="fas fa-tags"></i> Skills</a>
+      <a href="audit-logs.html"><i class="fas fa-shield-alt"></i> Audit Logs</a>
+      <a href="notifications.html"><i class="fas fa-bell"></i> Notifications</a>
+      <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
+    </nav>
+    <div class="sidebar-profile">
+      <div class="avatar">SA</div>
+      <div class="profile-info">
+        <div class="name">Super Admin</div>
+        <div class="role">Administrator</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h1>Jobs</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn"><i class="fas fa-search"></i></button>
+        <button class="topbar-btn">
+          <i class="fas fa-bell"></i>
+          <span class="badge-dot"></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <h2>All Job Postings</h2>
+          <p>Monitor all jobs posted across the platform</p>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon indigo"><i class="fas fa-briefcase"></i></div>
+          <div class="stat-info">
+            <h4>Total Jobs</h4>
+            <div class="value">1,247</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green"><i class="fas fa-globe"></i></div>
+          <div class="stat-info">
+            <h4>Published</h4>
+            <div class="value">534</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon orange"><i class="fas fa-pencil-alt"></i></div>
+          <div class="stat-info">
+            <h4>Draft</h4>
+            <div class="value">89</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon red"><i class="fas fa-lock"></i></div>
+          <div class="stat-info">
+            <h4>Closed</h4>
+            <div class="value">624</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter & Table -->
+      <div class="card">
+        <div class="filter-bar">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Search by job title or company..." id="jobSearch" />
+          </div>
+          <select id="filterJobStatus">
+            <option value="">All Status</option>
+            <option value="PUBLISHED">Published</option>
+            <option value="DRAFT">Draft</option>
+            <option value="CLOSED">Closed</option>
+          </select>
+          <select id="filterJobType">
+            <option value="">All Types</option>
+            <option value="FULLTIME">Full-time</option>
+            <option value="PARTTIME">Part-time</option>
+            <option value="REMOTE">Remote</option>
+            <option value="HYBRID">Hybrid</option>
+          </select>
+          <select id="filterExperience">
+            <option value="">All Levels</option>
+            <option value="INTERN">Intern</option>
+            <option value="FRESHER">Fresher</option>
+            <option value="JUNIOR">Junior</option>
+            <option value="MIDDLE">Middle</option>
+            <option value="SENIOR">Senior</option>
+            <option value="LEADER">Leader</option>
+          </select>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Job Title</th>
+                <th>Company</th>
+                <th>Type</th>
+                <th>Level</th>
+                <th>Salary Range</th>
+                <th>Status</th>
+                <th>Applications</th>
+                <th>Posted</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Senior Frontend Developer</strong></td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--primary-bg);color:var(--primary-dark);">TC</div>
+                    TechCorp
+                  </div>
+                </td>
+                <td>Full-time</td>
+                <td><span class="badge badge-primary">Senior</span></td>
+                <td>$2,000 - $3,500</td>
+                <td><span class="badge badge-success">Published</span></td>
+                <td>18</td>
+                <td>Mar 5, 2026</td>
+              </tr>
+              <tr>
+                <td><strong>Backend Engineer</strong></td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--info-bg);color:var(--info);">FP</div>
+                    FPT Software
+                  </div>
+                </td>
+                <td>Full-time</td>
+                <td><span class="badge badge-info">Middle</span></td>
+                <td>$1,500 - $2,500</td>
+                <td><span class="badge badge-success">Published</span></td>
+                <td>24</td>
+                <td>Mar 3, 2026</td>
+              </tr>
+              <tr>
+                <td><strong>UI/UX Designer</strong></td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--warning-bg);color:var(--warning);">VB</div>
+                    VietBank
+                  </div>
+                </td>
+                <td>Hybrid</td>
+                <td><span class="badge badge-warning">Junior</span></td>
+                <td>$800 - $1,500</td>
+                <td><span class="badge badge-success">Published</span></td>
+                <td>12</td>
+                <td>Mar 1, 2026</td>
+              </tr>
+              <tr>
+                <td><strong>DevOps Engineer</strong></td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--primary-bg);color:var(--primary-dark);">TC</div>
+                    TechCorp
+                  </div>
+                </td>
+                <td>Remote</td>
+                <td><span class="badge badge-primary">Senior</span></td>
+                <td>$2,500 - $4,000</td>
+                <td><span class="badge badge-neutral">Draft</span></td>
+                <td>0</td>
+                <td>Mar 8, 2026</td>
+              </tr>
+              <tr>
+                <td><strong>Data Analyst Intern</strong></td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--success-bg);color:var(--success);">SU</div>
+                    StartupXYZ
+                  </div>
+                </td>
+                <td>Part-time</td>
+                <td><span class="badge badge-neutral">Intern</span></td>
+                <td>$300 - $500</td>
+                <td><span class="badge badge-success">Published</span></td>
+                <td>6</td>
+                <td>Feb 28, 2026</td>
+              </tr>
+              <tr>
+                <td><strong>Project Manager</strong></td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--info-bg);color:var(--info);">FP</div>
+                    FPT Software
+                  </div>
+                </td>
+                <td>Full-time</td>
+                <td><span class="badge badge-danger">Leader</span></td>
+                <td>$3,000 - $5,000</td>
+                <td><span class="badge badge-danger">Closed</span></td>
+                <td>32</td>
+                <td>Jan 15, 2026</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

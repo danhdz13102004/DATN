@@ -1,0 +1,20 @@
+# Development profile overrides
+spring:
+  jpa:
+    show-sql: true
+  devtools:
+    restart:
+      enabled: true
+      poll-interval: 2000
+      quiet-period: 1000
+    livereload:
+      enabled: true
+
+app:
+  seed:
+    enabled: ${SEED_ENABLED:true}
+
+logging:
+  level:
+    com.recruitpro: DEBUG
+    org.hibernate.SQL: DEBUG

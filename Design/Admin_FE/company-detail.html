@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Company Detail — Admin Panel</title>
+  <meta name="description" content="Detailed view of a registered company" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">A</div>
+      <span>RecruitPro Admin</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Overview</div>
+      <a href="dashboard.html"><i class="fas fa-th-large"></i> Dashboard</a>
+      <div class="nav-label">Management</div>
+      <a href="users.html"><i class="fas fa-users"></i> Users</a>
+      <a href="companies.html" class="active"><i class="fas fa-building"></i> Companies</a>
+      <a href="jobs.html"><i class="fas fa-briefcase"></i> Jobs</a>
+      <a href="applications.html"><i class="fas fa-file-alt"></i> Applications</a>
+      <div class="nav-label">Finance</div>
+      <a href="subscriptions.html"><i class="fas fa-crown"></i> Subscriptions</a>
+      <a href="payments.html"><i class="fas fa-credit-card"></i> Payments</a>
+      <div class="nav-label">System</div>
+      <a href="skills.html"><i class="fas fa-tags"></i> Skills</a>
+      <a href="audit-logs.html"><i class="fas fa-shield-alt"></i> Audit Logs</a>
+      <a href="notifications.html"><i class="fas fa-bell"></i> Notifications</a>
+      <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
+    </nav>
+    <div class="sidebar-profile">
+      <div class="avatar">SA</div>
+      <div class="profile-info">
+        <div class="name">Super Admin</div>
+        <div class="role">Administrator</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div class="breadcrumb">
+          <a href="companies.html">Companies</a>
+          <i class="fas fa-chevron-right"></i>
+          <span>TechCorp Vietnam</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn"><i class="fas fa-search"></i></button>
+        <button class="topbar-btn">
+          <i class="fas fa-bell"></i>
+          <span class="badge-dot"></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- Company Header -->
+      <div class="card mb-3">
+        <div class="d-flex align-center gap-2" style="flex-wrap:wrap;">
+          <div class="avatar-circle xl" style="background:var(--primary-bg);color:var(--primary-dark);">TC</div>
+          <div style="flex:1;min-width:200px;">
+            <h2 style="font-size:1.4rem;font-weight:700;">TechCorp Vietnam</h2>
+            <p style="color:var(--text-secondary);margin-top:2px;">Leading technology corporation in Vietnam</p>
+            <div class="d-flex gap-1 mt-1">
+              <span class="badge badge-success">Verified</span>
+              <a href="#" style="font-size:0.85rem;"><i class="fas fa-globe"></i> techcorp.vn</a>
+            </div>
+          </div>
+          <div class="d-flex gap-1">
+            <button class="btn btn-outline"><i class="fas fa-edit"></i> Edit</button>
+            <button class="btn btn-danger"><i class="fas fa-times-circle"></i> Unverify</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Company Info -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3>Company Information</h3>
+        </div>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Company ID</div>
+            <div class="info-value" style="font-size:0.82rem;font-family:monospace;">c8d9e0f1-2a3b-4c5d</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Website</div>
+            <div class="info-value"><a href="#">techcorp.vn</a></div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Verified</div>
+            <div class="info-value" style="color:var(--success);">Yes</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Created At</div>
+            <div class="info-value">Jan 15, 2026</div>
+          </div>
+        </div>
+        <div class="mt-2">
+          <div class="info-label mb-1" style="font-size:0.78rem;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">Description</div>
+          <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.6;">TechCorp Vietnam is a leading technology corporation specializing in software development, IT consulting, and digital transformation services. Founded in 2015, the company has grown to over 500 employees across 3 offices in Vietnam.</p>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+        <!-- Staff Members -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Staff Members (12)</h3>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Role</th>
+                  <th>Joined</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div class="d-flex align-center gap-1">
+                      <div class="avatar-circle sm" style="background:var(--primary-bg);color:var(--primary-dark);">TN</div>
+                      tran.nam@techcorp.vn
+                    </div>
+                  </td>
+                  <td><span class="badge badge-danger">Owner</span></td>
+                  <td>Jan 15, 2026</td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="d-flex align-center gap-1">
+                      <div class="avatar-circle sm" style="background:var(--info-bg);color:var(--info);">LH</div>
+                      le.huong@techcorp.vn
+                    </div>
+                  </td>
+                  <td><span class="badge badge-warning">HR</span></td>
+                  <td>Feb 1, 2026</td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="d-flex align-center gap-1">
+                      <div class="avatar-circle sm" style="background:var(--success-bg);color:var(--success);">PQ</div>
+                      pham.quoc@techcorp.vn
+                    </div>
+                  </td>
+                  <td><span class="badge badge-info">Recruiter</span></td>
+                  <td>Feb 10, 2026</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Subscription & Payments -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Subscription</h3>
+          </div>
+          <div class="info-grid mb-2">
+            <div class="info-item">
+              <div class="info-label">Current Plan</div>
+              <div class="info-value">Premium</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Status</div>
+              <div class="info-value" style="color:var(--success);">Active</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">Start Date</div>
+              <div class="info-value">Feb 1, 2026</div>
+            </div>
+            <div class="info-item">
+              <div class="info-label">End Date</div>
+              <div class="info-value">May 1, 2026</div>
+            </div>
+          </div>
+          <div class="card-header">
+            <h3>Recent Payments</h3>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Amount</th>
+                  <th>Gateway</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>$299.00</strong></td>
+                  <td><span class="badge badge-primary">VNPAY</span></td>
+                  <td><span class="badge badge-success">Success</span></td>
+                  <td>Feb 1, 2026</td>
+                </tr>
+                <tr>
+                  <td><strong>$199.00</strong></td>
+                  <td><span class="badge badge-primary">VNPAY</span></td>
+                  <td><span class="badge badge-success">Success</span></td>
+                  <td>Nov 1, 2025</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Jobs -->
+      <div class="card mt-3">
+        <div class="card-header">
+          <h3>Active Jobs (24)</h3>
+          <a href="jobs.html" class="btn btn-ghost btn-sm">View All Jobs <i class="fas fa-arrow-right"></i></a>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Type</th>
+                <th>Level</th>
+                <th>Status</th>
+                <th>Applications</th>
+                <th>Posted</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Senior Frontend Developer</strong></td>
+                <td>Full-time</td>
+                <td><span class="badge badge-primary">Senior</span></td>
+                <td><span class="badge badge-success">Published</span></td>
+                <td>18</td>
+                <td>Mar 5, 2026</td>
+              </tr>
+              <tr>
+                <td><strong>Backend Engineer</strong></td>
+                <td>Full-time</td>
+                <td><span class="badge badge-info">Middle</span></td>
+                <td><span class="badge badge-success">Published</span></td>
+                <td>24</td>
+                <td>Mar 3, 2026</td>
+              </tr>
+              <tr>
+                <td><strong>DevOps Engineer</strong></td>
+                <td>Remote</td>
+                <td><span class="badge badge-warning">Junior</span></td>
+                <td><span class="badge badge-success">Published</span></td>
+                <td>9</td>
+                <td>Feb 28, 2026</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

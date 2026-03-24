@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings — Admin Panel</title>
+  <meta name="description" content="Platform settings and configuration" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">A</div>
+      <span>RecruitPro Admin</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Overview</div>
+      <a href="dashboard.html"><i class="fas fa-th-large"></i> Dashboard</a>
+      <div class="nav-label">Management</div>
+      <a href="users.html"><i class="fas fa-users"></i> Users</a>
+      <a href="companies.html"><i class="fas fa-building"></i> Companies</a>
+      <a href="jobs.html"><i class="fas fa-briefcase"></i> Jobs</a>
+      <a href="applications.html"><i class="fas fa-file-alt"></i> Applications</a>
+      <div class="nav-label">Finance</div>
+      <a href="subscriptions.html"><i class="fas fa-crown"></i> Subscriptions</a>
+      <a href="payments.html"><i class="fas fa-credit-card"></i> Payments</a>
+      <div class="nav-label">System</div>
+      <a href="skills.html"><i class="fas fa-tags"></i> Skills</a>
+      <a href="audit-logs.html"><i class="fas fa-shield-alt"></i> Audit Logs</a>
+      <a href="notifications.html"><i class="fas fa-bell"></i> Notifications</a>
+      <a href="settings.html" class="active"><i class="fas fa-cog"></i> Settings</a>
+    </nav>
+    <div class="sidebar-profile">
+      <div class="avatar">SA</div>
+      <div class="profile-info">
+        <div class="name">Super Admin</div>
+        <div class="role">Administrator</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h1>Settings</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn"><i class="fas fa-search"></i></button>
+        <button class="topbar-btn">
+          <i class="fas fa-bell"></i>
+          <span class="badge-dot"></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <h2>Platform Settings</h2>
+          <p>Configure platform-wide settings and preferences</p>
+        </div>
+        <button class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;">
+        <div>
+          <!-- General Settings -->
+          <div class="card mb-3">
+            <div class="settings-section">
+              <h3><i class="fas fa-globe" style="color:var(--primary);margin-right:8px;"></i> General Settings</h3>
+              <div class="form-group">
+                <label>Platform Name</label>
+                <input type="text" class="form-control" value="RecruitPro" />
+              </div>
+              <div class="form-group">
+                <label>Platform Description</label>
+                <textarea class="form-control" style="min-height:80px;">AI-powered recruitment platform connecting top talent with leading companies in Vietnam.</textarea>
+              </div>
+              <div class="form-group">
+                <label>Support Email</label>
+                <input type="email" class="form-control" value="support@recruitpro.com" />
+              </div>
+              <div class="form-group">
+                <label>Platform Logo URL</label>
+                <input type="text" class="form-control" value="https://recruitpro.com/logo.png" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Email / SMTP Settings -->
+          <div class="card mb-3">
+            <div class="settings-section">
+              <h3><i class="fas fa-envelope" style="color:var(--info);margin-right:8px;"></i> Email / SMTP Settings</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>SMTP Host</label>
+                  <input type="text" class="form-control" value="smtp.gmail.com" />
+                </div>
+                <div class="form-group">
+                  <label>SMTP Port</label>
+                  <input type="number" class="form-control" value="587" />
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>SMTP Username</label>
+                  <input type="text" class="form-control" value="noreply@recruitpro.com" />
+                </div>
+                <div class="form-group">
+                  <label>SMTP Password</label>
+                  <input type="password" class="form-control" value="••••••••••" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>From Name</label>
+                <input type="text" class="form-control" value="RecruitPro" />
+              </div>
+            </div>
+          </div>
+
+          <!-- OTP Configuration -->
+          <div class="card mb-3">
+            <div class="settings-section">
+              <h3><i class="fas fa-key" style="color:var(--warning);margin-right:8px;"></i> OTP Configuration</h3>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>OTP Expiry (minutes)</label>
+                  <input type="number" class="form-control" value="5" />
+                  <div class="form-hint">Time before OTP codes expire</div>
+                </div>
+                <div class="form-group">
+                  <label>Max Attempts</label>
+                  <input type="number" class="form-control" value="5" />
+                  <div class="form-hint">Max wrong attempts before lockout</div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>OTP Code Length</label>
+                <input type="number" class="form-control" value="6" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment Gateways -->
+          <div class="card">
+            <div class="settings-section">
+              <h3><i class="fas fa-credit-card" style="color:var(--success);margin-right:8px;"></i> Payment Gateways</h3>
+              <div class="form-group">
+                <div class="d-flex align-center justify-between mb-2">
+                  <div>
+                    <strong>VNPay</strong>
+                    <p style="font-size:0.82rem;color:var(--text-muted);">Vietnam payment gateway</p>
+                  </div>
+                  <label class="toggle">
+                    <input type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Merchant ID</label>
+                    <input type="text" class="form-control" value="VNP_MERCHANT_001" />
+                  </div>
+                  <div class="form-group">
+                    <label>Secret Key</label>
+                    <input type="password" class="form-control" value="••••••••••••" />
+                  </div>
+                </div>
+              </div>
+              <div class="form-group" style="border-top:1px solid var(--border-light);padding-top:20px;">
+                <div class="d-flex align-center justify-between mb-2">
+                  <div>
+                    <strong>MoMo</strong>
+                    <p style="font-size:0.82rem;color:var(--text-muted);">Mobile wallet payment</p>
+                  </div>
+                  <label class="toggle">
+                    <input type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Partner Code</label>
+                    <input type="text" class="form-control" value="MOMO_PARTNER_001" />
+                  </div>
+                  <div class="form-group">
+                    <label>Secret Key</label>
+                    <input type="password" class="form-control" value="••••••••••••" />
+                  </div>
+                </div>
+              </div>
+              <div class="form-group" style="border-top:1px solid var(--border-light);padding-top:20px;">
+                <div class="d-flex align-center justify-between mb-2">
+                  <div>
+                    <strong>Stripe</strong>
+                    <p style="font-size:0.82rem;color:var(--text-muted);">International payment gateway</p>
+                  </div>
+                  <label class="toggle">
+                    <input type="checkbox" checked />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Publishable Key</label>
+                    <input type="text" class="form-control" value="pk_live_••••••••" />
+                  </div>
+                  <div class="form-group">
+                    <label>Secret Key</label>
+                    <input type="password" class="form-control" value="sk_live_••••••••" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column - Quick Info -->
+        <div>
+          <div class="card mb-3">
+            <div class="card-header">
+              <h3>System Info</h3>
+            </div>
+            <div class="info-grid" style="grid-template-columns:1fr;">
+              <div class="info-item">
+                <div class="info-label">Version</div>
+                <div class="info-value">v2.4.1</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Environment</div>
+                <div class="info-value" style="color:var(--success);">Production</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Database</div>
+                <div class="info-value">PostgreSQL 16</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Last Backup</div>
+                <div class="info-value">Mar 11, 2026 03:00</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Server Uptime</div>
+                <div class="info-value">42 days</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mb-3">
+            <div class="card-header">
+              <h3>Feature Toggles</h3>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <div class="d-flex align-center justify-between">
+                <div>
+                  <strong style="font-size:0.9rem;">AI Matching</strong>
+                  <p style="font-size:0.78rem;color:var(--text-muted);">Enable AI-powered resume matching</p>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" checked />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="d-flex align-center justify-between">
+                <div>
+                  <strong style="font-size:0.9rem;">User Registration</strong>
+                  <p style="font-size:0.78rem;color:var(--text-muted);">Allow new user signups</p>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" checked />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="d-flex align-center justify-between">
+                <div>
+                  <strong style="font-size:0.9rem;">Email Verification</strong>
+                  <p style="font-size:0.78rem;color:var(--text-muted);">Require email OTP verification</p>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" checked />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="d-flex align-center justify-between">
+                <div>
+                  <strong style="font-size:0.9rem;">Maintenance Mode</strong>
+                  <p style="font-size:0.78rem;color:var(--text-muted);">Show maintenance page to users</p>
+                </div>
+                <label class="toggle">
+                  <input type="checkbox" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>Danger Zone</h3>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <button class="btn btn-outline w-full" style="justify-content:center;"><i class="fas fa-database"></i> Clear Cache</button>
+              <button class="btn btn-outline w-full" style="justify-content:center;color:var(--warning);border-color:var(--warning);"><i class="fas fa-download"></i> Export All Data</button>
+              <button class="btn btn-danger w-full" style="justify-content:center;"><i class="fas fa-exclamation-triangle"></i> Reset Platform</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

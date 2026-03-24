@@ -1,0 +1,16 @@
+# Development Dockerfile — full Maven SDK for hot reload
+FROM maven:3.9.6-eclipse-temurin-17
+WORKDIR /app
+
+# Pre-download dependencies (cached layer)
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+
+# Source is bind-mounted at runtime via docker-compose.dev.yml
+# DO NOT COPY src here
+
+COPY entrypoint-dev.sh /app/entrypoint-dev.sh
+RUN chmod +x /app/entrypoint-dev.sh
+
+EXPOSE 8080
+CMD ["/app/entrypoint-dev.sh"]

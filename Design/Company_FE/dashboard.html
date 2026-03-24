@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Company Portal</title>
+  <meta name="description" content="Company recruitment dashboard overview" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">R</div>
+      <span>RecruitPro</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Main</div>
+      <a href="dashboard.html" class="active"><i class="fas fa-th-large"></i> Dashboard</a>
+      <a href="jobs.html"><i class="fas fa-briefcase"></i> Jobs</a>
+      <a href="applications.html"><i class="fas fa-file-alt"></i> Applications</a>
+      <a href="interviews.html"><i class="fas fa-calendar-check"></i> Interviews</a>
+      <div class="nav-label">Communication</div>
+      <a href="messages.html"><i class="fas fa-comments"></i> Messages</a>
+      <a href="notifications.html"><i class="fas fa-bell"></i> Notifications</a>
+      <div class="nav-label">Management</div>
+      <a href="staff.html"><i class="fas fa-users"></i> Staff</a>
+      <a href="company-profile.html"><i class="fas fa-building"></i> Company Profile</a>
+      <a href="subscriptions.html"><i class="fas fa-crown"></i> Subscription</a>
+    </nav>
+    <div class="sidebar-profile" style="cursor:pointer;" onclick="document.getElementById('pwdModal').classList.add('active')" title="Click to change password">
+      <div class="avatar">TK</div>
+      <div class="profile-info">
+        <div class="name">Tran Khanh Linh</div>
+        <div class="role">HR Manager</div>
+      </div>
+      <i class="fas fa-key" style="color:var(--sidebar-text);font-size:0.75rem;opacity:0.5;"></i>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h1>Dashboard</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn"><i class="fas fa-search"></i></button>
+        <button class="topbar-btn">
+          <i class="fas fa-bell"></i>
+          <span class="badge-dot"></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon green"><i class="fas fa-briefcase"></i></div>
+          <div class="stat-info">
+            <h4>Total Jobs</h4>
+            <div class="value">24</div>
+            <div class="change"><i class="fas fa-arrow-up"></i> 12% this month</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fas fa-file-alt"></i></div>
+          <div class="stat-info">
+            <h4>Active Applications</h4>
+            <div class="value">156</div>
+            <div class="change"><i class="fas fa-arrow-up"></i> 8% this week</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon orange"><i class="fas fa-calendar-check"></i></div>
+          <div class="stat-info">
+            <h4>Interviews This Week</h4>
+            <div class="value">8</div>
+            <div class="change negative"><i class="fas fa-arrow-down"></i> 3 pending</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon red"><i class="fas fa-comments"></i></div>
+          <div class="stat-info">
+            <h4>New Messages</h4>
+            <div class="value">12</div>
+            <div class="change"><i class="fas fa-arrow-up"></i> 5 unread</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="d-flex gap-2 mb-3 flex-wrap">
+        <a href="job-create.html" class="btn btn-primary"><i class="fas fa-plus"></i> Post New Job</a>
+        <a href="applications.html" class="btn btn-outline"><i class="fas fa-eye"></i> Review Applications</a>
+        <a href="interviews.html" class="btn btn-outline"><i class="fas fa-calendar-plus"></i> View Interviews</a>
+      </div>
+
+      <!-- Recent Applications -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Recent Applications</h3>
+          <a href="applications.html" class="btn btn-ghost btn-sm">View All <i class="fas fa-arrow-right"></i></a>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Applicant</th>
+                <th>Job Position</th>
+                <th>AI Score</th>
+                <th>Status</th>
+                <th>Applied</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--primary-bg);color:var(--primary-dark);">NT</div>
+                    Nguyen Thi Mai
+                  </div>
+                </td>
+                <td>Senior Frontend Developer</td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <span style="font-weight:600;color:var(--primary-dark);">92%</span>
+                    <div class="score-bar" style="width:60px"><div class="fill" style="width:92%"></div></div>
+                  </div>
+                </td>
+                <td><span class="badge badge-info">Screening</span></td>
+                <td>Mar 6, 2026</td>
+                <td><a href="application-detail.html" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--info-bg);color:var(--info);">TH</div>
+                    Tran Hoang Long
+                  </div>
+                </td>
+                <td>Backend Engineer</td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <span style="font-weight:600;color:var(--primary-dark);">87%</span>
+                    <div class="score-bar" style="width:60px"><div class="fill" style="width:87%"></div></div>
+                  </div>
+                </td>
+                <td><span class="badge badge-warning">Interview</span></td>
+                <td>Mar 5, 2026</td>
+                <td><a href="application-detail.html" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--warning-bg);color:var(--warning);">LP</div>
+                    Le Phuong Anh
+                  </div>
+                </td>
+                <td>UI/UX Designer</td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <span style="font-weight:600;color:var(--warning);">74%</span>
+                    <div class="score-bar" style="width:60px"><div class="fill" style="width:74%;background:var(--warning)"></div></div>
+                  </div>
+                </td>
+                <td><span class="badge badge-success">Applied</span></td>
+                <td>Mar 5, 2026</td>
+                <td><a href="application-detail.html" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--danger-bg);color:var(--danger);">PV</div>
+                    Pham Van Duc
+                  </div>
+                </td>
+                <td>DevOps Engineer</td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <span style="font-weight:600;color:var(--primary-dark);">95%</span>
+                    <div class="score-bar" style="width:60px"><div class="fill" style="width:95%"></div></div>
+                  </div>
+                </td>
+                <td><span class="badge badge-success">Offer</span></td>
+                <td>Mar 4, 2026</td>
+                <td><a href="application-detail.html" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--primary-bg);color:var(--primary-dark);">VH</div>
+                    Vu Ha Linh
+                  </div>
+                </td>
+                <td>Senior Frontend Developer</td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <span style="font-weight:600;color:var(--danger);">58%</span>
+                    <div class="score-bar" style="width:60px"><div class="fill" style="width:58%;background:var(--danger)"></div></div>
+                  </div>
+                </td>
+                <td><span class="badge badge-danger">Rejected</span></td>
+                <td>Mar 3, 2026</td>
+                <td><a href="application-detail.html" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="pwdModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3><i class="fas fa-lock" style="color:var(--primary);margin-right:8px;"></i>Change Password</h3>
+      <button class="modal-close" onclick="document.getElementById('pwdModal').classList.remove('active')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="d-flex align-center gap-2 mb-3" style="padding:14px;background:var(--bg);border-radius:var(--radius-sm);">
+        <div class="avatar-circle" style="background:var(--primary);color:#fff;font-weight:600;">TK</div>
+        <div>
+          <div style="font-weight:600;">Tran Khanh Linh</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);">tran.klinh@company.com</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Current Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="current-pwd" placeholder="Enter your current password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePwd('current-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>New Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="new-pwd" placeholder="Enter a new password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePwd('new-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+        <div class="form-hint">Minimum 8 characters with at least one uppercase letter and one number</div>
+      </div>
+      <div class="form-group">
+        <label>Confirm New Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="confirm-pwd" placeholder="Re-enter new password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePwd('confirm-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="document.getElementById('pwdModal').classList.remove('active')">Cancel</button>
+      <button class="btn btn-primary"><i class="fas fa-key"></i> Update Password</button>
+    </div>
+  </div>
+</div>
+<script>
+  function togglePwd(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
+    else { input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+  }
+</script>
+</body>
+</html>

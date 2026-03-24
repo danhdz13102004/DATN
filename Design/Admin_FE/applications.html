@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Applications — Admin Panel</title>
+  <meta name="description" content="View all job applications across the platform" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">A</div>
+      <span>RecruitPro Admin</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Overview</div>
+      <a href="dashboard.html"><i class="fas fa-th-large"></i> Dashboard</a>
+      <div class="nav-label">Management</div>
+      <a href="users.html"><i class="fas fa-users"></i> Users</a>
+      <a href="companies.html"><i class="fas fa-building"></i> Companies</a>
+      <a href="jobs.html"><i class="fas fa-briefcase"></i> Jobs</a>
+      <a href="applications.html" class="active"><i class="fas fa-file-alt"></i> Applications</a>
+      <div class="nav-label">Finance</div>
+      <a href="subscriptions.html"><i class="fas fa-crown"></i> Subscriptions</a>
+      <a href="payments.html"><i class="fas fa-credit-card"></i> Payments</a>
+      <div class="nav-label">System</div>
+      <a href="skills.html"><i class="fas fa-tags"></i> Skills</a>
+      <a href="audit-logs.html"><i class="fas fa-shield-alt"></i> Audit Logs</a>
+      <a href="notifications.html"><i class="fas fa-bell"></i> Notifications</a>
+      <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
+    </nav>
+    <div class="sidebar-profile">
+      <div class="avatar">SA</div>
+      <div class="profile-info">
+        <div class="name">Super Admin</div>
+        <div class="role">Administrator</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h1>Applications</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn"><i class="fas fa-search"></i></button>
+        <button class="topbar-btn">
+          <i class="fas fa-bell"></i>
+          <span class="badge-dot"></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <h2>All Applications</h2>
+          <p>Monitor all job applications across the platform</p>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon indigo"><i class="fas fa-file-alt"></i></div>
+          <div class="stat-info">
+            <h4>Total Applications</h4>
+            <div class="value">4,892</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fas fa-search"></i></div>
+          <div class="stat-info">
+            <h4>Screening</h4>
+            <div class="value">1,234</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon orange"><i class="fas fa-calendar-check"></i></div>
+          <div class="stat-info">
+            <h4>Interview</h4>
+            <div class="value">456</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green"><i class="fas fa-user-check"></i></div>
+          <div class="stat-info">
+            <h4>Hired</h4>
+            <div class="value">312</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter & Table -->
+      <div class="card">
+        <div class="filter-bar">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Search by applicant or job title..." id="appSearch" />
+          </div>
+          <select id="filterAppStatus">
+            <option value="">All Status</option>
+            <option value="APPLIED">Applied</option>
+            <option value="SCREENING">Screening</option>
+            <option value="INTERVIEW">Interview</option>
+            <option value="OFFER">Offer</option>
+            <option value="REJECTED">Rejected</option>
+            <option value="HIRED">Hired</option>
+          </select>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Applicant</th>
+                <th>Job Position</th>
+                <th>Company</th>
+                <th>AI Score</th>
+                <th>Status</th>
+                <th>Applied</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--primary-bg);color:var(--primary-dark);">NM</div>
+                    Nguyen Thi Mai
+                  </div>
+                </td>
+                <td>Senior Frontend Developer</td>
+                <td>TechCorp</td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <span style="font-weight:600;color:var(--primary-dark);">92%</span>
+                    <div class="score-bar" style="width:60px"><div class="fill" style="width:92%"></div></div>
+                  </div>
+                </td>
+                <td><span class="badge badge-info">Screening</span></td>
+                <td>Mar 6, 2026</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--info-bg);color:var(--info);">TH</div>
+                    Tran Hoang Long
+                  </div>
+                </td>
+                <td>Backend Engineer</td>
+                <td>FPT Software</td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <span style="font-weight:600;color:var(--primary-dark);">87%</span>
+                    <div class="score-bar" style="width:60px"><div class="fill" style="width:87%"></div></div>
+                  </div>
+                </td>
+                <td><span class="badge badge-warning">Interview</span></td>
+                <td>Mar 5, 2026</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--warning-bg);color:var(--warning);">LP</div>
+                    Le Phuong Anh
+                  </div>
+                </td>
+                <td>UI/UX Designer</td>
+                <td>VietBank</td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <span style="font-weight:600;color:var(--warning);">74%</span>
+                    <div class="score-bar" style="width:60px"><div class="fill" style="width:74%;background:var(--warning)"></div></div>
+                  </div>
+                </td>
+                <td><span class="badge badge-success">Applied</span></td>
+                <td>Mar 5, 2026</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--success-bg);color:var(--success);">PD</div>
+                    Pham Van Duc
+                  </div>
+                </td>
+                <td>DevOps Engineer</td>
+                <td>TechCorp</td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <span style="font-weight:600;color:var(--success);">95%</span>
+                    <div class="score-bar" style="width:60px"><div class="fill" style="width:95%;background:var(--success)"></div></div>
+                  </div>
+                </td>
+                <td><span class="badge badge-primary">Offer</span></td>
+                <td>Mar 4, 2026</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--danger-bg);color:var(--danger);">VH</div>
+                    Vu Ha Linh
+                  </div>
+                </td>
+                <td>Senior Frontend Developer</td>
+                <td>TechCorp</td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <span style="font-weight:600;color:var(--danger);">58%</span>
+                    <div class="score-bar" style="width:60px"><div class="fill" style="width:58%;background:var(--danger)"></div></div>
+                  </div>
+                </td>
+                <td><span class="badge badge-danger">Rejected</span></td>
+                <td>Mar 3, 2026</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--primary-bg);color:var(--primary-dark);">DT</div>
+                    Do Thanh Tung
+                  </div>
+                </td>
+                <td>Backend Engineer</td>
+                <td>FPT Software</td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <span style="font-weight:600;color:var(--success);">89%</span>
+                    <div class="score-bar" style="width:60px"><div class="fill" style="width:89%;background:var(--success)"></div></div>
+                  </div>
+                </td>
+                <td><span class="badge badge-success">Hired</span></td>
+                <td>Feb 28, 2026</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

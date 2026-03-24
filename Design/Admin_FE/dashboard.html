@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Admin Panel</title>
+  <meta name="description" content="Admin dashboard with platform-wide KPIs and activity overview" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">A</div>
+      <span>RecruitPro Admin</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Overview</div>
+      <a href="dashboard.html" class="active"><i class="fas fa-th-large"></i> Dashboard</a>
+      <div class="nav-label">Management</div>
+      <a href="users.html"><i class="fas fa-users"></i> Users</a>
+      <a href="companies.html"><i class="fas fa-building"></i> Companies</a>
+      <a href="jobs.html"><i class="fas fa-briefcase"></i> Jobs</a>
+      <a href="applications.html"><i class="fas fa-file-alt"></i> Applications</a>
+      <div class="nav-label">Finance</div>
+      <a href="subscriptions.html"><i class="fas fa-crown"></i> Subscriptions</a>
+      <a href="payments.html"><i class="fas fa-credit-card"></i> Payments</a>
+      <div class="nav-label">System</div>
+      <a href="skills.html"><i class="fas fa-tags"></i> Skills</a>
+      <a href="audit-logs.html"><i class="fas fa-shield-alt"></i> Audit Logs</a>
+      <a href="notifications.html"><i class="fas fa-bell"></i> Notifications</a>
+      <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
+    </nav>
+    <div class="sidebar-profile">
+      <div class="avatar">SA</div>
+      <div class="profile-info">
+        <div class="name">Super Admin</div>
+        <div class="role">Administrator</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h1>Dashboard</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn"><i class="fas fa-search"></i></button>
+        <button class="topbar-btn">
+          <i class="fas fa-bell"></i>
+          <span class="badge-dot"></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon indigo"><i class="fas fa-users"></i></div>
+          <div class="stat-info">
+            <h4>Total Users</h4>
+            <div class="value">2,847</div>
+            <div class="change"><i class="fas fa-arrow-up"></i> 14% this month</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fas fa-building"></i></div>
+          <div class="stat-info">
+            <h4>Companies</h4>
+            <div class="value">186</div>
+            <div class="change"><i class="fas fa-arrow-up"></i> 8 new this week</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green"><i class="fas fa-briefcase"></i></div>
+          <div class="stat-info">
+            <h4>Active Jobs</h4>
+            <div class="value">534</div>
+            <div class="change"><i class="fas fa-arrow-up"></i> 23% this month</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon orange"><i class="fas fa-dollar-sign"></i></div>
+          <div class="stat-info">
+            <h4>Monthly Revenue</h4>
+            <div class="value">$48,250</div>
+            <div class="change"><i class="fas fa-arrow-up"></i> 12% vs last month</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+        <!-- Recent Registrations -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Recent Registrations</h3>
+            <a href="users.html" class="btn btn-ghost btn-sm">View All <i class="fas fa-arrow-right"></i></a>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Joined</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div class="d-flex align-center gap-1">
+                      <div class="avatar-circle sm" style="background:var(--primary-bg);color:var(--primary-dark);">NT</div>
+                      nguyen.thi@email.com
+                    </div>
+                  </td>
+                  <td><span class="badge badge-info">JobSeeker</span></td>
+                  <td><span class="badge badge-success">Active</span></td>
+                  <td>Mar 11, 2026</td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="d-flex align-center gap-1">
+                      <div class="avatar-circle sm" style="background:var(--info-bg);color:var(--info);">TH</div>
+                      techcorp.hr@company.vn
+                    </div>
+                  </td>
+                  <td><span class="badge badge-primary">Company</span></td>
+                  <td><span class="badge badge-warning">Pending</span></td>
+                  <td>Mar 11, 2026</td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="d-flex align-center gap-1">
+                      <div class="avatar-circle sm" style="background:var(--warning-bg);color:var(--warning);">LP</div>
+                      le.phuong@gmail.com
+                    </div>
+                  </td>
+                  <td><span class="badge badge-info">JobSeeker</span></td>
+                  <td><span class="badge badge-success">Active</span></td>
+                  <td>Mar 10, 2026</td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="d-flex align-center gap-1">
+                      <div class="avatar-circle sm" style="background:var(--success-bg);color:var(--success);">VD</div>
+                      viet.digital@corp.com
+                    </div>
+                  </td>
+                  <td><span class="badge badge-primary">Company</span></td>
+                  <td><span class="badge badge-success">Active</span></td>
+                  <td>Mar 10, 2026</td>
+                </tr>
+                <tr>
+                  <td>
+                    <div class="d-flex align-center gap-1">
+                      <div class="avatar-circle sm" style="background:var(--danger-bg);color:var(--danger);">PD</div>
+                      pham.duc@email.com
+                    </div>
+                  </td>
+                  <td><span class="badge badge-info">JobSeeker</span></td>
+                  <td><span class="badge badge-danger">Suspended</span></td>
+                  <td>Mar 9, 2026</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Recent Activity</h3>
+            <a href="audit-logs.html" class="btn btn-ghost btn-sm">View All <i class="fas fa-arrow-right"></i></a>
+          </div>
+          <div class="activity-list">
+            <div class="activity-item">
+              <div class="activity-icon" style="background:var(--success-bg);color:var(--success);"><i class="fas fa-building"></i></div>
+              <div class="activity-content">
+                <p><strong>TechCorp Vietnam</strong> was verified by admin</p>
+                <div class="activity-time">2 minutes ago</div>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-icon" style="background:var(--info-bg);color:var(--info);"><i class="fas fa-user-plus"></i></div>
+              <div class="activity-content">
+                <p><strong>15 new users</strong> registered today</p>
+                <div class="activity-time">1 hour ago</div>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-icon" style="background:var(--primary-bg);color:var(--primary);"><i class="fas fa-briefcase"></i></div>
+              <div class="activity-content">
+                <p><strong>8 new jobs</strong> posted by FPT Software</p>
+                <div class="activity-time">3 hours ago</div>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-icon" style="background:var(--warning-bg);color:var(--warning);"><i class="fas fa-credit-card"></i></div>
+              <div class="activity-content">
+                <p><strong>VietBank</strong> subscribed to Premium plan — $299/mo</p>
+                <div class="activity-time">5 hours ago</div>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-icon" style="background:var(--danger-bg);color:var(--danger);"><i class="fas fa-user-slash"></i></div>
+              <div class="activity-content">
+                <p>User <strong>spam.account@mail.com</strong> was suspended</p>
+                <div class="activity-time">Yesterday</div>
+              </div>
+            </div>
+            <div class="activity-item">
+              <div class="activity-icon" style="background:var(--primary-bg);color:var(--primary);"><i class="fas fa-tags"></i></div>
+              <div class="activity-content">
+                <p><strong>3 new skills</strong> added: Flutter, Kotlin, SwiftUI</p>
+                <div class="activity-time">Yesterday</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

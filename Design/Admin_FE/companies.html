@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Companies — Admin Panel</title>
+  <meta name="description" content="Manage all registered companies on the platform" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">A</div>
+      <span>RecruitPro Admin</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Overview</div>
+      <a href="dashboard.html"><i class="fas fa-th-large"></i> Dashboard</a>
+      <div class="nav-label">Management</div>
+      <a href="users.html"><i class="fas fa-users"></i> Users</a>
+      <a href="companies.html" class="active"><i class="fas fa-building"></i> Companies</a>
+      <a href="jobs.html"><i class="fas fa-briefcase"></i> Jobs</a>
+      <a href="applications.html"><i class="fas fa-file-alt"></i> Applications</a>
+      <div class="nav-label">Finance</div>
+      <a href="subscriptions.html"><i class="fas fa-crown"></i> Subscriptions</a>
+      <a href="payments.html"><i class="fas fa-credit-card"></i> Payments</a>
+      <div class="nav-label">System</div>
+      <a href="skills.html"><i class="fas fa-tags"></i> Skills</a>
+      <a href="audit-logs.html"><i class="fas fa-shield-alt"></i> Audit Logs</a>
+      <a href="notifications.html"><i class="fas fa-bell"></i> Notifications</a>
+      <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
+    </nav>
+    <div class="sidebar-profile">
+      <div class="avatar">SA</div>
+      <div class="profile-info">
+        <div class="name">Super Admin</div>
+        <div class="role">Administrator</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h1>Companies</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn"><i class="fas fa-search"></i></button>
+        <button class="topbar-btn">
+          <i class="fas fa-bell"></i>
+          <span class="badge-dot"></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <h2>Company Management</h2>
+          <p>Manage all registered companies and their verification status</p>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon indigo"><i class="fas fa-building"></i></div>
+          <div class="stat-info">
+            <h4>Total Companies</h4>
+            <div class="value">186</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+          <div class="stat-info">
+            <h4>Verified</h4>
+            <div class="value">142</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon orange"><i class="fas fa-clock"></i></div>
+          <div class="stat-info">
+            <h4>Pending Verification</h4>
+            <div class="value">44</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fas fa-briefcase"></i></div>
+          <div class="stat-info">
+            <h4>Total Jobs Posted</h4>
+            <div class="value">1,247</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter & Table -->
+      <div class="card">
+        <div class="filter-bar">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Search by company name..." id="companySearch" />
+          </div>
+          <select id="filterVerified">
+            <option value="">All Status</option>
+            <option value="true">Verified</option>
+            <option value="false">Unverified</option>
+          </select>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Website</th>
+                <th>Verified</th>
+                <th>Staff</th>
+                <th>Active Jobs</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--primary-bg);color:var(--primary-dark);">TC</div>
+                    <strong>TechCorp Vietnam</strong>
+                  </div>
+                </td>
+                <td><a href="#">techcorp.vn</a></td>
+                <td><span class="badge badge-success">Verified</span></td>
+                <td>12</td>
+                <td>24</td>
+                <td>Jan 15, 2026</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <a href="company-detail.html" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a>
+                    <button class="btn btn-ghost btn-sm" style="color:var(--danger);"><i class="fas fa-times-circle"></i></button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--info-bg);color:var(--info);">FP</div>
+                    <strong>FPT Software</strong>
+                  </div>
+                </td>
+                <td><a href="#">fpt-software.com</a></td>
+                <td><span class="badge badge-success">Verified</span></td>
+                <td>45</td>
+                <td>86</td>
+                <td>Jan 5, 2026</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <a href="company-detail.html" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a>
+                    <button class="btn btn-ghost btn-sm" style="color:var(--danger);"><i class="fas fa-times-circle"></i></button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--warning-bg);color:var(--warning);">VB</div>
+                    <strong>VietBank</strong>
+                  </div>
+                </td>
+                <td><a href="#">vietbank.com.vn</a></td>
+                <td><span class="badge badge-success">Verified</span></td>
+                <td>8</td>
+                <td>15</td>
+                <td>Feb 1, 2026</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <a href="company-detail.html" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a>
+                    <button class="btn btn-ghost btn-sm" style="color:var(--danger);"><i class="fas fa-times-circle"></i></button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--success-bg);color:var(--success);">SU</div>
+                    <strong>StartupXYZ</strong>
+                  </div>
+                </td>
+                <td><a href="#">startupxyz.io</a></td>
+                <td><span class="badge badge-warning">Pending</span></td>
+                <td>3</td>
+                <td>2</td>
+                <td>Mar 8, 2026</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <a href="company-detail.html" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a>
+                    <button class="btn btn-success btn-sm"><i class="fas fa-check"></i> Verify</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--danger-bg);color:var(--danger);">ND</div>
+                    <strong>NewDev Solutions</strong>
+                  </div>
+                </td>
+                <td><a href="#">newdev.vn</a></td>
+                <td><span class="badge badge-warning">Pending</span></td>
+                <td>1</td>
+                <td>0</td>
+                <td>Mar 10, 2026</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <a href="company-detail.html" class="btn btn-ghost btn-sm"><i class="fas fa-eye"></i></a>
+                    <button class="btn btn-success btn-sm"><i class="fas fa-check"></i> Verify</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Company Profile — Company Portal</title>
+  <meta name="description" content="Edit company profile information and manage office locations" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand"><div class="brand-icon">R</div><span>RecruitPro</span></div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Main</div>
+      <a href="dashboard.html"><i class="fas fa-th-large"></i> Dashboard</a>
+      <a href="jobs.html"><i class="fas fa-briefcase"></i> Jobs</a>
+      <a href="applications.html"><i class="fas fa-file-alt"></i> Applications</a>
+      <a href="interviews.html"><i class="fas fa-calendar-check"></i> Interviews</a>
+      <div class="nav-label">Communication</div>
+      <a href="messages.html"><i class="fas fa-comments"></i> Messages</a>
+      <a href="notifications.html"><i class="fas fa-bell"></i> Notifications</a>
+      <div class="nav-label">Management</div>
+      <a href="staff.html"><i class="fas fa-users"></i> Staff</a>
+      <a href="company-profile.html" class="active"><i class="fas fa-building"></i> Company Profile</a>
+      <a href="subscriptions.html"><i class="fas fa-crown"></i> Subscription</a>
+    </nav>
+    <div class="sidebar-profile" style="cursor:pointer;" onclick="document.getElementById('pwdModal').classList.add('active')" title="Click to change password">
+      <div class="avatar">TK</div>
+      <div class="profile-info"><div class="name">Tran Khanh Linh</div><div class="role">HR Manager</div></div>
+      <i class="fas fa-key" style="color:var(--sidebar-text);font-size:0.75rem;opacity:0.5;"></i>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')"><i class="fas fa-bars"></i></button>
+        <h1>Company Profile</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn"><i class="fas fa-bell"></i><span class="badge-dot"></span></button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <h2>Company Profile</h2>
+          <p>Manage your company's public information and office locations</p>
+        </div>
+        <span class="badge badge-success" style="font-size:0.85rem;padding:6px 16px;">
+          <i class="fas fa-check-circle"></i> Verified
+        </span>
+      </div>
+
+      <div style="display:grid;grid-template-columns:280px 1fr;gap:24px;max-width:960px;margin:0 auto;">
+        <!-- Logo Section -->
+        <div class="card" style="text-align:center;">
+          <div style="width:120px;height:120px;border-radius:var(--radius-lg);background:var(--primary-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:2.5rem;color:var(--primary-dark);font-weight:700;">
+            TC
+          </div>
+          <h4 style="margin-bottom:4px;">TechCorp Vietnam</h4>
+          <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px;">Since 2020</p>
+          <button class="btn btn-outline btn-sm w-full"><i class="fas fa-camera"></i> Change Logo</button>
+        </div>
+
+        <!-- Form Section -->
+        <div class="card">
+          <div class="card-header"><h3>Company Information</h3></div>
+          <form>
+            <div class="form-group">
+              <label>Company Name <span class="required">*</span></label>
+              <input type="text" class="form-control" value="TechCorp Vietnam" id="company-name" />
+            </div>
+
+            <div class="form-group">
+              <label>Website</label>
+              <input type="url" class="form-control" value="https://techcorp.vn" id="company-website" />
+            </div>
+
+            <div class="form-group">
+              <label>Description</label>
+              <textarea class="form-control" id="company-description" style="min-height:160px;">TechCorp Vietnam is a leading software development company based in Ho Chi Minh City. We specialize in building scalable web and mobile applications for clients globally. Our team of 150+ engineers work with cutting-edge technologies including React, Node.js, Python, and Cloud services.
+
+We are committed to providing an innovative and collaborative work environment where talented professionals can grow their careers while solving meaningful problems.</textarea>
+            </div>
+
+            <div class="d-flex gap-2 mt-3">
+              <button type="button" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+              <button type="button" class="btn btn-outline">Cancel</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+
+      <!-- ===================================================
+           COMPANY LOCATIONS / ADDRESSES
+           =================================================== -->
+      <div class="mt-3" style="max-width:960px;margin:0 auto;">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <h3><i class="fas fa-map-marker-alt" style="color:var(--primary);margin-right:8px;"></i>Office Locations</h3>
+              <p style="font-size:0.82rem;color:var(--text-muted);margin-top:2px;">Manage your company's office addresses. These can be selected when creating job postings.</p>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="document.getElementById('addAddressModal').classList.add('active')">
+              <i class="fas fa-plus"></i> Add Location
+            </button>
+          </div>
+
+          <!-- Address Cards Grid -->
+          <div class="address-grid" id="address-grid">
+            <!-- Address 1 — Default / HQ -->
+            <div class="address-card default">
+              <div class="address-card-header">
+                <div class="address-label">
+                  <i class="fas fa-building"></i>
+                  <span>Headquarters</span>
+                </div>
+                <span class="badge badge-success">Default</span>
+              </div>
+              <div class="address-body">
+                <div class="address-line"><i class="fas fa-map-pin"></i> 123 Nguyen Hue Blvd, District 1</div>
+                <div class="address-line"><i class="fas fa-city"></i> Ho Chi Minh City</div>
+                <div class="address-line"><i class="fas fa-globe-asia"></i> Vietnam</div>
+              </div>
+              <div class="address-card-footer">
+                <button class="btn-icon" title="Edit" onclick="document.getElementById('editAddressModal').classList.add('active')">
+                  <i class="fas fa-pen"></i>
+                </button>
+                <button class="btn-icon danger" title="Delete">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Address 2 — Branch -->
+            <div class="address-card">
+              <div class="address-card-header">
+                <div class="address-label">
+                  <i class="fas fa-code-branch"></i>
+                  <span>Hanoi Office</span>
+                </div>
+                <button class="btn btn-ghost btn-sm" title="Set as default" onclick="this.closest('.address-card').classList.add('default')">
+                  Set Default
+                </button>
+              </div>
+              <div class="address-body">
+                <div class="address-line"><i class="fas fa-map-pin"></i> 45 Tran Duy Hung, Cau Giay</div>
+                <div class="address-line"><i class="fas fa-city"></i> Hanoi</div>
+                <div class="address-line"><i class="fas fa-globe-asia"></i> Vietnam</div>
+              </div>
+              <div class="address-card-footer">
+                <button class="btn-icon" title="Edit">
+                  <i class="fas fa-pen"></i>
+                </button>
+                <button class="btn-icon danger" title="Delete">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Address 3 — Branch -->
+            <div class="address-card">
+              <div class="address-card-header">
+                <div class="address-label">
+                  <i class="fas fa-code-branch"></i>
+                  <span>Da Nang Office</span>
+                </div>
+                <button class="btn btn-ghost btn-sm" title="Set as default">
+                  Set Default
+                </button>
+              </div>
+              <div class="address-body">
+                <div class="address-line"><i class="fas fa-map-pin"></i> 78 Bach Dang, Hai Chau</div>
+                <div class="address-line"><i class="fas fa-city"></i> Da Nang</div>
+                <div class="address-line"><i class="fas fa-globe-asia"></i> Vietnam</div>
+              </div>
+              <div class="address-card-footer">
+                <button class="btn-icon" title="Edit">
+                  <i class="fas fa-pen"></i>
+                </button>
+                <button class="btn-icon danger" title="Delete">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ========== Add Address Modal ========== -->
+<div class="modal-overlay" id="addAddressModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3><i class="fas fa-map-marker-alt" style="color:var(--primary);margin-right:8px;"></i>Add Office Location</h3>
+      <button class="modal-close" onclick="document.getElementById('addAddressModal').classList.remove('active')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Label <span class="required">*</span></label>
+        <input type="text" class="form-control" id="addr-label" placeholder="e.g. Headquarters, Branch Office, Remote Hub..." />
+        <div class="form-hint">A short name to identify this location</div>
+      </div>
+      <div class="form-group">
+        <label>Address Line <span class="required">*</span></label>
+        <input type="text" class="form-control" id="addr-line" placeholder="e.g. 123 Nguyen Hue Blvd, District 1" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>City <span class="required">*</span></label>
+          <input type="text" class="form-control" id="addr-city" placeholder="e.g. Ho Chi Minh City" />
+        </div>
+        <div class="form-group">
+          <label>Country</label>
+          <input type="text" class="form-control" id="addr-country" value="Vietnam" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="d-flex align-center gap-1" style="cursor:pointer;">
+          <input type="checkbox" id="addr-default" style="width:16px;height:16px;accent-color:var(--primary);" />
+          Set as default location
+        </label>
+        <div class="form-hint">The default location will be pre-selected when creating new job postings</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="document.getElementById('addAddressModal').classList.remove('active')">Cancel</button>
+      <button class="btn btn-primary"><i class="fas fa-plus"></i> Add Location</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== Edit Address Modal ========== -->
+<div class="modal-overlay" id="editAddressModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3><i class="fas fa-pen" style="color:var(--primary);margin-right:8px;"></i>Edit Location</h3>
+      <button class="modal-close" onclick="document.getElementById('editAddressModal').classList.remove('active')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Label <span class="required">*</span></label>
+        <input type="text" class="form-control" value="Headquarters" />
+      </div>
+      <div class="form-group">
+        <label>Address Line <span class="required">*</span></label>
+        <input type="text" class="form-control" value="123 Nguyen Hue Blvd, District 1" />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>City <span class="required">*</span></label>
+          <input type="text" class="form-control" value="Ho Chi Minh City" />
+        </div>
+        <div class="form-group">
+          <label>Country</label>
+          <input type="text" class="form-control" value="Vietnam" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="d-flex align-center gap-1" style="cursor:pointer;">
+          <input type="checkbox" checked style="width:16px;height:16px;accent-color:var(--primary);" />
+          Set as default location
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="document.getElementById('editAddressModal').classList.remove('active')">Cancel</button>
+      <button class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="pwdModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3><i class="fas fa-lock" style="color:var(--primary);margin-right:8px;"></i>Change Password</h3>
+      <button class="modal-close" onclick="document.getElementById('pwdModal').classList.remove('active')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="d-flex align-center gap-2 mb-3" style="padding:14px;background:var(--bg);border-radius:var(--radius-sm);">
+        <div class="avatar-circle" style="background:var(--primary);color:#fff;font-weight:600;">TK</div>
+        <div>
+          <div style="font-weight:600;">Tran Khanh Linh</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);">tran.klinh@company.com</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Current Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="current-pwd" placeholder="Enter your current password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePwd('current-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>New Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="new-pwd" placeholder="Enter a new password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePwd('new-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+        <div class="form-hint">Minimum 8 characters with at least one uppercase letter and one number</div>
+      </div>
+      <div class="form-group">
+        <label>Confirm New Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="confirm-pwd" placeholder="Re-enter new password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePwd('confirm-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="document.getElementById('pwdModal').classList.remove('active')">Cancel</button>
+      <button class="btn btn-primary"><i class="fas fa-key"></i> Update Password</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function togglePwd(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+      input.type = 'password';
+      icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
+  }
+</script>
+</body>
+</html>

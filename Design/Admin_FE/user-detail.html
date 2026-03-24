@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Detail — Admin Panel</title>
+  <meta name="description" content="Detailed view of a single platform user" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">A</div>
+      <span>RecruitPro Admin</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Overview</div>
+      <a href="dashboard.html"><i class="fas fa-th-large"></i> Dashboard</a>
+      <div class="nav-label">Management</div>
+      <a href="users.html" class="active"><i class="fas fa-users"></i> Users</a>
+      <a href="companies.html"><i class="fas fa-building"></i> Companies</a>
+      <a href="jobs.html"><i class="fas fa-briefcase"></i> Jobs</a>
+      <a href="applications.html"><i class="fas fa-file-alt"></i> Applications</a>
+      <div class="nav-label">Finance</div>
+      <a href="subscriptions.html"><i class="fas fa-crown"></i> Subscriptions</a>
+      <a href="payments.html"><i class="fas fa-credit-card"></i> Payments</a>
+      <div class="nav-label">System</div>
+      <a href="skills.html"><i class="fas fa-tags"></i> Skills</a>
+      <a href="audit-logs.html"><i class="fas fa-shield-alt"></i> Audit Logs</a>
+      <a href="notifications.html"><i class="fas fa-bell"></i> Notifications</a>
+      <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
+    </nav>
+    <div class="sidebar-profile">
+      <div class="avatar">SA</div>
+      <div class="profile-info">
+        <div class="name">Super Admin</div>
+        <div class="role">Administrator</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div class="breadcrumb">
+          <a href="users.html">Users</a>
+          <i class="fas fa-chevron-right"></i>
+          <span>nguyen.mai@gmail.com</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn"><i class="fas fa-search"></i></button>
+        <button class="topbar-btn">
+          <i class="fas fa-bell"></i>
+          <span class="badge-dot"></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- User Profile Header -->
+      <div class="card mb-3">
+        <div class="d-flex align-center gap-2" style="flex-wrap:wrap;">
+          <div class="avatar-circle xl" style="background:var(--primary-bg);color:var(--primary-dark);">NM</div>
+          <div style="flex:1;min-width:200px;">
+            <h2 style="font-size:1.4rem;font-weight:700;">Nguyen Thi Mai</h2>
+            <p style="color:var(--text-secondary);margin-top:2px;">nguyen.mai@gmail.com</p>
+            <div class="d-flex gap-1 mt-1">
+              <span class="badge badge-info">JobSeeker</span>
+              <span class="badge badge-success">Active</span>
+              <span class="badge badge-primary"><i class="fas fa-check-circle" style="font-size:0.65rem;"></i> Email Verified</span>
+            </div>
+          </div>
+          <div class="d-flex gap-1">
+            <button class="btn btn-outline"><i class="fas fa-edit"></i> Edit</button>
+            <button class="btn btn-danger"><i class="fas fa-ban"></i> Suspend</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Info Grid -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3>Account Information</h3>
+        </div>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">User ID</div>
+            <div class="info-value" style="font-size:0.82rem;font-family:monospace;">a3b8d1b6-0b3b-4b1a</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Role</div>
+            <div class="info-value">JobSeeker</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Status</div>
+            <div class="info-value" style="color:var(--success);">Active</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Email Verified At</div>
+            <div class="info-value">Mar 1, 2026 14:30</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Created At</div>
+            <div class="info-value">Mar 1, 2026 10:15</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Updated At</div>
+            <div class="info-value">Mar 10, 2026 09:45</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Linked JobSeeker Profile -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3>JobSeeker Profile</h3>
+        </div>
+        <div class="info-grid">
+          <div class="info-item">
+            <div class="info-label">Location</div>
+            <div class="info-value">Ho Chi Minh City, Vietnam</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Experience</div>
+            <div class="info-value">3 years</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Resumes</div>
+            <div class="info-value">2 uploaded</div>
+          </div>
+          <div class="info-item">
+            <div class="info-label">Applications</div>
+            <div class="info-value">7 total</div>
+          </div>
+        </div>
+        <div class="mt-2">
+          <div class="info-label mb-1" style="font-size:0.78rem;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.04em;">Bio</div>
+          <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.6;">Experienced frontend developer with a passion for creating beautiful and performant web applications. Skilled in React, Vue.js, and modern CSS frameworks.</p>
+        </div>
+      </div>
+
+      <!-- Audit Log for this User -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Activity Log</h3>
+          <a href="audit-logs.html" class="btn btn-ghost btn-sm">View All Logs <i class="fas fa-arrow-right"></i></a>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Action</th>
+                <th>Entity Type</th>
+                <th>Entity ID</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="badge badge-info">LOGIN</span></td>
+                <td>user</td>
+                <td style="font-family:monospace;font-size:0.82rem;">a3b8d1b6</td>
+                <td>Mar 11, 2026 08:30</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-primary">UPDATE</span></td>
+                <td>resume</td>
+                <td style="font-family:monospace;font-size:0.82rem;">e5f2a1c7</td>
+                <td>Mar 10, 2026 15:20</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-success">CREATE</span></td>
+                <td>application</td>
+                <td style="font-family:monospace;font-size:0.82rem;">b7d4e9f2</td>
+                <td>Mar 9, 2026 11:05</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-info">LOGIN</span></td>
+                <td>user</td>
+                <td style="font-family:monospace;font-size:0.82rem;">a3b8d1b6</td>
+                <td>Mar 9, 2026 10:00</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-success">CREATE</span></td>
+                <td>resume</td>
+                <td style="font-family:monospace;font-size:0.82rem;">e5f2a1c7</td>
+                <td>Mar 5, 2026 14:30</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

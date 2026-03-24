@@ -1,0 +1,383 @@
+Enum user_role {
+  ADMIN
+  COMPANY
+  JOBSEEKER
+}
+
+Enum user_status {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+Enum company_user_role {
+  OWNER
+  HR
+  RECRUITER
+}
+
+Enum job_status {
+  DRAFT
+  PUBLISHED
+  CLOSED
+}
+
+Enum job_type {
+  FULLTIME
+  PARTTIME
+  REMOTE
+  HYBRID
+}
+
+Enum application_status {
+  APPLIED
+  SCREENING
+  INTERVIEW
+  OFFER
+  REJECTED
+  HIRED
+}
+
+Enum interview_status {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+Enum notification_type {
+  JOB_APPLIED
+  INTERVIEW_INVITE
+  MESSAGE
+  APPLICATION_UPDATE
+}
+
+Enum subscription_status {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+Enum payment_status {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+Enum payment_gateway {
+  VNPAY
+  MOMO
+  STRIPE
+}
+
+Enum message_type {
+  TEXT
+  FILE
+}
+
+Enum audit_action {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+}
+
+Enum otp_type {
+  VERIFY_ACCOUNT
+  RESET_PASSWORD
+}
+
+Enum meeting_type {
+    ONLINE
+    OFFLINE
+  }
+
+Table users {
+  id uuid [pk]
+  email varchar [unique]
+  password_hash varchar
+  role user_role
+  status user_status
+  email_verified_at timestamptz
+  created_at timestamptz
+  updated_at timestamptz
+  deleted_at timestamptz
+}
+
+Table companies {
+  id uuid [pk]
+  name varchar
+  description text
+  website varchar
+  logo_url varchar
+  is_verified boolean
+  created_at timestamptz
+  updated_at timestamptz
+  deleted_at timestamptz
+}
+
+Table company_addresses {
+  id uuid [pk]
+  company_id uuid
+  label varchar          // e.g. "HQ", "Branch Office"
+  address_line varchar
+  city varchar
+  country varchar [default: 'Vietnam']
+  is_default boolean [default: false]
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+Table staff {
+  id uuid [pk]
+  user_id uuid [unique]
+  company_id uuid
+  role company_user_role
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+Table job_seekers {
+  id uuid [pk]
+  user_id uuid [unique]
+  avatar_url varchar
+  bio text
+  location varchar
+  experience_years int
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+
+Enum experience_level {
+  INTERN
+  FRESHER
+  JUNIOR
+  MIDDLE
+  SENIOR
+  LEADER
+}
+
+
+Table jobs {
+  id uuid [pk]
+  company_id uuid
+  company_address_id uuid  // nullable — pick from saved or enter custom
+  title varchar
+  description text
+  experience_level experience_level
+  location varchar         // kept for custom / display location
+  salary_min int
+  salary_max int
+  job_type job_type
+  status job_status
+  embedding vector
+  created_at timestamptz
+  updated_at timestamptz
+  deleted_at timestamptz
+}
+
+Table skills {
+  id uuid [pk]
+  name varchar
+}
+
+Table job_skills {
+  id uuid [pk]
+  job_id uuid
+  skill_id uuid
+}
+
+Table resumes {
+  id uuid [pk]
+  job_seeker_id uuid
+  file_url varchar
+  parsed_text text
+  embedding vector
+  created_at timestamptz
+  updated_at timestamptz
+  deleted_at timestamptz
+}
+
+
+Table applications {
+  id uuid [pk]
+  job_id uuid
+  job_seeker_id uuid
+  resume_id uuid
+  ai_score float
+  status application_status
+  created_at timestamptz
+  updated_at timestamptz
+  deleted_at timestamptz
+
+  indexes {
+    (job_id, job_seeker_id) [unique]  // prevent duplicate applications
+  }
+}
+
+
+
+Table interviews {
+  id uuid [pk]
+  application_id uuid
+  interviewer_id uuid       // staff member conducting the interview
+  scheduled_time timestamptz
+  meeting_type meeting_type
+  meeting_link varchar
+  status interview_status
+  note text
+  created_at timestamptz
+  updated_at timestamptz
+}
+
+Table conversations {
+  id uuid [pk]
+  job_id uuid
+  company_user_id uuid
+  jobseeker_id uuid
+  created_at timestamptz
+}
+
+Table messages {
+  id uuid [pk]
+  conversation_id uuid
+  sender_id uuid            // references users.id — single source of truth; staff resolved via staff.user_id
+  message text
+  type message_type
+  created_at timestamptz
+}
+
+Table notifications {
+  id uuid [pk]
+  user_id uuid
+  type notification_type
+  content text
+  is_read boolean
+  reference_id uuid         // nullable — FK to the triggering entity
+  reference_type varchar    // e.g. "application", "interview", "message"
+  created_at timestamptz
+}
+
+Table plans {
+  id uuid [pk]
+  name varchar
+  price decimal
+  job_post_limit int
+  duration_days int
+  created_at timestamptz
+}
+
+Table subscriptions {
+  id uuid [pk]
+  company_id uuid
+  plan_id uuid
+  start_date timestamptz
+  end_date timestamptz
+  status subscription_status
+  jobs_posted_count int [default: 0]  // tracks usage against plan.job_post_limit
+  created_at timestamptz
+}
+
+Table payments {
+  id uuid [pk]
+  company_id uuid
+  subscription_id uuid
+  amount decimal
+  currency varchar
+  gateway payment_gateway
+  status payment_status
+  transaction_id varchar
+  created_at timestamptz
+}
+
+Table audit_logs {
+  id uuid [pk]
+  user_id uuid
+  action audit_action
+  entity_type varchar
+  entity_id uuid
+  metadata jsonb            // stores old/new values, IP, user-agent, etc.
+  created_at timestamptz
+}
+
+Table otps {
+  id uuid [pk]
+  email varchar
+  code varchar
+  type otp_type
+  is_used boolean [default: false]
+  attempts int [default: 0]
+  expires_at timestamptz
+  created_at timestamptz
+}
+
+// captures passive interest signals
+Table job_views {
+  id uuid [pk]
+  job_seeker_id uuid
+  job_id uuid
+  viewed_at timestamptz
+  duration_seconds int      // time spent on page, useful as weight
+}
+
+// explicit save/bookmark
+Table saved_jobs {
+  id uuid [pk]
+  job_seeker_id uuid
+  job_id uuid
+  created_at timestamptz
+
+  indexes {
+    (job_seeker_id, job_id) [unique]
+  }
+}
+
+
+Ref: staff.user_id > users.id
+Ref: staff.company_id > companies.id
+
+Ref: company_addresses.company_id > companies.id
+
+Ref: job_seekers.user_id > users.id
+
+Ref: jobs.company_id > companies.id
+Ref: jobs.company_address_id > company_addresses.id
+
+Ref: job_skills.job_id > jobs.id
+Ref: job_skills.skill_id > skills.id
+
+Ref: resumes.job_seeker_id > job_seekers.id
+
+
+
+Ref: applications.job_id > jobs.id
+Ref: applications.job_seeker_id > job_seekers.id
+Ref: applications.resume_id > resumes.id
+
+
+Ref: interviews.application_id > applications.id
+Ref: interviews.interviewer_id > staff.id
+
+Ref: conversations.job_id > jobs.id
+Ref: conversations.company_user_id > staff.id
+Ref: conversations.jobseeker_id > job_seekers.id
+
+Ref: messages.conversation_id > conversations.id
+Ref: messages.sender_id > users.id
+
+Ref: notifications.user_id > users.id
+
+Ref: subscriptions.company_id > companies.id
+Ref: subscriptions.plan_id > plans.id
+
+Ref: payments.company_id > companies.id
+Ref: payments.subscription_id > subscriptions.id
+
+Ref: audit_logs.user_id > users.id
+
+Ref: job_views.job_seeker_id > job_seekers.id
+Ref: job_views.job_id > jobs.id
+
+Ref: saved_jobs.job_seeker_id > job_seekers.id
+Ref: saved_jobs.job_id > jobs.id

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Notifications — Admin Panel</title>
+  <meta name="description" content="View admin notifications and system alerts" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">A</div>
+      <span>RecruitPro Admin</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Overview</div>
+      <a href="dashboard.html"><i class="fas fa-th-large"></i> Dashboard</a>
+      <div class="nav-label">Management</div>
+      <a href="users.html"><i class="fas fa-users"></i> Users</a>
+      <a href="companies.html"><i class="fas fa-building"></i> Companies</a>
+      <a href="jobs.html"><i class="fas fa-briefcase"></i> Jobs</a>
+      <a href="applications.html"><i class="fas fa-file-alt"></i> Applications</a>
+      <div class="nav-label">Finance</div>
+      <a href="subscriptions.html"><i class="fas fa-crown"></i> Subscriptions</a>
+      <a href="payments.html"><i class="fas fa-credit-card"></i> Payments</a>
+      <div class="nav-label">System</div>
+      <a href="skills.html"><i class="fas fa-tags"></i> Skills</a>
+      <a href="audit-logs.html"><i class="fas fa-shield-alt"></i> Audit Logs</a>
+      <a href="notifications.html" class="active"><i class="fas fa-bell"></i> Notifications</a>
+      <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
+    </nav>
+    <div class="sidebar-profile">
+      <div class="avatar">SA</div>
+      <div class="profile-info">
+        <div class="name">Super Admin</div>
+        <div class="role">Administrator</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h1>Notifications</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn"><i class="fas fa-search"></i></button>
+        <button class="topbar-btn">
+          <i class="fas fa-bell"></i>
+          <span class="badge-dot"></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <h2>Notifications</h2>
+          <p>System alerts and platform notifications</p>
+        </div>
+        <div class="d-flex gap-1">
+          <button class="btn btn-outline btn-sm"><i class="fas fa-check-double"></i> Mark All Read</button>
+          <select style="padding:8px 30px 8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:0.85rem;appearance:none;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%235f6780' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 8px center;">
+            <option value="">All Types</option>
+            <option value="JOB_APPLIED">Job Applied</option>
+            <option value="INTERVIEW_INVITE">Interview Invite</option>
+            <option value="MESSAGE">Message</option>
+            <option value="APPLICATION_UPDATE">Application Update</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card" style="padding:0;">
+        <!-- Unread -->
+        <div class="notification-item unread">
+          <div class="notif-icon" style="background:var(--primary-bg);color:var(--primary);">
+            <i class="fas fa-building"></i>
+          </div>
+          <div class="notif-content">
+            <p><strong>New company registration:</strong> NewDev Solutions has registered and is waiting for verification.</p>
+            <div class="notif-time">5 minutes ago</div>
+          </div>
+        </div>
+        <div class="notification-item unread">
+          <div class="notif-icon" style="background:var(--danger-bg);color:var(--danger);">
+            <i class="fas fa-exclamation-triangle"></i>
+          </div>
+          <div class="notif-content">
+            <p><strong>Payment failed:</strong> NewDev Solutions subscription payment of $49.00 via Stripe has failed.</p>
+            <div class="notif-time">22 minutes ago</div>
+          </div>
+        </div>
+        <div class="notification-item unread">
+          <div class="notif-icon" style="background:var(--success-bg);color:var(--success);">
+            <i class="fas fa-user-plus"></i>
+          </div>
+          <div class="notif-content">
+            <p><strong>15 new users</strong> registered today. 12 job seekers and 3 company staff members.</p>
+            <div class="notif-time">1 hour ago</div>
+          </div>
+        </div>
+
+        <!-- Read -->
+        <div class="notification-item">
+          <div class="notif-icon" style="background:var(--info-bg);color:var(--info);">
+            <i class="fas fa-credit-card"></i>
+          </div>
+          <div class="notif-content">
+            <p><strong>Payment received:</strong> VietBank subscribed to Professional plan — $149.00 via MoMo.</p>
+            <div class="notif-time">3 hours ago</div>
+          </div>
+        </div>
+        <div class="notification-item">
+          <div class="notif-icon" style="background:var(--warning-bg);color:var(--warning);">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="notif-content">
+            <p><strong>Subscription expiring:</strong> StartupXYZ's Starter plan expires in 4 days.</p>
+            <div class="notif-time">5 hours ago</div>
+          </div>
+        </div>
+        <div class="notification-item">
+          <div class="notif-icon" style="background:var(--primary-bg);color:var(--primary);">
+            <i class="fas fa-briefcase"></i>
+          </div>
+          <div class="notif-content">
+            <p><strong>8 new jobs</strong> posted by FPT Software today.</p>
+            <div class="notif-time">6 hours ago</div>
+          </div>
+        </div>
+        <div class="notification-item">
+          <div class="notif-icon" style="background:var(--danger-bg);color:var(--danger);">
+            <i class="fas fa-user-slash"></i>
+          </div>
+          <div class="notif-content">
+            <p><strong>User suspended:</strong> spam.user@fake.com was automatically suspended for suspicious activity.</p>
+            <div class="notif-time">Yesterday</div>
+          </div>
+        </div>
+        <div class="notification-item">
+          <div class="notif-icon" style="background:var(--success-bg);color:var(--success);">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <div class="notif-content">
+            <p><strong>Company verified:</strong> TechCorp Vietnam has been verified by admin.</p>
+            <div class="notif-time">Yesterday</div>
+          </div>
+        </div>
+        <div class="notification-item">
+          <div class="notif-icon" style="background:var(--info-bg);color:var(--info);">
+            <i class="fas fa-tags"></i>
+          </div>
+          <div class="notif-content">
+            <p><strong>Skills updated:</strong> 3 new skills added to taxonomy — Flutter, Kotlin, SwiftUI.</p>
+            <div class="notif-time">2 days ago</div>
+          </div>
+        </div>
+        <div class="notification-item">
+          <div class="notif-icon" style="background:var(--warning-bg);color:var(--warning);">
+            <i class="fas fa-file-alt"></i>
+          </div>
+          <div class="notif-content">
+            <p><strong>Application milestone:</strong> Platform has reached 4,800+ total applications.</p>
+            <div class="notif-time">3 days ago</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

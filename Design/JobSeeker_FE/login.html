@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sign In — JobSeeker Portal</title>
+  <meta name="description" content="Sign in to your JobSeeker account" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,600,700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Satoshi', sans-serif; min-height: 100vh; display: flex; background: #f4f6fa; color: #1a1d26; }
+
+    .auth-brand {
+      flex: 0 0 45%; display: flex; flex-direction: column; justify-content: center; align-items: center;
+      background: linear-gradient(135deg, #1a56c4 0%, #4287f5 50%, #6ea3f7 100%);
+      color: #fff; padding: 60px; position: relative; overflow: hidden;
+    }
+    .auth-brand::before { content: ''; position: absolute; width: 500px; height: 500px; border-radius: 50%; background: rgba(255,255,255,0.06); top: -120px; right: -120px; }
+    .auth-brand::after { content: ''; position: absolute; width: 350px; height: 350px; border-radius: 50%; background: rgba(255,255,255,0.04); bottom: -80px; left: -80px; }
+    .auth-brand .brand-logo { font-size: 2.2rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 12px; z-index: 1; }
+    .auth-brand .brand-logo .icon { width: 52px; height: 52px; background: rgba(255,255,255,0.2); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; backdrop-filter: blur(10px); }
+    .auth-brand .brand-tagline { font-size: 1.15rem; opacity: 0.9; max-width: 380px; text-align: center; line-height: 1.7; z-index: 1; }
+    .auth-brand .brand-features { margin-top: 48px; display: flex; flex-direction: column; gap: 18px; z-index: 1; }
+    .auth-brand .feature { display: flex; align-items: center; gap: 14px; font-size: 0.95rem; opacity: 0.92; }
+    .auth-brand .feature i { width: 36px; height: 36px; background: rgba(255,255,255,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; }
+
+    .auth-form-panel { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px; }
+    .auth-form-container { width: 100%; max-width: 440px; }
+    .auth-form-container h1 { font-size: 1.75rem; font-weight: 700; margin-bottom: 6px; }
+    .auth-form-container .subtitle { color: #5f6780; font-size: 0.95rem; margin-bottom: 32px; }
+    .auth-form-container .subtitle a { color: #4287f5; text-decoration: none; font-weight: 600; }
+    .auth-form-container .subtitle a:hover { text-decoration: underline; }
+
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-weight: 550; font-size: 0.88rem; margin-bottom: 6px; }
+    .form-group .required { color: #ef4444; }
+    .form-control {
+      width: 100%; padding: 12px 14px; border: 1.5px solid #e2e6ed; border-radius: 10px;
+      font-size: 0.92rem; font-family: inherit; transition: all 0.2s ease; background: #fff;
+    }
+    .form-control:focus { outline: none; border-color: #4287f5; box-shadow: 0 0 0 3px rgba(66,135,245,0.1); }
+
+    .password-wrapper { position: relative; }
+    .password-wrapper .form-control { padding-right: 42px; }
+    .password-toggle { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #8b92a8; font-size: 0.9rem; padding: 4px; }
+
+    .form-options { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; font-size: 0.88rem; }
+    .form-options label { display: flex; align-items: center; gap: 8px; cursor: pointer; color: #5f6780; font-weight: 400; margin-bottom: 0; }
+    .form-options label input { width: 16px; height: 16px; accent-color: #4287f5; }
+    .form-options a { color: #4287f5; text-decoration: none; font-weight: 500; }
+    .form-options a:hover { text-decoration: underline; }
+
+    .btn-primary {
+      width: 100%; padding: 13px 24px; background: #4287f5; color: #fff; border: none; border-radius: 10px;
+      font-size: 0.95rem; font-weight: 600; font-family: inherit; cursor: pointer; transition: all 0.2s ease;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-primary:hover { background: #2b6de0; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(66,135,245,0.3); }
+
+    .divider { display: flex; align-items: center; gap: 16px; margin: 28px 0; color: #8b92a8; font-size: 0.85rem; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #e2e6ed; }
+
+    .social-buttons { display: flex; gap: 12px; margin-bottom: 24px; }
+    .social-btn {
+      flex: 1; padding: 12px; border: 1.5px solid #e2e6ed; border-radius: 10px; background: #fff;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+      font-size: 0.9rem; font-weight: 500; font-family: inherit; transition: all 0.2s ease; color: #1a1d26;
+    }
+    .social-btn:hover { border-color: #c8cdd6; background: #f8f9fb; }
+
+    @media (max-width: 900px) {
+      body { flex-direction: column; }
+      .auth-brand { flex: none; padding: 40px 24px; min-height: auto; }
+      .auth-brand .brand-features { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-brand">
+    <div class="brand-logo"><div class="icon">J</div> JobSeeker</div>
+    <p class="brand-tagline">Your career journey starts here. Discover thousands of opportunities from top companies.</p>
+    <div class="brand-features">
+      <div class="feature"><i class="fas fa-search"></i> Smart job matching with AI</div>
+      <div class="feature"><i class="fas fa-file-alt"></i> Build and manage multiple resumes</div>
+      <div class="feature"><i class="fas fa-bell"></i> Get instant alerts for new jobs</div>
+      <div class="feature"><i class="fas fa-handshake"></i> Direct messaging with recruiters</div>
+    </div>
+  </div>
+
+  <div class="auth-form-panel">
+    <div class="auth-form-container">
+      <h1>Welcome Back 👋</h1>
+      <p class="subtitle">Don't have an account? <a href="signup.html">Sign up for free</a></p>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label>Email Address <span class="required">*</span></label>
+          <input type="email" class="form-control" placeholder="you@email.com" required id="login-email" />
+        </div>
+
+        <div class="form-group">
+          <label>Password <span class="required">*</span></label>
+          <div class="password-wrapper">
+            <input type="password" class="form-control" placeholder="Enter your password" required id="login-password" />
+            <button type="button" class="password-toggle" onclick="togglePwd('login-password', this)"><i class="fas fa-eye"></i></button>
+          </div>
+        </div>
+
+        <div class="form-options">
+          <label><input type="checkbox" checked /> Remember me</label>
+          <a href="forgot-password.html">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="btn-primary"><i class="fas fa-sign-in-alt"></i> Sign In</button>
+      </form>
+
+      <div class="divider">or continue with</div>
+      <div class="social-buttons">
+        <button type="button" class="social-btn"><img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" style="width:20px;height:20px;" /> Google</button>
+        <button type="button" class="social-btn"><i class="fab fa-github" style="font-size:1.2rem;"></i> GitHub</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function togglePwd(id, btn) {
+      const input = document.getElementById(id);
+      const icon = btn.querySelector('i');
+      if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
+      else { input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+    }
+  </script>
+</body>
+</html>

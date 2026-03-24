@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interviews — JobSeeker Portal</title>
+  <meta name="description" content="View and manage your interview schedule" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">J</div>
+      <span>JobSeeker</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Main</div>
+      <a href="dashboard.html"><i class="fas fa-th-large"></i> Dashboard</a>
+      <a href="jobs.html"><i class="fas fa-briefcase"></i> Browse Jobs</a>
+      <a href="applications.html"><i class="fas fa-file-alt"></i> My Applications</a>
+      <a href="interviews.html" class="active"><i class="fas fa-calendar-check"></i> Interviews</a>
+      <div class="nav-label">Communication</div>
+      <a href="messages.html"><i class="fas fa-comments"></i> Messages</a>
+      <a href="notifications.html"><i class="fas fa-bell"></i> Notifications</a>
+      <div class="nav-label">Personal</div>
+      <a href="resumes.html"><i class="fas fa-file-pdf"></i> My Resumes</a>
+      <a href="profile.html"><i class="fas fa-user-circle"></i> Profile</a>
+    </nav>
+    <div class="sidebar-profile" style="cursor:pointer;" onclick="document.getElementById('pwdModal').classList.add('active')" title="Click to change password">
+      <div class="avatar">NM</div>
+      <div class="profile-info">
+        <div class="name">Nguyen Minh</div>
+        <div class="role">Job Seeker</div>
+      </div>
+      <i class="fas fa-key" style="color:var(--sidebar-text);font-size:0.75rem;opacity:0.5;"></i>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h1>Interviews</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn"><i class="fas fa-bell"></i><span class="badge-dot"></span></button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <h2>My Interviews</h2>
+          <p>View and prepare for your upcoming interviews</p>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon orange"><i class="fas fa-clock"></i></div>
+          <div class="stat-info">
+            <h4>Upcoming</h4>
+            <div class="value">2</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+          <div class="stat-info">
+            <h4>Completed</h4>
+            <div class="value">5</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon red"><i class="fas fa-times-circle"></i></div>
+          <div class="stat-info">
+            <h4>Cancelled</h4>
+            <div class="value">1</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter & Table -->
+      <section class="card">
+        <div class="filter-bar">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" id="interview-search" placeholder="Search interviews..." />
+          </div>
+          <select id="filter-interview-status" aria-label="Filter by status">
+            <option value="">All Status</option>
+            <option value="PENDING">Pending</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+          <select id="filter-meeting-type" aria-label="Filter by meeting type">
+            <option value="">All Types</option>
+            <option value="ONLINE">Online</option>
+            <option value="OFFLINE">Offline</option>
+          </select>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Job Position</th>
+                <th>Company</th>
+                <th>Date & Time</th>
+                <th>Meeting Type</th>
+                <th>Status</th>
+                <th>Note</th>
+
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Senior Frontend Developer</strong></td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--primary-bg);color:var(--primary-dark);">T</div>
+                    TechViet Corp
+                  </div>
+                </td>
+                <td>
+                  <div><strong>Mar 10, 2026</strong></div>
+                  <div style="color:var(--text-muted);font-size:0.82rem;">10:00 AM</div>
+                </td>
+                <td><span class="badge badge-info"><i class="fas fa-video" style="font-size:0.65rem;margin-right:4px;"></i> Online</span></td>
+                <td><span class="badge badge-warning">Pending</span></td>
+                <td style="max-width:200px;font-size:0.85rem;color:var(--text-secondary);">Technical interview — prepare portfolio</td>
+              </tr>
+              <tr>
+                <td><strong>Backend Developer</strong></td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--purple-bg);color:var(--purple);">Z</div>
+                    Zalo Group
+                  </div>
+                </td>
+                <td>
+                  <div><strong>Mar 12, 2026</strong></div>
+                  <div style="color:var(--text-muted);font-size:0.82rem;">02:00 PM</div>
+                </td>
+                <td><span class="badge badge-purple"><i class="fas fa-building" style="font-size:0.65rem;margin-right:4px;"></i> Offline</span></td>
+                <td><span class="badge badge-warning">Pending</span></td>
+                <td style="max-width:200px;font-size:0.85rem;color:var(--text-secondary);">On-site at Zalo HQ, District 7</td>
+              </tr>
+              <tr>
+                <td><strong>React Developer</strong></td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--info-bg);color:var(--info);">F</div>
+                    FPT Software
+                  </div>
+                </td>
+                <td>
+                  <div><strong>Mar 3, 2026</strong></div>
+                  <div style="color:var(--text-muted);font-size:0.82rem;">09:30 AM</div>
+                </td>
+                <td><span class="badge badge-info"><i class="fas fa-video" style="font-size:0.65rem;margin-right:4px;"></i> Online</span></td>
+                <td><span class="badge badge-success">Completed</span></td>
+                <td style="max-width:200px;font-size:0.85rem;color:var(--text-secondary);">HR screening round — went well</td>
+              </tr>
+              <tr>
+                <td><strong>DevOps Engineer</strong></td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--primary-bg);color:var(--primary-dark);">S</div>
+                    Shopee Vietnam
+                  </div>
+                </td>
+                <td>
+                  <div><strong>Feb 28, 2026</strong></div>
+                  <div style="color:var(--text-muted);font-size:0.82rem;">03:00 PM</div>
+                </td>
+                <td><span class="badge badge-purple"><i class="fas fa-building" style="font-size:0.65rem;margin-right:4px;"></i> Offline</span></td>
+                <td><span class="badge badge-success">Completed</span></td>
+                <td style="max-width:200px;font-size:0.85rem;color:var(--text-secondary);">Final round — received offer</td>
+              </tr>
+              <tr>
+                <td><strong>Full-Stack Engineer</strong></td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--warning-bg);color:var(--warning);">V</div>
+                    VNG Corporation
+                  </div>
+                </td>
+                <td>
+                  <div><strong>Feb 20, 2026</strong></div>
+                  <div style="color:var(--text-muted);font-size:0.82rem;">11:00 AM</div>
+                </td>
+                <td><span class="badge badge-info"><i class="fas fa-video" style="font-size:0.65rem;margin-right:4px;"></i> Online</span></td>
+                <td><span class="badge badge-danger">Cancelled</span></td>
+                <td style="max-width:200px;font-size:0.85rem;color:var(--text-secondary);">Cancelled by recruiter</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="pwdModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3><i class="fas fa-lock" style="color:var(--primary);margin-right:8px;"></i>Change Password</h3>
+      <button class="modal-close" onclick="document.getElementById('pwdModal').classList.remove('active')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="d-flex align-center gap-2 mb-3" style="padding:14px;background:var(--bg);border-radius:var(--radius-sm);">
+        <div class="avatar-circle" style="background:var(--primary);color:#fff;font-weight:600;">NM</div>
+        <div>
+          <div style="font-weight:600;">Nguyen Minh</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);">nguyen.minh@email.com</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Current Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="modal-current-pwd" placeholder="Enter your current password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePwdModal('modal-current-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>New Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="modal-new-pwd" placeholder="Enter a new password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePwdModal('modal-new-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+        <div class="form-hint">Minimum 8 characters with at least one uppercase letter and one number</div>
+      </div>
+      <div class="form-group">
+        <label>Confirm New Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="modal-confirm-pwd" placeholder="Re-enter new password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePwdModal('modal-confirm-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="document.getElementById('pwdModal').classList.remove('active')">Cancel</button>
+      <button class="btn btn-primary"><i class="fas fa-key"></i> Update Password</button>
+    </div>
+  </div>
+</div>
+<script>
+  function togglePwdModal(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
+    else { input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+  }
+</script>
+</body>
+</html>

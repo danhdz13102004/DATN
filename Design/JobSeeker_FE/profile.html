@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Profile — JobSeeker Portal</title>
+  <meta name="description" content="Edit your job seeker profile and skills" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">J</div>
+      <span>JobSeeker</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Main</div>
+      <a href="dashboard.html"><i class="fas fa-th-large"></i> Dashboard</a>
+      <a href="jobs.html"><i class="fas fa-briefcase"></i> Browse Jobs</a>
+      <a href="applications.html"><i class="fas fa-file-alt"></i> My Applications</a>
+      <a href="interviews.html"><i class="fas fa-calendar-check"></i> Interviews</a>
+      <div class="nav-label">Communication</div>
+      <a href="messages.html"><i class="fas fa-comments"></i> Messages</a>
+      <a href="notifications.html"><i class="fas fa-bell"></i> Notifications</a>
+      <div class="nav-label">Personal</div>
+      <a href="resumes.html"><i class="fas fa-file-pdf"></i> My Resumes</a>
+      <a href="profile.html" class="active"><i class="fas fa-user-circle"></i> Profile</a>
+    </nav>
+    <div class="sidebar-profile" style="cursor:pointer;" onclick="document.getElementById('pwdModal').classList.add('active')" title="Click to change password">
+      <div class="avatar">NM</div>
+      <div class="profile-info">
+        <div class="name">Nguyen Minh</div>
+        <div class="role">Job Seeker</div>
+      </div>
+      <i class="fas fa-key" style="color:var(--sidebar-text);font-size:0.75rem;opacity:0.5;"></i>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h1>My Profile</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn"><i class="fas fa-bell"></i><span class="badge-dot"></span></button>
+      </div>
+    </header>
+
+    <div class="content">
+      <!-- Profile Header -->
+      <section class="profile-header">
+        <div style="position:relative;">
+          <div class="profile-avatar" id="avatar-display">NM</div>
+          <button type="button" class="avatar-upload-btn" id="avatar-change-btn" title="Change avatar" onclick="document.getElementById('avatar-input').click()">
+            <i class="fas fa-camera"></i>
+          </button>
+          <input type="file" id="avatar-input" accept="image/png,image/jpeg,image/webp" style="display:none" onchange="previewAvatar(this)" />
+        </div>
+        <div class="profile-details">
+          <h2>Nguyen Minh</h2>
+          <div class="profile-subtitle">Senior Frontend Developer — 5 years experience</div>
+          <div class="profile-meta">
+            <span><i class="fas fa-envelope"></i> nguyen.minh@email.com</span>
+            <span><i class="fas fa-map-marker-alt"></i> Ho Chi Minh City</span>
+            <span><i class="fas fa-briefcase"></i> 5 years</span>
+            <span><i class="fas fa-calendar"></i> Joined Jan 2026</span>
+          </div>
+        </div>
+      </section>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+        <!-- Left: Profile Edit Form -->
+        <div>
+          <section class="card mb-3">
+            <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:20px;"><i class="fas fa-user-edit" style="color:var(--primary);margin-right:8px;"></i>Edit Profile</h3>
+            <form id="profile-form">
+              <div class="form-group">
+                <label for="profile-email">Email</label>
+                <input type="email" class="form-control" id="profile-email" value="nguyen.minh@email.com" readonly style="background:var(--bg);color:var(--text-muted);" />
+                <div class="form-hint">Email cannot be changed. Contact support if needed.</div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="profile-location">Location <span class="required">*</span></label>
+                  <input type="text" class="form-control" id="profile-location" value="Ho Chi Minh City" placeholder="Your city or region" />
+                </div>
+                <div class="form-group">
+                  <label for="profile-experience">Experience (Years) <span class="required">*</span></label>
+                  <input type="number" class="form-control" id="profile-experience" value="5" min="0" max="50" />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="profile-bio">Bio</label>
+                <textarea class="form-control" id="profile-bio" rows="5" placeholder="Tell companies about yourself, your passion, and career goals...">Passionate frontend developer with 5 years of experience building modern web applications. Skilled in React, TypeScript, and Next.js. I love creating beautiful, performant user interfaces and have a strong eye for design. Currently seeking senior-level opportunities at innovative tech companies.</textarea>
+              </div>
+
+              <div class="d-flex gap-1" style="justify-content:flex-end;">
+                <button type="reset" class="btn btn-outline">Cancel</button>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+              </div>
+            </form>
+          </section>
+
+          <!-- Change Password -->
+          <section class="card">
+            <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:20px;"><i class="fas fa-lock" style="color:var(--primary);margin-right:8px;"></i>Change Password</h3>
+            <form id="password-form">
+              <div class="form-group">
+                <label for="current-password">Current Password <span class="required">*</span></label>
+                <div style="position:relative;">
+                  <input type="password" class="form-control" id="current-password" placeholder="Enter your current password" style="padding-right:42px;" />
+                  <button type="button" onclick="togglePwd('current-password', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="new-password">New Password <span class="required">*</span></label>
+                <div style="position:relative;">
+                  <input type="password" class="form-control" id="new-password" placeholder="Enter a new password" style="padding-right:42px;" />
+                  <button type="button" onclick="togglePwd('new-password', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                </div>
+                <div class="form-hint">Minimum 8 characters with at least one uppercase letter and one number</div>
+              </div>
+
+              <div class="form-group">
+                <label for="confirm-password">Confirm New Password <span class="required">*</span></label>
+                <div style="position:relative;">
+                  <input type="password" class="form-control" id="confirm-password" placeholder="Re-enter new password" style="padding-right:42px;" />
+                  <button type="button" onclick="togglePwd('confirm-password', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="d-flex gap-1" style="justify-content:flex-end;">
+                <button type="reset" class="btn btn-outline">Cancel</button>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-key"></i> Update Password</button>
+              </div>
+            </form>
+          </section>
+        </div>
+
+        <!-- Right: Skills & Stats -->
+        <div>
+          <!-- Skills -->
+          <section class="card mb-3">
+            <div class="card-header">
+              <h3><i class="fas fa-code" style="color:var(--primary);margin-right:8px;"></i>My Skills</h3>
+              <button class="btn btn-ghost btn-sm"><i class="fas fa-plus"></i> Add</button>
+            </div>
+            <div class="tags">
+              <span class="tag">React <span class="remove"><i class="fas fa-times"></i></span></span>
+              <span class="tag">TypeScript <span class="remove"><i class="fas fa-times"></i></span></span>
+              <span class="tag">Next.js <span class="remove"><i class="fas fa-times"></i></span></span>
+              <span class="tag">JavaScript <span class="remove"><i class="fas fa-times"></i></span></span>
+              <span class="tag">HTML / CSS <span class="remove"><i class="fas fa-times"></i></span></span>
+              <span class="tag">Redux <span class="remove"><i class="fas fa-times"></i></span></span>
+              <span class="tag">Node.js <span class="remove"><i class="fas fa-times"></i></span></span>
+              <span class="tag">Git <span class="remove"><i class="fas fa-times"></i></span></span>
+              <span class="tag">Figma <span class="remove"><i class="fas fa-times"></i></span></span>
+              <span class="tag">REST API <span class="remove"><i class="fas fa-times"></i></span></span>
+            </div>
+            <div class="mt-2">
+              <input type="text" class="form-control" id="add-skill" placeholder="Type a skill and press Enter..." />
+            </div>
+          </section>
+
+          <!-- Profile Stats -->
+          <section class="card mb-3">
+            <h3 style="font-size:1.05rem;font-weight:600;margin-bottom:16px;"><i class="fas fa-chart-bar" style="color:var(--primary);margin-right:8px;"></i>Profile Stats</h3>
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="info-label">Applications</div>
+                <div class="info-value">18</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Interviews</div>
+                <div class="info-value">8</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Offers</div>
+                <div class="info-value">2</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Profile Views</div>
+                <div class="info-value">52</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Resumes Quick View -->
+          <section class="card">
+            <div class="card-header">
+              <h3><i class="fas fa-file-pdf" style="color:var(--danger);margin-right:8px;"></i>My Resumes</h3>
+              <a href="resumes.html" class="btn btn-ghost btn-sm">Manage <i class="fas fa-arrow-right"></i></a>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <div class="d-flex align-center gap-1" style="padding:12px;background:var(--bg);border-radius:var(--radius-sm);">
+                <i class="fas fa-file-pdf" style="color:var(--danger);"></i>
+                <div style="flex:1;">
+                  <div style="font-weight:550;font-size:0.88rem;">Frontend_Resume_2026.pdf</div>
+                  <div style="font-size:0.78rem;color:var(--text-muted);">Mar 1, 2026</div>
+                </div>
+              </div>
+              <div class="d-flex align-center gap-1" style="padding:12px;background:var(--bg);border-radius:var(--radius-sm);">
+                <i class="fas fa-file-pdf" style="color:var(--danger);"></i>
+                <div style="flex:1;">
+                  <div style="font-weight:550;font-size:0.88rem;">FullStack_Resume_v2.pdf</div>
+                  <div style="font-size:0.78rem;color:var(--text-muted);">Feb 15, 2026</div>
+                </div>
+              </div>
+              <div class="d-flex align-center gap-1" style="padding:12px;background:var(--bg);border-radius:var(--radius-sm);">
+                <i class="fas fa-file-word" style="color:var(--info);"></i>
+                <div style="flex:1;">
+                  <div style="font-weight:550;font-size:0.88rem;">General_CV.docx</div>
+                  <div style="font-size:0.78rem;color:var(--text-muted);">Jan 20, 2026</div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="pwdModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3><i class="fas fa-lock" style="color:var(--primary);margin-right:8px;"></i>Change Password</h3>
+      <button class="modal-close" onclick="document.getElementById('pwdModal').classList.remove('active')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="d-flex align-center gap-2 mb-3" style="padding:14px;background:var(--bg);border-radius:var(--radius-sm);">
+        <div class="avatar-circle" style="background:var(--primary);color:#fff;font-weight:600;">NM</div>
+        <div>
+          <div style="font-weight:600;">Nguyen Minh</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);">nguyen.minh@email.com</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Current Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="modal-current-pwd" placeholder="Enter your current password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePwdModal('modal-current-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>New Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="modal-new-pwd" placeholder="Enter a new password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePwdModal('modal-new-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+        <div class="form-hint">Minimum 8 characters with at least one uppercase letter and one number</div>
+      </div>
+      <div class="form-group">
+        <label>Confirm New Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="modal-confirm-pwd" placeholder="Re-enter new password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePwdModal('modal-confirm-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="document.getElementById('pwdModal').classList.remove('active')">Cancel</button>
+      <button class="btn btn-primary"><i class="fas fa-key"></i> Update Password</button>
+    </div>
+  </div>
+</div>
+<script>
+  function togglePwdModal(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
+    else { input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+  }
+</script>
+</body>
+<style>
+  .avatar-upload-btn {
+    position: absolute;
+    bottom: 4px; right: 4px;
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    background: var(--primary);
+    color: #fff;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    transition: all 0.2s ease;
+  }
+  .avatar-upload-btn:hover {
+    background: var(--primary-dark);
+    transform: scale(1.1);
+  }
+  .profile-avatar.has-image {
+    background: none;
+    padding: 0;
+    overflow: hidden;
+  }
+  .profile-avatar.has-image img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+</style>
+<script>
+  function previewAvatar(input) {
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image must be under 5MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const avatar = document.getElementById('avatar-display');
+        avatar.classList.add('has-image');
+        avatar.innerHTML = '<img src="' + e.target.result + '" alt="Profile avatar" />';
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function togglePwd(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+      input.type = 'password';
+      icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
+  }
+</script>
+</html>

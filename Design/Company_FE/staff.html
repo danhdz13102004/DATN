@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Staff Management — Company Portal</title>
+  <meta name="description" content="Manage company staff members" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand"><div class="brand-icon">R</div><span>RecruitPro</span></div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Main</div>
+      <a href="dashboard.html"><i class="fas fa-th-large"></i> Dashboard</a>
+      <a href="jobs.html"><i class="fas fa-briefcase"></i> Jobs</a>
+      <a href="applications.html"><i class="fas fa-file-alt"></i> Applications</a>
+      <a href="interviews.html"><i class="fas fa-calendar-check"></i> Interviews</a>
+      <div class="nav-label">Communication</div>
+      <a href="messages.html"><i class="fas fa-comments"></i> Messages</a>
+      <a href="notifications.html"><i class="fas fa-bell"></i> Notifications</a>
+      <div class="nav-label">Management</div>
+      <a href="staff.html" class="active"><i class="fas fa-users"></i> Staff</a>
+      <a href="company-profile.html"><i class="fas fa-building"></i> Company Profile</a>
+      <a href="subscriptions.html"><i class="fas fa-crown"></i> Subscription</a>
+    </nav>
+    <div class="sidebar-profile" style="cursor:pointer;" onclick="document.getElementById('pwdModal').classList.add('active')" title="Click to change password">
+      <div class="avatar">TK</div>
+      <div class="profile-info"><div class="name">Tran Khanh Linh</div><div class="role">HR Manager</div></div>
+      <i class="fas fa-key" style="color:var(--sidebar-text);font-size:0.75rem;opacity:0.5;"></i>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')"><i class="fas fa-bars"></i></button>
+        <h1>Staff Management</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn"><i class="fas fa-bell"></i><span class="badge-dot"></span></button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <h2>Team Members</h2>
+          <p>Manage your company's staff and roles</p>
+        </div>
+        <button class="btn btn-primary" onclick="document.getElementById('invite-modal').classList.add('active')"><i class="fas fa-user-plus"></i> Invite Staff</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon green"><i class="fas fa-users"></i></div>
+          <div class="stat-info"><h4>Total Staff</h4><div class="value">8</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fas fa-user-shield"></i></div>
+          <div class="stat-info"><h4>Owners</h4><div class="value">1</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon orange"><i class="fas fa-user-tie"></i></div>
+          <div class="stat-info"><h4>HR</h4><div class="value">3</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon red"><i class="fas fa-headset"></i></div>
+          <div class="stat-info"><h4>Recruiters</h4><div class="value">4</div></div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="card">
+        <div class="card-header">
+          <h3>All Staff</h3>
+          <div class="filter-bar" style="padding:0;">
+            <div class="search-box" style="min-width:180px;">
+              <i class="fas fa-search"></i>
+              <input type="text" placeholder="Search staff..." id="search-staff" />
+            </div>
+          </div>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Joined</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--primary-bg);color:var(--primary-dark);">TK</div>
+                    <div style="font-weight:550;">Tran Khanh Linh</div>
+                  </div>
+                </td>
+                <td>tran.klinh@company.com</td>
+                <td><span class="badge badge-success">Owner</span></td>
+                <td>Jan 1, 2025</td>
+                <td><span style="font-size:0.82rem;color:var(--text-muted);">—</span></td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--info-bg);color:var(--info);">AL</div>
+                    <div style="font-weight:550;">Anna Le</div>
+                  </div>
+                </td>
+                <td>anna.le@company.com</td>
+                <td><span class="badge badge-info">HR</span></td>
+                <td>Mar 15, 2025</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <button class="btn btn-ghost btn-sm"><i class="fas fa-pen"></i></button>
+                    <button class="btn btn-ghost btn-sm" style="color:var(--danger);"><i class="fas fa-trash"></i></button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--warning-bg);color:var(--warning);">BT</div>
+                    <div style="font-weight:550;">Binh Tran</div>
+                  </div>
+                </td>
+                <td>binh.tran@company.com</td>
+                <td><span class="badge badge-info">HR</span></td>
+                <td>Jun 20, 2025</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <button class="btn btn-ghost btn-sm"><i class="fas fa-pen"></i></button>
+                    <button class="btn btn-ghost btn-sm" style="color:var(--danger);"><i class="fas fa-trash"></i></button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--danger-bg);color:var(--danger);">CN</div>
+                    <div style="font-weight:550;">Chi Nguyen</div>
+                  </div>
+                </td>
+                <td>chi.nguyen@company.com</td>
+                <td><span class="badge badge-warning">Recruiter</span></td>
+                <td>Sep 1, 2025</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <button class="btn btn-ghost btn-sm"><i class="fas fa-pen"></i></button>
+                    <button class="btn btn-ghost btn-sm" style="color:var(--danger);"><i class="fas fa-trash"></i></button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--primary-bg);color:var(--primary-dark);">DV</div>
+                    <div style="font-weight:550;">Duc Vo</div>
+                  </div>
+                </td>
+                <td>duc.vo@company.com</td>
+                <td><span class="badge badge-warning">Recruiter</span></td>
+                <td>Oct 10, 2025</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <button class="btn btn-ghost btn-sm"><i class="fas fa-pen"></i></button>
+                    <button class="btn btn-ghost btn-sm" style="color:var(--danger);"><i class="fas fa-trash"></i></button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--info-bg);color:var(--info);">EH</div>
+                    <div style="font-weight:550;">Emily Ha</div>
+                  </div>
+                </td>
+                <td>emily.ha@company.com</td>
+                <td><span class="badge badge-info">HR</span></td>
+                <td>Nov 5, 2025</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <button class="btn btn-ghost btn-sm"><i class="fas fa-pen"></i></button>
+                    <button class="btn btn-ghost btn-sm" style="color:var(--danger);"><i class="fas fa-trash"></i></button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="pwdModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3><i class="fas fa-lock" style="color:var(--primary);margin-right:8px;"></i>Change Password</h3>
+      <button class="modal-close" onclick="document.getElementById('pwdModal').classList.remove('active')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="d-flex align-center gap-2 mb-3" style="padding:14px;background:var(--bg);border-radius:var(--radius-sm);">
+        <div class="avatar-circle" style="background:var(--primary);color:#fff;font-weight:600;">TK</div>
+        <div>
+          <div style="font-weight:600;">Tran Khanh Linh</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);">tran.klinh@company.com</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Current Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="current-pwd" placeholder="Enter your current password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePasswordVisibility('current-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>New Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="new-pwd" placeholder="Enter a new password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePasswordVisibility('new-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+        <div class="form-hint">Minimum 8 characters with at least one uppercase letter and one number</div>
+      </div>
+      <div class="form-group">
+        <label>Confirm New Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="confirm-pwd" placeholder="Re-enter new password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePasswordVisibility('confirm-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="document.getElementById('pwdModal').classList.remove('active')">Cancel</button>
+      <button class="btn btn-primary"><i class="fas fa-key"></i> Update Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- Invite Staff Modal -->
+<div class="modal-overlay" id="invite-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Invite Staff Member</h3>
+      <button class="modal-close" onclick="document.getElementById('invite-modal').classList.remove('active')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Email Address <span class="required">*</span></label>
+        <input type="email" class="form-control" placeholder="colleague@company.com" id="invite-email" />
+      </div>
+      <div class="form-group">
+        <label>Full Name <span class="required">*</span></label>
+        <input type="text" class="form-control" placeholder="Full name" id="invite-name" />
+      </div>
+      <div class="form-group">
+        <label>Role <span class="required">*</span></label>
+        <select class="form-control" id="invite-role">
+          <option value="">Select role...</option>
+          <option>HR</option>
+          <option>Recruiter</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="invite-password" placeholder="Create a password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePasswordVisibility('invite-password', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+        <div class="form-hint">Minimum 8 characters with at least one uppercase letter and one number</div>
+      </div>
+      <div class="form-group">
+        <label>Confirm Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="invite-password-confirm" placeholder="Re-enter the password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePasswordVisibility('invite-password-confirm', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;">
+            <i class="fas fa-eye"></i>
+          </button>
+        </div>
+      </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="document.getElementById('invite-modal').classList.remove('active')">Cancel</button>
+      <button class="btn btn-primary"><i class="fas fa-paper-plane"></i> Send Invite</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function togglePasswordVisibility(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.classList.replace('fa-eye', 'fa-eye-slash');
+    } else {
+      input.type = 'password';
+      icon.classList.replace('fa-eye-slash', 'fa-eye');
+    }
+  }
+</script>
+</body>
+</html>

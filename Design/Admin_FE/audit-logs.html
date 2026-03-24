@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Audit Logs — Admin Panel</title>
+  <meta name="description" content="View system audit trail and activity logs" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body>
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">A</div>
+      <span>RecruitPro Admin</span>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Overview</div>
+      <a href="dashboard.html"><i class="fas fa-th-large"></i> Dashboard</a>
+      <div class="nav-label">Management</div>
+      <a href="users.html"><i class="fas fa-users"></i> Users</a>
+      <a href="companies.html"><i class="fas fa-building"></i> Companies</a>
+      <a href="jobs.html"><i class="fas fa-briefcase"></i> Jobs</a>
+      <a href="applications.html"><i class="fas fa-file-alt"></i> Applications</a>
+      <div class="nav-label">Finance</div>
+      <a href="subscriptions.html"><i class="fas fa-crown"></i> Subscriptions</a>
+      <a href="payments.html"><i class="fas fa-credit-card"></i> Payments</a>
+      <div class="nav-label">System</div>
+      <a href="skills.html"><i class="fas fa-tags"></i> Skills</a>
+      <a href="audit-logs.html" class="active"><i class="fas fa-shield-alt"></i> Audit Logs</a>
+      <a href="notifications.html"><i class="fas fa-bell"></i> Notifications</a>
+      <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
+    </nav>
+    <div class="sidebar-profile">
+      <div class="avatar">SA</div>
+      <div class="profile-info">
+        <div class="name">Super Admin</div>
+        <div class="role">Administrator</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h1>Audit Logs</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn"><i class="fas fa-search"></i></button>
+        <button class="topbar-btn">
+          <i class="fas fa-bell"></i>
+          <span class="badge-dot"></span>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <h2>System Audit Trail</h2>
+          <p>Track all user actions and system events</p>
+        </div>
+        <button class="btn btn-outline"><i class="fas fa-download"></i> Export Logs</button>
+      </div>
+
+      <!-- Filter & Table -->
+      <div class="card">
+        <div class="filter-bar">
+          <div class="search-box">
+            <i class="fas fa-search"></i>
+            <input type="text" placeholder="Search by user email or entity..." id="logSearch" />
+          </div>
+          <select id="filterAction">
+            <option value="">All Actions</option>
+            <option value="CREATE">Create</option>
+            <option value="UPDATE">Update</option>
+            <option value="DELETE">Delete</option>
+            <option value="LOGIN">Login</option>
+            <option value="LOGOUT">Logout</option>
+          </select>
+          <select id="filterEntity">
+            <option value="">All Entities</option>
+            <option value="user">User</option>
+            <option value="company">Company</option>
+            <option value="job">Job</option>
+            <option value="application">Application</option>
+            <option value="resume">Resume</option>
+            <option value="subscription">Subscription</option>
+            <option value="payment">Payment</option>
+          </select>
+        </div>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Action</th>
+                <th>Entity Type</th>
+                <th>Entity ID</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--primary-bg);color:var(--primary-dark);">SA</div>
+                    admin@recruitpro.com
+                  </div>
+                </td>
+                <td><span class="badge badge-primary">UPDATE</span></td>
+                <td>company</td>
+                <td style="font-family:monospace;font-size:0.82rem;">c8d9e0f1-2a3b</td>
+                <td>Mar 11, 2026 15:02</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--info-bg);color:var(--info);">TN</div>
+                    tran.nam@techcorp.vn
+                  </div>
+                </td>
+                <td><span class="badge badge-info">LOGIN</span></td>
+                <td>user</td>
+                <td style="font-family:monospace;font-size:0.82rem;">a1b2c3d4-5e6f</td>
+                <td>Mar 11, 2026 14:30</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--success-bg);color:var(--success);">NM</div>
+                    nguyen.mai@gmail.com
+                  </div>
+                </td>
+                <td><span class="badge badge-success">CREATE</span></td>
+                <td>application</td>
+                <td style="font-family:monospace;font-size:0.82rem;">b7d4e9f2-8a1b</td>
+                <td>Mar 11, 2026 13:15</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--info-bg);color:var(--info);">FP</div>
+                    hr@fpt-software.com
+                  </div>
+                </td>
+                <td><span class="badge badge-success">CREATE</span></td>
+                <td>job</td>
+                <td style="font-family:monospace;font-size:0.82rem;">d3e4f5a6-7b8c</td>
+                <td>Mar 11, 2026 11:45</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--primary-bg);color:var(--primary-dark);">SA</div>
+                    admin@recruitpro.com
+                  </div>
+                </td>
+                <td><span class="badge badge-danger">DELETE</span></td>
+                <td>user</td>
+                <td style="font-family:monospace;font-size:0.82rem;">f9a0b1c2-3d4e</td>
+                <td>Mar 11, 2026 10:30</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--warning-bg);color:var(--warning);">VB</div>
+                    hr@vietbank.com.vn
+                  </div>
+                </td>
+                <td><span class="badge badge-primary">UPDATE</span></td>
+                <td>job</td>
+                <td style="font-family:monospace;font-size:0.82rem;">e5f6a7b8-9c0d</td>
+                <td>Mar 11, 2026 09:20</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--success-bg);color:var(--success);">NM</div>
+                    nguyen.mai@gmail.com
+                  </div>
+                </td>
+                <td><span class="badge badge-primary">UPDATE</span></td>
+                <td>resume</td>
+                <td style="font-family:monospace;font-size:0.82rem;">e5f2a1c7-4b3d</td>
+                <td>Mar 10, 2026 15:20</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--primary-bg);color:var(--primary-dark);">SA</div>
+                    admin@recruitpro.com
+                  </div>
+                </td>
+                <td><span class="badge badge-info">LOGIN</span></td>
+                <td>user</td>
+                <td style="font-family:monospace;font-size:0.82rem;">x1y2z3a4-5b6c</td>
+                <td>Mar 10, 2026 08:00</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--danger-bg);color:var(--danger);">SP</div>
+                    spam.user@fake.com
+                  </div>
+                </td>
+                <td><span class="badge badge-neutral">LOGOUT</span></td>
+                <td>user</td>
+                <td style="font-family:monospace;font-size:0.82rem;">q1w2e3r4-5t6y</td>
+                <td>Mar 9, 2026 23:45</td>
+              </tr>
+              <tr>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <div class="avatar-circle sm" style="background:var(--info-bg);color:var(--info);">TN</div>
+                    tran.nam@techcorp.vn
+                  </div>
+                </td>
+                <td><span class="badge badge-success">CREATE</span></td>
+                <td>subscription</td>
+                <td style="font-family:monospace;font-size:0.82rem;">m1n2o3p4-5q6r</td>
+                <td>Mar 9, 2026 16:00</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

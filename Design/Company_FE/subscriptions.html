@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Subscription & Payments — Company Portal</title>
+  <meta name="description" content="Manage subscription plans and payment history" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand"><div class="brand-icon">R</div><span>RecruitPro</span></div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Main</div>
+      <a href="dashboard.html"><i class="fas fa-th-large"></i> Dashboard</a>
+      <a href="jobs.html"><i class="fas fa-briefcase"></i> Jobs</a>
+      <a href="applications.html"><i class="fas fa-file-alt"></i> Applications</a>
+      <a href="interviews.html"><i class="fas fa-calendar-check"></i> Interviews</a>
+      <div class="nav-label">Communication</div>
+      <a href="messages.html"><i class="fas fa-comments"></i> Messages</a>
+      <a href="notifications.html"><i class="fas fa-bell"></i> Notifications</a>
+      <div class="nav-label">Management</div>
+      <a href="staff.html"><i class="fas fa-users"></i> Staff</a>
+      <a href="company-profile.html"><i class="fas fa-building"></i> Company Profile</a>
+      <a href="subscriptions.html" class="active"><i class="fas fa-crown"></i> Subscription</a>
+    </nav>
+    <div class="sidebar-profile" style="cursor:pointer;" onclick="document.getElementById('pwdModal').classList.add('active')" title="Click to change password">
+      <div class="avatar">TK</div>
+      <div class="profile-info"><div class="name">Tran Khanh Linh</div><div class="role">HR Manager</div></div>
+      <i class="fas fa-key" style="color:var(--sidebar-text);font-size:0.75rem;opacity:0.5;"></i>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')"><i class="fas fa-bars"></i></button>
+        <h1>Subscription</h1>
+      </div>
+      <div class="topbar-right">
+        <button class="topbar-btn"><i class="fas fa-bell"></i><span class="badge-dot"></span></button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="page-header">
+        <div>
+          <h2>Subscription & Payments</h2>
+          <p>Manage your plan and view payment history</p>
+        </div>
+      </div>
+
+      <!-- Current Plan -->
+      <div class="card mb-3" style="border-left:4px solid var(--primary);">
+        <div class="d-flex align-center justify-between flex-wrap gap-2">
+          <div>
+            <div style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:4px;">Current Plan</div>
+            <div style="font-size:1.35rem;font-weight:700;">Professional Plan</div>
+            <div style="font-size:0.88rem;color:var(--text-secondary);margin-top:4px;">
+              <span class="badge badge-success">Active</span>
+              &nbsp;·&nbsp; Jan 1, 2026 — Dec 31, 2026
+            </div>
+          </div>
+          <div class="d-flex gap-1">
+            <div style="text-align:right;">
+              <div style="font-size:0.78rem;color:var(--text-muted);">Job Posts Used</div>
+              <div style="font-size:1.25rem;font-weight:700;color:var(--primary-dark);">18 / 50</div>
+            </div>
+          </div>
+        </div>
+        <div class="score-bar mt-2" style="height:10px;">
+          <div class="fill" style="width:36%"></div>
+        </div>
+      </div>
+
+      <!-- Pricing Cards -->
+      <h3 style="margin-bottom:16px;font-size:1.1rem;">Available Plans</h3>
+      <div class="pricing-grid mb-3">
+        <div class="pricing-card">
+          <div class="plan-name">Starter</div>
+          <div class="plan-price">$29<span>/month</span></div>
+          <ul class="plan-features">
+            <li><i class="fas fa-check"></i> 5 job postings</li>
+            <li><i class="fas fa-check"></i> Basic AI matching</li>
+            <li><i class="fas fa-check"></i> Email support</li>
+            <li><i class="fas fa-check"></i> 30 days duration</li>
+          </ul>
+          <button class="btn btn-outline w-full">Downgrade</button>
+        </div>
+
+        <div class="pricing-card featured">
+          <div style="position:absolute;top:-1px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;padding:4px 16px;border-radius:0 0 8px 8px;font-size:0.72rem;font-weight:600;text-transform:uppercase;">Current</div>
+          <div class="plan-name">Professional</div>
+          <div class="plan-price">$79<span>/month</span></div>
+          <ul class="plan-features">
+            <li><i class="fas fa-check"></i> 50 job postings</li>
+            <li><i class="fas fa-check"></i> Advanced AI matching</li>
+            <li><i class="fas fa-check"></i> Priority support</li>
+            <li><i class="fas fa-check"></i> 365 days duration</li>
+            <li><i class="fas fa-check"></i> Analytics dashboard</li>
+          </ul>
+          <button class="btn btn-primary w-full" disabled style="opacity:0.6;">Current Plan</button>
+        </div>
+
+        <div class="pricing-card">
+          <div class="plan-name">Enterprise</div>
+          <div class="plan-price">$199<span>/month</span></div>
+          <ul class="plan-features">
+            <li><i class="fas fa-check"></i> Unlimited job postings</li>
+            <li><i class="fas fa-check"></i> Premium AI matching</li>
+            <li><i class="fas fa-check"></i> Dedicated account manager</li>
+            <li><i class="fas fa-check"></i> 365 days duration</li>
+            <li><i class="fas fa-check"></i> Custom integrations</li>
+            <li><i class="fas fa-check"></i> SLA guarantee</li>
+          </ul>
+          <button class="btn btn-primary w-full">Upgrade</button>
+        </div>
+      </div>
+
+      <!-- Payment History -->
+      <div class="card">
+        <div class="card-header">
+          <h3>Payment History</h3>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th>Gateway</th>
+                <th>Transaction ID</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Jan 1, 2026</td>
+                <td>Professional Plan — Annual</td>
+                <td style="font-weight:600;">$948.00</td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <i class="fas fa-credit-card" style="color:var(--info);"></i> VNPay
+                  </div>
+                </td>
+                <td style="font-family:monospace;font-size:0.82rem;">TXN-2026010001</td>
+                <td><span class="badge badge-success">Success</span></td>
+              </tr>
+              <tr>
+                <td>Jul 1, 2025</td>
+                <td>Professional Plan — Semi-Annual</td>
+                <td style="font-weight:600;">$474.00</td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <i class="fas fa-wallet" style="color:var(--danger);"></i> MoMo
+                  </div>
+                </td>
+                <td style="font-family:monospace;font-size:0.82rem;">TXN-2025070042</td>
+                <td><span class="badge badge-success">Success</span></td>
+              </tr>
+              <tr>
+                <td>Jan 1, 2025</td>
+                <td>Starter Plan — Annual</td>
+                <td style="font-weight:600;">$348.00</td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <i class="fab fa-stripe-s" style="color:var(--info);"></i> Stripe
+                  </div>
+                </td>
+                <td style="font-family:monospace;font-size:0.82rem;">TXN-2025010018</td>
+                <td><span class="badge badge-success">Success</span></td>
+              </tr>
+              <tr>
+                <td>Dec 28, 2024</td>
+                <td>Starter Plan — Monthly</td>
+                <td style="font-weight:600;">$29.00</td>
+                <td>
+                  <div class="d-flex align-center gap-1">
+                    <i class="fas fa-credit-card" style="color:var(--info);"></i> VNPay
+                  </div>
+                </td>
+                <td style="font-family:monospace;font-size:0.82rem;">TXN-2024120099</td>
+                <td><span class="badge badge-danger">Failed</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Change Password Modal -->
+<div class="modal-overlay" id="pwdModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3><i class="fas fa-lock" style="color:var(--primary);margin-right:8px;"></i>Change Password</h3>
+      <button class="modal-close" onclick="document.getElementById('pwdModal').classList.remove('active')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="d-flex align-center gap-2 mb-3" style="padding:14px;background:var(--bg);border-radius:var(--radius-sm);">
+        <div class="avatar-circle" style="background:var(--primary);color:#fff;font-weight:600;">TK</div>
+        <div>
+          <div style="font-weight:600;">Tran Khanh Linh</div>
+          <div style="font-size:0.82rem;color:var(--text-muted);">tran.klinh@company.com</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Current Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="current-pwd" placeholder="Enter your current password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePwd('current-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>New Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="new-pwd" placeholder="Enter a new password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePwd('new-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+        <div class="form-hint">Minimum 8 characters with at least one uppercase letter and one number</div>
+      </div>
+      <div class="form-group">
+        <label>Confirm New Password <span class="required">*</span></label>
+        <div style="position:relative;">
+          <input type="password" class="form-control" id="confirm-pwd" placeholder="Re-enter new password" style="padding-right:42px;" />
+          <button type="button" onclick="togglePwd('confirm-pwd', this)" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:0.9rem;padding:4px;"><i class="fas fa-eye"></i></button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="document.getElementById('pwdModal').classList.remove('active')">Cancel</button>
+      <button class="btn btn-primary"><i class="fas fa-key"></i> Update Password</button>
+    </div>
+  </div>
+</div>
+<script>
+  function togglePwd(inputId, btn) {
+    const input = document.getElementById(inputId);
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') { input.type = 'text'; icon.classList.replace('fa-eye', 'fa-eye-slash'); }
+    else { input.type = 'password'; icon.classList.replace('fa-eye-slash', 'fa-eye'); }
+  }
+</script>
+</body>
+</html>
