@@ -2,6 +2,7 @@ import { useState, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import ChangePasswordModal from '../ui/ChangePasswordModal';
+import LogoutModal from '../ui/LogoutModal';
 import { useUserProfile } from '../../hooks/useCompany';
 
 const ContentLoader = () => (
@@ -16,6 +17,7 @@ const ContentLoader = () => (
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { data: user } = useUserProfile();
   const { pathname } = useLocation();
 
@@ -37,6 +39,7 @@ export default function DashboardLayout() {
         userRole={userRole}
         userInitials={userInitials}
         onChangePassword={() => setShowPasswordModal(true)}
+        onLogout={() => setShowLogoutModal(true)}
       />
 
       <div className="lg:ml-[260px] flex flex-col min-h-screen">
@@ -54,6 +57,10 @@ export default function DashboardLayout() {
           userInitials={userInitials}
           onClose={() => setShowPasswordModal(false)}
         />
+      )}
+
+      {showLogoutModal && (
+        <LogoutModal onClose={() => setShowLogoutModal(false)} />
       )}
     </div>
   );

@@ -108,15 +108,15 @@ export default function CompanyProfilePage() {
             {editMode ? (
               <form onSubmit={handleSubmit(handleProfileSave)} className="p-5 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">Company Name <span className="text-red-500">*</span></label>
+                  <label className="block text-md font-medium mb-1.5">Company Name <span className="text-red-500">*</span></label>
                   <input className="w-full px-3.5 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10" {...register('name', { required: true })} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">Website</label>
+                  <label className="block text-md font-medium mb-1.5">Website</label>
                   <input className="w-full px-3.5 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10" {...register('website')} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1.5">Description</label>
+                  <label className="block text-md font-medium mb-1.5">Description</label>
                   <textarea className="w-full px-3.5 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 min-h-[120px]" {...register('description')} />
                 </div>
                 <div className="flex gap-2 justify-end">
@@ -131,7 +131,7 @@ export default function CompanyProfilePage() {
                 <div><span className="text-xs text-gray-400 uppercase tracking-wider">Company Name</span><p className="text-sm text-gray-900 font-medium mt-1">{profile?.name || '—'}</p></div>
                 <div><span className="text-xs text-gray-400 uppercase tracking-wider">Website</span><p className="text-sm text-gray-900 mt-1">{profile?.website || '—'}</p></div>
                 <div><span className="text-xs text-gray-400 uppercase tracking-wider">Description</span><p className="text-sm text-gray-600 mt-1 leading-relaxed">{profile?.description || '—'}</p></div>
-                <div><span className="text-xs text-gray-400 uppercase tracking-wider">Member Since</span><p className="text-sm text-gray-900 mt-1">{profile?.createdAt || '—'}</p></div>
+                {/* <div><span className="text-xs text-gray-400 uppercase tracking-wider">Member Since</span><p className="text-sm text-gray-900 mt-1">{profile?.createdAt || '—'}</p></div> */}
               </div>
             )}
           </div>
@@ -149,13 +149,13 @@ export default function CompanyProfilePage() {
             {addresses?.map((addr) => (
               <div key={addr.id} className="border border-gray-100 rounded-xl p-4 hover:shadow-sm transition-shadow relative">
                 {addr.isDefault && <span className="absolute top-3 right-3 text-[0.65rem] bg-primary/10 text-primary font-semibold px-2 py-0.5 rounded-full">Default</span>}
-                <h4 className="text-sm font-semibold text-gray-900">{addr.label}</h4>
-                <p className="text-xs text-gray-500 mt-1">{addr.addressLine}</p>
-                <p className="text-xs text-gray-400">{addr.city}, {addr.country}</p>
+                <h4 className="text-md font-semibold text-gray-900">{addr.label}</h4>
+                <p className="text-sm text-gray-500 mt-1">{addr.addressLine}</p>
+                <p className="text-sm text-gray-400">{addr.city}, {addr.country}</p>
                 <div className="flex gap-2 mt-3">
-                  <button className="text-xs text-primary hover:underline" onClick={() => { setAddrModal({ open: true, editing: addr.id }); addrForm.reset(addr); }}>Edit</button>
-                  {!addr.isDefault && <button className="text-xs text-gray-400 hover:text-primary" onClick={() => setDefault.mutate(addr.id)}>Set Default</button>}
-                  {!addr.isDefault && <button className="text-xs text-red-400 hover:text-red-600" onClick={() => handleAddrDelete(addr.id)}>Delete</button>}
+                  <button className="border border-gray-200 rounded-xl px-2 py-1 text-md text-primary hover:underline" onClick={() => { setAddrModal({ open: true, editing: addr.id }); addrForm.reset(addr); }}>Edit</button>
+                  {/* {!addr.isDefault && <button className="text-xs text-gray-400 hover:text-primary" onClick={() => setDefault.mutate(addr.id)}>Set Default</button>} */}
+                  {!addr.isDefault && <button className="border border-gray-200 rounded-xl px-2 py-1 text-md text-red-400 hover:text-red-600" onClick={() => handleAddrDelete(addr.id)}>Delete</button>}
                 </div>
               </div>
             ))}

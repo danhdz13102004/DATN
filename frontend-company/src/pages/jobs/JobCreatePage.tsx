@@ -4,6 +4,7 @@ import { useNavigate, useParams, useOutletContext } from 'react-router-dom';
 import Topbar from '../../components/layout/Topbar';
 import { useJobDetail, useCreateJob, useUpdateJob, useSkills } from '../../hooks/useJobs';
 import { useCompanyAddresses } from '../../hooks/useCompany';
+import { useToast } from '../../contexts/ToastContext';
 import { ROUTES } from '../../constants';
 import type { ExperienceLevel, JobFormData } from '../../types/job';
 
@@ -34,7 +35,7 @@ export default function JobCreatePage() {
   const [selectedLevels, setSelectedLevels] = useState<ExperienceLevel[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState('');
-  const [error, setError] = useState('');
+  const toast = useToast();
 
   useEffect(() => {
     if (isEdit && job) {
@@ -73,23 +74,25 @@ export default function JobCreatePage() {
 
   const onSubmit = async (data: FormValues) => {
     if (selectedLevels.length === 0) {
-      setError('Please select at least one experience level.');
+      toast.error('Please select at least one experience level.');
       return;
     }
-    setError('');
+    
     try {
       const payload: JobFormData = { ...data, levels: selectedLevels, skillIds: selectedSkills };
       if (isEdit) {
         await updateJob.mutateAsync({ id: id!, data: payload });
+        toast.success('Job updated successfully!');
       } else {
         await createJob.mutateAsync(payload);
+        toast.success('Job created successfully!');
       }
       navigate(ROUTES.JOBS);
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error
           ?.message || 'Failed to save job.';
-      setError(msg);
+      toast.error(msg);
     }
   };
 
@@ -108,11 +111,6 @@ export default function JobCreatePage() {
       <div className="p-6">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-50 max-w-[860px] mx-auto">
           <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
-            {error && (
-              <div className="bg-red-50 text-red-600 border border-red-200 rounded-xl px-4 py-3 text-sm">
-                {error}
-              </div>
-            )}
 
             {/* Title */}
             <div>

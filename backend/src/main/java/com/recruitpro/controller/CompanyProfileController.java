@@ -1,6 +1,8 @@
 package com.recruitpro.controller;
 
 import com.recruitpro.dto.response.ApiResponse;
+import com.recruitpro.dto.response.CompanyResponseDto;
+import com.recruitpro.mapper.CompanyMapper;
 import com.recruitpro.model.Company;
 import com.recruitpro.model.CompanyAddress;
 import com.recruitpro.security.UserPrincipal;
@@ -28,15 +30,17 @@ import java.util.UUID;
 public class CompanyProfileController {
 
     private final CompanyService companyService;
+    private final CompanyMapper  companyMapper;
 
     // ── Profile ──────────────────────────────────
 
     @GetMapping("/profile")
-    public ResponseEntity<ApiResponse<Company>> getProfile(
+    public ResponseEntity<ApiResponse<CompanyResponseDto>> getProfile(
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         UUID companyId = UUID.fromString(principal.getCompanyId());
-        return ResponseEntity.ok(ApiResponse.ok(companyService.findById(companyId)));
+        Company company = companyService.findById(companyId);
+        return ResponseEntity.ok(ApiResponse.ok(companyMapper.toDto(company)));
     }
 
     @PutMapping("/profile")

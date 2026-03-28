@@ -4,6 +4,7 @@ import { useJobDetail, useChangeJobStatus, useDeleteJob } from '../../hooks/useJ
 import { useApplications } from '../../hooks/useApplications';
 import { ROUTES, STATUS_LABELS, STATUS_COLORS } from '../../constants';
 import { formatDate, formatRelativeDate } from '../../utils/date';
+import { useToast } from '../../contexts/ToastContext';
 
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -13,13 +14,20 @@ export default function JobDetailPage() {
   const { data: appsData } = useApplications(id ? { jobId: id } : undefined);
   const changeStatus = useChangeJobStatus();
   const deleteJob = useDeleteJob();
+  const toast = useToast();
 
   const apps = appsData?.data || [];
 
   const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this job?')) {
-      await deleteJob.mutateAsync(id!);
-      navigate(ROUTES.JOBS);
+      try {
+        await deleteJob.mutateAsync(id!);
+        toast.success('Job deleted successfully');
+        navigate(ROUTES.JOBS);
+      } catch (err: unknown) {
+        const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || 'Failed to delete job';
+        toast.error(msg);
+      }
     }
   };
 
@@ -68,12 +76,28 @@ export default function JobDetailPage() {
               <i className="fas fa-pen" /> Edit
             </Link>
             {job.status === 'PUBLISHED' && (
-              <button className="px-4 py-2.5 bg-red-500 text-white rounded-xl text-sm font-semibold hover:bg-red-600 flex items-center gap-2" onClick={() => changeStatus.mutate({ id: id!, status: 'CLOSED' })}>
+              <button className="px-4 py-2.5 bg-red-500 text-white rounded-xl text-sm font-semibold hover:bg-red-600 flex items-center gap-2" onClick={async () => {
+                try {
+                  await changeStatus.mutateAsync({ id: id!, status: 'CLOSED' });
+                  toast.success('Job closed successfully');
+                } catch (err: unknown) {
+                  const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || 'Failed to close job';
+                  toast.error(msg);
+                }
+              }}>
                 <i className="fas fa-times-circle" /> Close Job
               </button>
             )}
             {job.status === 'DRAFT' && (
-              <button className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover flex items-center gap-2" onClick={() => changeStatus.mutate({ id: id!, status: 'PUBLISHED' })}>
+              <button className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover flex items-center gap-2" onClick={async () => {
+                try {
+                  await changeStatus.mutateAsync({ id: id!, status: 'PUBLISHED' });
+                  toast.success('Job published successfully');
+                } catch (err: unknown) {
+                  const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || 'Failed to publish job';
+                  toast.error(msg);
+                }
+              }}>
                 <i className="fas fa-rocket" /> Publish
               </button>
             )}

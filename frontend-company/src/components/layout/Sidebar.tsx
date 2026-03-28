@@ -8,6 +8,7 @@ interface SidebarProps {
   userRole: string;
   userInitials: string;
   onChangePassword: () => void;
+  onLogout: () => void;
 }
 
 const NAV_ITEMS = {
@@ -28,7 +29,21 @@ const NAV_ITEMS = {
   ],
 };
 
-export default function Sidebar({ isOpen, onToggle, userName, userRole, userInitials, onChangePassword }: SidebarProps) {
+import { useState, useRef, useEffect } from 'react';
+
+export default function Sidebar({ isOpen, onToggle, userName, userRole, userInitials, onChangePassword, onLogout }: SidebarProps) {
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
       isActive
@@ -75,19 +90,47 @@ export default function Sidebar({ isOpen, onToggle, userName, userRole, userInit
           ))}
         </nav>
 
-        <div
-          className="mx-3 mb-4 p-3 rounded-lg bg-white/5 flex items-center gap-3 cursor-pointer hover:bg-white/10 transition-colors"
-          onClick={onChangePassword}
-          title="Click to change password"
-        >
-          <div className="w-9 h-9 rounded-full bg-primary/20 text-primary flex items-center justify-center text-sm font-semibold">
-            {userInitials}
+        <div className="relative mx-3 mb-4" ref={menuRef}>
+          {showUserMenu && (
+            <div className="absolute bottom-full left-0 w-full mb-2 bg-[#2a2e39] rounded-xl shadow-xl border border-white/10 overflow-hidden z-50 animate-fade-in-up">
+              <button
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-colors"
+                onClick={() => {
+                  setShowUserMenu(false);
+                  onChangePassword();
+                }}
+              >
+                <i className="fas fa-key w-4 text-center" />
+                Change Password
+              </button>
+              <div className="h-[1px] bg-white/10" />
+              <button
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-white/5 hover:text-red-300 transition-colors"
+                onClick={() => {
+                  setShowUserMenu(false);
+                  onLogout();
+                }}
+              >
+                <i className="fas fa-sign-out-alt w-4 text-center" />
+                Logout
+              </button>
+            </div>
+          )}
+
+          <div
+            className={`p-3 rounded-lg flex items-center gap-3 cursor-pointer transition-colors ${showUserMenu ? 'bg-white/10' : 'bg-white/5 hover:bg-white/10'}`}
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            title="User Menu"
+          >
+            <div className="w-9 h-9 rounded-full bg-primary/20 text-primary flex items-center justify-center text-sm font-semibold">
+              {userInitials}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-white text-sm font-medium truncate">{userName}</div>
+              <div className="text-gray-400 text-xs truncate">{userRole}</div>
+            </div>
+            <i className={`fas fa-chevron-${showUserMenu ? 'down' : 'up'} text-gray-500 text-xs transition-transform`} />
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-white text-sm font-medium truncate">{userName}</div>
-            <div className="text-gray-400 text-xs truncate">{userRole}</div>
-          </div>
-          <i className="fas fa-key text-gray-500 text-xs" />
         </div>
       </aside>
     </>

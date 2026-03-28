@@ -76,7 +76,16 @@ public class StorageService {
      * @return The generated storage key
      */
     public String upload(String folder, String fileName, InputStream content, long size, String mimeType) {
-        String key = folder + "/" + UUID.randomUUID() + "/" + fileName;
+        // Extract original extension (e.g., ".png" or ".pdf")
+        String extension = "";
+        if (fileName != null && fileName.contains(".")) {
+            extension = fileName.substring(fileName.lastIndexOf("."));
+        }
+        
+        // Generate a completely random filename. 
+        // e.g., folder/62908f51-b8ae-4ae3-bb9f-86ee2b3149ca.png
+        String randomFileName = UUID.randomUUID().toString() + extension;
+        String key = folder + "/" + randomFileName;
 
         s3Client.putObject(
                 PutObjectRequest.builder()
@@ -131,5 +140,21 @@ public class StorageService {
         } catch (NoSuchKeyException e) {
             return false;
         }
+    }
+
+    /**
+     * Generate a public, non-expiring URL for a given object key (e.g. logos).
+     * Assumes the MinIO bucket has a public read policy.
+     */
+    public String getPublicUrl(String key) {
+        if (key == null || key.trim().isEmpty()) {
+            return null;
+        }
+        // If it's already a full URL (e.g., placeholder or external image), return it as is
+        if (key.startsWith("http://") || key.startsWith("https://")) {
+            return key;
+        }
+        
+        return "http://127.0.0.1:9000" + "/" + bucket + "/" + key;
     }
 }
