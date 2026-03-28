@@ -50,6 +50,11 @@ services:
     volumes:
       - ./frontend-jobseeker/src:/app/src
       - ./frontend-jobseeker/public:/app/public
+      - ./frontend-jobseeker/index.html:/app/index.html
+      - ./frontend-jobseeker/vite.config.ts:/app/vite.config.ts
+      - ./frontend-jobseeker/tsconfig.json:/app/tsconfig.json
+      - ./frontend-jobseeker/tailwind.config.js:/app/tailwind.config.js
+      - ./frontend-jobseeker/postcss.config.js:/app/postcss.config.js
       - frontend_js_node_modules:/app/node_modules
 
   # ── Frontend — Company (Hot Reload) ──────────
@@ -64,6 +69,11 @@ services:
     volumes:
       - ./frontend-company/src:/app/src
       - ./frontend-company/public:/app/public
+      - ./frontend-company/index.html:/app/index.html
+      - ./frontend-company/vite.config.ts:/app/vite.config.ts
+      - ./frontend-company/tsconfig.json:/app/tsconfig.json
+      - ./frontend-company/tailwind.config.js:/app/tailwind.config.js
+      - ./frontend-company/postcss.config.js:/app/postcss.config.js
       - frontend_co_node_modules:/app/node_modules
 
   # ── Frontend — Admin (Hot Reload) ────────────
@@ -78,4 +88,9 @@ services:
     volumes:
       - ./frontend-admin/src:/app/src
       - ./frontend-admin/public:/app/public
+      - ./frontend-admin/index.html:/app/index.html
+      - ./frontend-admin/vite.config.ts:/app/vite.config.ts
+      - ./frontend-admin/tsconfig.json:/app/tsconfig.json
+      - ./frontend-admin/tailwind.config.js:/app/tailwind.config.js
+      - ./frontend-admin/postcss.config.js:/app/postcss.config.js
       - frontend_ad_node_modules:/app/node_modules

@@ -3,6 +3,8 @@ package com.recruitpro.model;
 import com.recruitpro.model.enums.CompanyUserRole;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -28,7 +30,8 @@ public class Staff {
     private UUID companyId;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(nullable = false, columnDefinition = "company_user_role")
     private CompanyUserRole role;
 
     @Column(name = "created_at", nullable = false, updatable = false)

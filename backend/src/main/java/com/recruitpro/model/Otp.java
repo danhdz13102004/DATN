@@ -3,6 +3,8 @@ package com.recruitpro.model;
 import com.recruitpro.model.enums.OtpType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -27,7 +29,8 @@ public class Otp {
     private String code;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(nullable = false, columnDefinition = "otp_type")
     private OtpType type;
 
     @Column(name = "is_used", nullable = false)

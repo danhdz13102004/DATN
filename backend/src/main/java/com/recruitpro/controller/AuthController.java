@@ -3,6 +3,7 @@ package com.recruitpro.controller;
 import com.recruitpro.dto.request.*;
 import com.recruitpro.dto.response.ApiResponse;
 import com.recruitpro.dto.response.AuthResponseDto;
+import com.recruitpro.dto.response.UserInfoResponseDto;
 import com.recruitpro.security.UserPrincipal;
 import com.recruitpro.service.AuthService;
 import jakarta.validation.Valid;
@@ -65,9 +66,9 @@ public class AuthController {
 
     @PostMapping("/resend-otp")
     public ResponseEntity<ApiResponse<Map<String, String>>> resendOtp(
-            @RequestParam @Email String email
+            @RequestBody Map<String, String> body
     ) {
-        authService.resendOtp(email);
+        authService.resendOtp(body.get("email"));
         return ResponseEntity.ok(ApiResponse.ok(Map.of("message", "OTP sent successfully")));
     }
 
@@ -94,5 +95,13 @@ public class AuthController {
     ) {
         authService.changePassword(principal, request);
         return ResponseEntity.ok(ApiResponse.ok(Map.of("message", "Password changed successfully")));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<UserInfoResponseDto>> getCurrentUser(
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        UserInfoResponseDto userInfo = authService.getCurrentUser(principal);
+        return ResponseEntity.ok(ApiResponse.ok(userInfo));
     }
 }

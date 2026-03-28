@@ -1,5 +1,6 @@
 package com.recruitpro.service;
 
+import com.recruitpro.dto.response.JobSelectOptionDto;
 import com.recruitpro.exception.ForbiddenException;
 import com.recruitpro.exception.ResourceNotFoundException;
 import com.recruitpro.model.Job;
@@ -32,9 +33,12 @@ public class JobService {
      * Public job listing — only shows PUBLISHED jobs.
      */
     public Page<Job> findPublishedJobs(String keyword, JobType jobType,
-                                        ExperienceLevel experienceLevel,
+                                        java.util.Set<ExperienceLevel> experienceLevels,
                                         String location, Pageable pageable) {
-        return jobRepository.findPublishedJobs(keyword, jobType, experienceLevel, location, pageable);
+        if (experienceLevels != null && !experienceLevels.isEmpty()) {
+            return jobRepository.findPublishedJobsWithLevels(keyword, jobType, experienceLevels, location, pageable);
+        }
+        return jobRepository.findPublishedJobs(keyword, jobType, location, pageable);
     }
 
     /**
@@ -58,7 +62,10 @@ public class JobService {
     @Transactional
     public Job create(Job job, Set<UUID> skillIds, UserPrincipal principal) {
         job.setCompanyId(UUID.fromString(principal.getCompanyId()));
-        job.setStatus(JobStatus.DRAFT);
+        // Status defaults to DRAFT if not explicitly set by the controller
+        if (job.getStatus() == null) {
+            job.setStatus(JobStatus.DRAFT);
+        }
 
         if (skillIds != null && !skillIds.isEmpty()) {
             Set<Skill> skills = new HashSet<>(skillRepository.findAllById(skillIds));
@@ -66,7 +73,7 @@ public class JobService {
         }
 
         Job saved = jobRepository.save(job);
-        log.info("Job created: {} (companyId={})", saved.getTitle(), saved.getCompanyId());
+        log.info("Job created: {} (companyId={}, status={})", saved.getTitle(), saved.getCompanyId(), saved.getStatus());
         return saved;
     }
 
@@ -80,11 +87,13 @@ public class JobService {
 
         if (updates.getTitle() != null) job.setTitle(updates.getTitle());
         if (updates.getDescription() != null) job.setDescription(updates.getDescription());
-        if (updates.getExperienceLevel() != null) job.setExperienceLevel(updates.getExperienceLevel());
+        if (updates.getExperienceLevels() != null && !updates.getExperienceLevels().isEmpty())
+            job.setExperienceLevels(updates.getExperienceLevels());
         if (updates.getLocation() != null) job.setLocation(updates.getLocation());
         if (updates.getSalaryMin() != null) job.setSalaryMin(updates.getSalaryMin());
         if (updates.getSalaryMax() != null) job.setSalaryMax(updates.getSalaryMax());
         if (updates.getJobType() != null) job.setJobType(updates.getJobType());
+        if (updates.getStatus() != null) job.setStatus(updates.getStatus());
         if (updates.getCompanyAddressId() != null) job.setCompanyAddressId(updates.getCompanyAddressId());
 
         if (skillIds != null) {
@@ -119,6 +128,18 @@ public class JobService {
         job.setDeletedAt(Instant.now());
         jobRepository.save(job);
         log.info("Job soft-deleted: {} (id={})", job.getTitle(), id);
+    }
+
+    /**
+     * Lightweight job list for filter dropdowns.
+     */
+    public List<JobSelectOptionDto> getSelectOptions(UUID companyId) {
+        return jobRepository.findSelectOptionsByCompanyId(companyId).stream()
+                .map(j -> JobSelectOptionDto.builder()
+                        .id(j.getId().toString())
+                        .title(j.getTitle())
+                        .build())
+                .toList();
     }
 
     private void verifyCompanyOwnership(Job job, UserPrincipal principal) {

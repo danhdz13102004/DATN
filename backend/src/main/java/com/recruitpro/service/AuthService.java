@@ -2,14 +2,18 @@ package com.recruitpro.service;
 
 import com.recruitpro.dto.request.*;
 import com.recruitpro.dto.response.AuthResponseDto;
+import com.recruitpro.dto.response.UserInfoResponseDto;
 import com.recruitpro.exception.DuplicateResourceException;
 import com.recruitpro.exception.RateLimitException;
 import com.recruitpro.exception.ResourceNotFoundException;
 import com.recruitpro.exception.UnauthorizedException;
+import com.recruitpro.model.Company;
 import com.recruitpro.model.Otp;
+import com.recruitpro.model.Staff;
 import com.recruitpro.model.User;
 import com.recruitpro.model.enums.*;
 import com.recruitpro.cache.CacheService;
+import com.recruitpro.repository.CompanyRepository;
 import com.recruitpro.repository.OtpRepository;
 import com.recruitpro.repository.StaffRepository;
 import com.recruitpro.repository.UserRepository;
@@ -35,6 +39,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final StaffRepository staffRepository;
     private final OtpRepository otpRepository;
+    private final CompanyRepository companyRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
@@ -62,10 +67,26 @@ public class AuthService {
                 .build();
         userRepository.save(user);
 
-        // If COMPANY role, create company and staff records
-        if (role == UserRole.COMPANY && request.getCompanyName() != null) {
-            // Company creation will be done in CompanyService — for now just track the user.
-            // The company + staff setup will be handled during company onboarding flow.
+        // If COMPANY role, create company and staff (owner) records
+        if (role == UserRole.COMPANY) {
+            String companyName = (request.getCompanyName() != null && !request.getCompanyName().isBlank())
+                    ? request.getCompanyName()
+                    : request.getEmail(); // fallback to email if no name provided
+
+            Company company = Company.builder()
+                    .name(companyName)
+                    .verified(false)
+                    .build();
+            companyRepository.save(company);
+
+            Staff staff = Staff.builder()
+                    .user(user)
+                    .companyId(company.getId())
+                    .role(CompanyUserRole.OWNER)
+                    .build();
+            staffRepository.save(staff);
+
+            log.info("Company '{}' created for user: {}", companyName, user.getEmail());
         }
 
         // Generate and send verification OTP
@@ -155,13 +176,25 @@ public class AuthService {
         otp.setUsed(true);
         otpRepository.save(otp);
 
-        // If verifying account, activate user
+        // If verifying account, activate user and verify company (if applicable)
         if (type == OtpType.VERIFY_ACCOUNT) {
             User user = userRepository.findByEmail(request.getEmail())
                     .orElseThrow(() -> new ResourceNotFoundException("User not found"));
             user.setStatus(UserStatus.ACTIVE);
             user.setEmailVerifiedAt(Instant.now());
             userRepository.save(user);
+
+            // If user is a COMPANY owner, also verify the company
+            if (user.getRole() == UserRole.COMPANY) {
+                staffRepository.findByUserId(user.getId()).ifPresent(staff -> {
+                    companyRepository.findById(staff.getCompanyId()).ifPresent(company -> {
+                        company.setVerified(true);
+                        companyRepository.save(company);
+                        log.info("Company '{}' verified for user: {}", company.getName(), request.getEmail());
+                    });
+                });
+            }
+
             log.info("User verified: {}", request.getEmail());
         }
     }
@@ -237,6 +270,24 @@ public class AuthService {
         log.info("Password changed for: {}", principal.getEmail());
     }
 
+    // ── Get Current User ─────────────────────────
+
+    public UserInfoResponseDto getCurrentUser(UserPrincipal principal) {
+        UserInfoResponseDto.UserInfoResponseDtoBuilder builder = UserInfoResponseDto.builder()
+                .userId(principal.getId())
+                .email(principal.getEmail())
+                .role(principal.getRole());
+
+        if (principal.getCompanyId() != null) {
+            builder.companyId(principal.getCompanyId());
+            builder.companyRole(principal.getCompanyRole());
+            companyRepository.findById(UUID.fromString(principal.getCompanyId()))
+                    .ifPresent(company -> builder.companyName(company.getName()));
+        }
+
+        return builder.build();
+    }
+
     // ── Internal helpers ──────────────────────────
 
     private AuthResponseDto generateTokenResponse(User user) {
@@ -266,7 +317,7 @@ public class AuthService {
     }
 
     private void sendOtpInternal(String email, OtpType type) {
-        String code = String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
+        String code = "111111"; // TODO: replace with random for production: String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
 
         Otp otp = Otp.builder()
                 .email(email)

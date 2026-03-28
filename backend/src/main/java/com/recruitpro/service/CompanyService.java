@@ -112,4 +112,24 @@ public class CompanyService {
             throw new ForbiddenException("You do not have permission to manage this company's data");
         }
     }
+
+    @Transactional
+    public CompanyAddress setDefaultAddress(UUID addressId, UserPrincipal principal) {
+        CompanyAddress address = addressRepository.findById(addressId)
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found"));
+        verifyCompanyOwnership(address.getCompanyId(), principal);
+
+        // Clear all defaults for this company
+        List<CompanyAddress> allAddresses = addressRepository.findAllByCompanyId(address.getCompanyId());
+        for (CompanyAddress addr : allAddresses) {
+            if (addr.isDefault()) {
+                addr.setDefault(false);
+                addressRepository.save(addr);
+            }
+        }
+
+        // Set the target as default
+        address.setDefault(true);
+        return addressRepository.save(address);
+    }
 }

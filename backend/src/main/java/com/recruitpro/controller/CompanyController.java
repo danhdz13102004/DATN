@@ -3,34 +3,27 @@ package com.recruitpro.controller;
 import com.recruitpro.dto.response.ApiResponse;
 import com.recruitpro.dto.response.PaginationMeta;
 import com.recruitpro.model.Company;
-import com.recruitpro.model.CompanyAddress;
-import com.recruitpro.security.UserPrincipal;
 import com.recruitpro.service.CompanyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Public company-browsing endpoints (no auth required).
+ */
 @RestController
+@RequestMapping("/api/v1/companies")
 @RequiredArgsConstructor
 public class CompanyController {
 
     private final CompanyService companyService;
 
-    // ── Public ───────────────────────────────────
-
-    @GetMapping("/api/v1/companies")
+    @GetMapping
     public ResponseEntity<ApiResponse<Object>> list(@PageableDefault(size = 20) Pageable pageable) {
         Page<Company> page = companyService.findAll(pageable);
         PaginationMeta meta = PaginationMeta.builder()
@@ -41,85 +34,8 @@ public class CompanyController {
         return ResponseEntity.ok(ApiResponse.ok(page.getContent(), meta));
     }
 
-    @GetMapping("/api/v1/companies/{id}")
+    @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<Company>> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.ok(companyService.findById(id)));
-    }
-
-    // ── Company (own) ────────────────────────────
-
-    @PutMapping("/api/v1/company/profile")
-    @PreAuthorize("hasRole('COMPANY')")
-    public ResponseEntity<ApiResponse<Company>> updateProfile(
-            @AuthenticationPrincipal UserPrincipal principal,
-            @RequestBody Map<String, String> body
-    ) {
-        UUID companyId = UUID.fromString(principal.getCompanyId());
-        Company updates = Company.builder()
-                .name(body.get("name"))
-                .description(body.get("description"))
-                .website(body.get("website"))
-                .build();
-        return ResponseEntity.ok(ApiResponse.ok(companyService.updateProfile(companyId, updates)));
-    }
-
-    @PostMapping("/api/v1/company/logo")
-    @PreAuthorize("hasRole('COMPANY')")
-    public ResponseEntity<ApiResponse<Company>> uploadLogo(
-            @AuthenticationPrincipal UserPrincipal principal,
-            @RequestParam("file") MultipartFile file
-    ) throws IOException {
-        UUID companyId = UUID.fromString(principal.getCompanyId());
-        return ResponseEntity.ok(ApiResponse.ok(companyService.uploadLogo(companyId, file)));
-    }
-
-    // ── Admin ────────────────────────────────────
-
-    @PatchMapping("/api/v1/admin/companies/{id}/verify")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<Company>> verify(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.ok(companyService.verify(id)));
-    }
-
-    // ── Addresses ────────────────────────────────
-
-    @GetMapping("/api/v1/company/addresses")
-    @PreAuthorize("hasRole('COMPANY')")
-    public ResponseEntity<ApiResponse<List<CompanyAddress>>> listAddresses(
-            @AuthenticationPrincipal UserPrincipal principal
-    ) {
-        UUID companyId = UUID.fromString(principal.getCompanyId());
-        return ResponseEntity.ok(ApiResponse.ok(companyService.findAddresses(companyId)));
-    }
-
-    @PostMapping("/api/v1/company/addresses")
-    @PreAuthorize("hasRole('COMPANY')")
-    public ResponseEntity<ApiResponse<CompanyAddress>> createAddress(
-            @AuthenticationPrincipal UserPrincipal principal,
-            @RequestBody CompanyAddress address
-    ) {
-        UUID companyId = UUID.fromString(principal.getCompanyId());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(companyService.createAddress(companyId, address)));
-    }
-
-    @PutMapping("/api/v1/company/addresses/{id}")
-    @PreAuthorize("hasRole('COMPANY')")
-    public ResponseEntity<ApiResponse<CompanyAddress>> updateAddress(
-            @PathVariable UUID id,
-            @RequestBody CompanyAddress updates,
-            @AuthenticationPrincipal UserPrincipal principal
-    ) {
-        return ResponseEntity.ok(ApiResponse.ok(companyService.updateAddress(id, updates, principal)));
-    }
-
-    @DeleteMapping("/api/v1/company/addresses/{id}")
-    @PreAuthorize("hasRole('COMPANY')")
-    public ResponseEntity<ApiResponse<Map<String, String>>> deleteAddress(
-            @PathVariable UUID id,
-            @AuthenticationPrincipal UserPrincipal principal
-    ) {
-        companyService.deleteAddress(id, principal);
-        return ResponseEntity.ok(ApiResponse.ok(Map.of("message", "Address deleted")));
     }
 }

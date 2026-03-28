@@ -14,6 +14,15 @@ app:
   seed:
     enabled: ${SEED_ENABLED:true}
 
+# ── Actuator (dev) ─────────────────────────────
+management:
+  endpoint:
+    health:
+      show-details: always
+  health:
+    mail:
+      enabled: false
+
 logging:
   level:
     com.recruitpro: DEBUG

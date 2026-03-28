@@ -7,10 +7,19 @@ export const ROUTES = {
   RESET_PASSWORD: '/reset-password',
   DASHBOARD: '/dashboard',
   JOBS: '/jobs',
+  JOB_CREATE: '/jobs/create',
+  JOB_EDIT: '/jobs/:id/edit',
+  JOB_DETAIL: '/jobs/:id',
   APPLICATIONS: '/applications',
+  APPLICATION_DETAIL: '/applications/:id',
   INTERVIEWS: '/interviews',
+  INTERVIEW_SCHEDULE: '/interviews/schedule',
+  INTERVIEW_EDIT: '/interviews/:id/edit',
+  MESSAGES: '/messages',
+  NOTIFICATIONS: '/notifications',
   STAFF: '/staff',
   PROFILE: '/company/profile',
+  SUBSCRIPTIONS: '/subscriptions',
 } as const;
 
 export const AUTH_STRINGS = {
@@ -22,9 +31,9 @@ export const AUTH_STRINGS = {
   SIGNUP_SUBTITLE: 'Already have an account?',
   SIGNUP_LINK: 'Sign in',
   SIGNUP_BUTTON: 'Create Account',
-  FORGOT_TITLE: 'Forgot Password?',
-  FORGOT_SUBTITLE: 'Enter your email and we\'ll send you a reset code.',
-  FORGOT_BUTTON: 'Send Reset Code',
+  FORGOT_TITLE: 'Forgot Password? 🔐',
+  FORGOT_SUBTITLE: 'Enter the email address associated with your account and we\'ll send you a verification code.',
+  FORGOT_BUTTON: 'Send Verification Code',
   EMAIL_LABEL: 'Email Address',
   PASSWORD_LABEL: 'Password',
   CONFIRM_PASSWORD_LABEL: 'Confirm Password',
@@ -34,3 +43,34 @@ export const AUTH_STRINGS = {
   OR_CONTINUE: 'or continue with',
   REQUIRED: '*',
 } as const;
+
+export const STATUS_LABELS: Record<string, string> = {
+  DRAFT: 'Draft',
+  PUBLISHED: 'Published',
+  CLOSED: 'Closed',
+  APPLIED: 'Applied',
+  SCREENING: 'Screening',
+  INTERVIEW: 'Interview',
+  OFFER: 'Offer',
+  HIRED: 'Hired',
+  REJECTED: 'Rejected',
+  PENDING: 'Pending',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+};
+
+export const STATUS_COLORS: Record<string, string> = {
+  DRAFT: 'bg-amber-100 text-amber-700',
+  PUBLISHED: 'bg-emerald-100 text-emerald-700',
+  CLOSED: 'bg-red-100 text-red-700',
+  APPLIED: 'bg-emerald-100 text-emerald-700',
+  SCREENING: 'bg-sky-100 text-sky-700',
+  INTERVIEW: 'bg-amber-100 text-amber-700',
+  OFFER: 'bg-emerald-100 text-emerald-700',
+  HIRED: 'bg-emerald-100 text-emerald-700',
+  REJECTED: 'bg-red-100 text-red-700',
+  PENDING: 'bg-amber-100 text-amber-700',
+  COMPLETED: 'bg-emerald-100 text-emerald-700',
+  CANCELLED: 'bg-red-100 text-red-700',
+};
+

@@ -5,7 +5,9 @@ import com.recruitpro.model.enums.JobStatus;
 import com.recruitpro.model.enums.JobType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.SQLRestriction;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.HashSet;
@@ -38,9 +40,16 @@ public class Job {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+        name = "job_experience_levels",
+        joinColumns = @JoinColumn(name = "job_id")
+    )
+    @Column(name = "level", columnDefinition = "experience_level")
     @Enumerated(EnumType.STRING)
-    @Column(name = "experience_level")
-    private ExperienceLevel experienceLevel;
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Builder.Default
+    private Set<ExperienceLevel> experienceLevels = new HashSet<>();
 
     private String location;
 
@@ -51,11 +60,13 @@ public class Job {
     private Integer salaryMax;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "job_type")
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "job_type", columnDefinition = "job_type")
     private JobType jobType;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(nullable = false, columnDefinition = "job_status")
     private JobStatus status;
 
     // embedding is managed by AI service — not mapped as JPA column to avoid pgvector deps in JPA

@@ -3,14 +3,16 @@ package com.recruitpro.controller;
 import com.recruitpro.dto.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
 @RestController
+@RequestMapping("/api/v1/health")
 public class HealthController {
 
-    @GetMapping("/api/v1/health")
+    @GetMapping
     public ResponseEntity<ApiResponse<Map<String, String>>> health() {
         Map<String, String> status = Map.of(
                 "status", "UP",
