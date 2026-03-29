@@ -36,6 +36,9 @@ public class User {
     @Column(nullable = false, columnDefinition = "user_role")
     private UserRole role;
 
+    @Column(name = "full_name")
+    private String fullName;
+
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false, columnDefinition = "user_status")

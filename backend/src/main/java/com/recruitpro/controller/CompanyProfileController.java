@@ -30,6 +30,7 @@ import java.util.UUID;
 public class CompanyProfileController {
 
     private final CompanyService companyService;
+    private final com.recruitpro.service.StaffService staffService;
     private final CompanyMapper  companyMapper;
 
     // ── Profile ──────────────────────────────────
@@ -110,5 +111,41 @@ public class CompanyProfileController {
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         return ResponseEntity.ok(ApiResponse.ok(companyService.setDefaultAddress(id, principal)));
+    }
+
+    // ── Staff ────────────────────────────────────
+
+    @GetMapping("/staff")
+    public ResponseEntity<ApiResponse<List<com.recruitpro.dto.response.StaffMemberResponseDto>>> listStaff(
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(staffService.listStaff(principal)));
+    }
+
+    @PostMapping("/staff")
+    public ResponseEntity<ApiResponse<com.recruitpro.dto.response.StaffMemberResponseDto>> createStaff(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @jakarta.validation.Valid @RequestBody com.recruitpro.dto.request.CreateStaffRequestDto request
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(staffService.createStaff(principal, request)));
+    }
+
+    @PutMapping("/staff/{id}")
+    public ResponseEntity<ApiResponse<com.recruitpro.dto.response.StaffMemberResponseDto>> updateStaffName(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal,
+            @jakarta.validation.Valid @RequestBody com.recruitpro.dto.request.UpdateStaffRequestDto request
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(staffService.updateName(id, principal, request)));
+    }
+
+    @DeleteMapping("/staff/{id}")
+    public ResponseEntity<ApiResponse<Map<String, String>>> deleteStaff(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        staffService.deleteStaff(id, principal);
+        return ResponseEntity.ok(ApiResponse.ok(Map.of("message", "Staff removed")));
     }
 }

@@ -62,6 +62,7 @@ public class AuthService {
         User user = User.builder()
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .fullName(request.getFullName())
                 .role(role)
                 .status(UserStatus.PENDING_VERIFICATION)
                 .build();
@@ -273,9 +274,13 @@ public class AuthService {
     // ── Get Current User ─────────────────────────
 
     public UserInfoResponseDto getCurrentUser(UserPrincipal principal) {
+        User user = userRepository.findById(UUID.fromString(principal.getId()))
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                
         UserInfoResponseDto.UserInfoResponseDtoBuilder builder = UserInfoResponseDto.builder()
                 .userId(principal.getId())
                 .email(principal.getEmail())
+                .fullName(user.getFullName())
                 .role(principal.getRole());
 
         if (principal.getCompanyId() != null) {
@@ -303,6 +308,7 @@ public class AuthService {
                 .refreshToken(refreshToken)
                 .userId(user.getId().toString())
                 .email(user.getEmail())
+                .fullName(user.getFullName())
                 .role(user.getRole().name());
 
         // Add company context for COMPANY users

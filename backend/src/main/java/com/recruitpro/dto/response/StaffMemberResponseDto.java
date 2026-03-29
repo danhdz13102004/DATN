@@ -5,18 +5,18 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AuthResponseDto {
+public class StaffMemberResponseDto {
 
-    private String accessToken;
-    private String refreshToken;
+    private String id;
     private String userId;
     private String email;
     private String fullName;
     private String role;
-    private String companyId;
-    private String companyRole;
+    private Instant joinedAt;
 }

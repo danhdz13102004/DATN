@@ -17,6 +17,7 @@ const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'));
 
 /* Company */
 const CompanyProfilePage = lazy(() => import('./pages/company/CompanyProfilePage'));
+const StaffManagementPage = lazy(() => import('./pages/company/staff/StaffManagementPage'));
 
 /* Jobs */
 const JobsPage = lazy(() => import('./pages/jobs/JobsPage'));
@@ -68,7 +69,7 @@ function App() {
 
         <Route path={ROUTES.MESSAGES} element={<ComingSoonPage />} />
         <Route path={ROUTES.NOTIFICATIONS} element={<ComingSoonPage />} />
-        <Route path={ROUTES.STAFF} element={<ComingSoonPage />} />
+        <Route path={ROUTES.STAFF} element={<StaffManagementPage />} />
         <Route path={ROUTES.SUBSCRIPTIONS} element={<ComingSoonPage />} />
       </Route>
 
