@@ -7,9 +7,14 @@ export const ROUTES = {
   RESET_PASSWORD: '/reset-password',
   DASHBOARD: '/dashboard',
   JOBS: '/jobs',
-  PROFILE: '/profile',
-  RESUMES: '/resumes',
+  JOB_DETAIL: '/jobs/:id',
   APPLICATIONS: '/applications',
+  APPLICATION_DETAIL: '/applications/:id',
+  INTERVIEWS: '/interviews',
+  RESUMES: '/resumes',
+  PROFILE: '/profile',
+  MESSAGES: '/messages',
+  NOTIFICATIONS: '/notifications',
 } as const;
 
 export const AUTH_STRINGS = {

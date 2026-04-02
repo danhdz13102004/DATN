@@ -30,6 +30,16 @@ public class Resume {
     @Column(name = "parsed_text", columnDefinition = "TEXT")
     private String parsedText;
 
+    @Column(name = "label")
+    private String label;
+
+    @Column(name = "file_size")
+    private Long fileSize;
+
+    @Column(name = "is_primary", nullable = false)
+    @Builder.Default
+    private Boolean isPrimary = false;
+
     // embedding managed by AI service — not mapped in JPA
 
     @Column(name = "created_at", nullable = false, updatable = false)

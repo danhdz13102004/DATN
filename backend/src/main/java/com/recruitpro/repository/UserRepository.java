@@ -21,8 +21,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByEmail(String email);
 
     @Query("SELECT u FROM User u WHERE " +
-           "(:role IS NULL OR u.role = :role) AND " +
-           "(:status IS NULL OR u.status = :status)")
+           "(cast(:role as string) IS NULL OR u.role = :role) AND " +
+           "(cast(:status as string) IS NULL OR u.status = :status)")
     Page<User> findAllByFilters(
             @Param("role") UserRole role,
             @Param("status") UserStatus status,

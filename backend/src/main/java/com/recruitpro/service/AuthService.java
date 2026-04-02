@@ -8,12 +8,14 @@ import com.recruitpro.exception.RateLimitException;
 import com.recruitpro.exception.ResourceNotFoundException;
 import com.recruitpro.exception.UnauthorizedException;
 import com.recruitpro.model.Company;
+import com.recruitpro.model.JobSeeker;
 import com.recruitpro.model.Otp;
 import com.recruitpro.model.Staff;
 import com.recruitpro.model.User;
 import com.recruitpro.model.enums.*;
 import com.recruitpro.cache.CacheService;
 import com.recruitpro.repository.CompanyRepository;
+import com.recruitpro.repository.JobSeekerRepository;
 import com.recruitpro.repository.OtpRepository;
 import com.recruitpro.repository.StaffRepository;
 import com.recruitpro.repository.UserRepository;
@@ -40,6 +42,7 @@ public class AuthService {
     private final StaffRepository staffRepository;
     private final OtpRepository otpRepository;
     private final CompanyRepository companyRepository;
+    private final JobSeekerRepository jobSeekerRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
@@ -90,6 +93,15 @@ public class AuthService {
             log.info("Company '{}' created for user: {}", companyName, user.getEmail());
         }
 
+        // If JOBSEEKER role, create job_seekers profile record
+        if (role == UserRole.JOBSEEKER) {
+            JobSeeker jobSeeker = JobSeeker.builder()
+                    .user(user)
+                    .build();
+            jobSeekerRepository.save(jobSeeker);
+            log.info("Job seeker profile created for user: {}", user.getEmail());
+        }
+
         // Generate and send verification OTP
         sendOtpInternal(user.getEmail(), OtpType.VERIFY_ACCOUNT);
 
@@ -98,6 +110,7 @@ public class AuthService {
 
     // ── Login ─────────────────────────────────────
 
+    @Transactional
     public AuthResponseDto login(LoginRequestDto request) {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UnauthorizedException("Invalid email or password"));
@@ -112,6 +125,17 @@ public class AuthService {
 
         if (user.getStatus() == UserStatus.PENDING_VERIFICATION) {
             throw new UnauthorizedException("Account not verified. Please check your email for the OTP.");
+        }
+
+        // Backfill: ensure JOBSEEKER profile exists for legacy accounts
+        if (user.getRole() == UserRole.JOBSEEKER) {
+            if (jobSeekerRepository.findByUserId(user.getId()).isEmpty()) {
+                JobSeeker jobSeeker = JobSeeker.builder()
+                        .user(user)
+                        .build();
+                jobSeekerRepository.save(jobSeeker);
+                log.info("Backfilled job seeker profile on login for user: {}", user.getEmail());
+            }
         }
 
         return generateTokenResponse(user);
@@ -194,6 +218,17 @@ public class AuthService {
                         log.info("Company '{}' verified for user: {}", company.getName(), request.getEmail());
                     });
                 });
+            }
+
+            // Safety net: ensure JOBSEEKER profile exists (backfill for legacy accounts)
+            if (user.getRole() == UserRole.JOBSEEKER) {
+                if (jobSeekerRepository.findByUserId(user.getId()).isEmpty()) {
+                    JobSeeker jobSeeker = JobSeeker.builder()
+                            .user(user)
+                            .build();
+                    jobSeekerRepository.save(jobSeeker);
+                    log.info("Backfilled job seeker profile for user: {}", user.getEmail());
+                }
             }
 
             log.info("User verified: {}", request.getEmail());

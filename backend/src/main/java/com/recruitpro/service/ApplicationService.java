@@ -110,7 +110,11 @@ public class ApplicationService {
                 .aiScore(app.getAiScore())
                 .status(app.getStatus().name())
                 .hasScheduledInterview(applicationRepository.hasScheduledInterview(app.getId()))
-                .resumeUrl(app.getResumeId() != null ? "/api/v1/company/applications/" + app.getId() + "/resume" : null)
+                .resumeUrl(app.getResumeId() != null
+                        ? resumeRepository.findById(app.getResumeId())
+                                .map(r -> storageService.getPublicUrl(r.getFileUrl()))
+                                .orElse(null)
+                        : null)
                 .appliedAt(app.getCreatedAt())
                 .timeline(timeline)
                 .build();

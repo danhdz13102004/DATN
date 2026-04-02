@@ -84,24 +84,30 @@ export default function ApplicationsPage() {
                   <tr key={app.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">{app.applicantInitials}</div>
+                        <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
+                          {app.candidateName?.charAt(0)?.toUpperCase() ?? '?'}
+                        </div>
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{app.applicantName}</div>
-                          <div className="text-xs text-gray-400">{app.applicantEmail}</div>
+                          <div className="text-sm font-medium text-gray-900">{app.candidateName}</div>
+                          <div className="text-xs text-gray-400">{app.candidateEmail}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-5 py-3.5 text-sm text-gray-600">{app.jobTitle}</td>
                     <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-sm font-semibold ${app.aiScore >= 80 ? 'text-emerald-600' : app.aiScore >= 60 ? 'text-amber-500' : 'text-red-500'}`}>{app.aiScore}%</span>
-                        <div className="w-14 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${app.aiScore >= 80 ? 'bg-emerald-500' : app.aiScore >= 60 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${app.aiScore}%` }} />
+                      {app.aiScore != null ? (
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-semibold ${app.aiScore >= 80 ? 'text-emerald-600' : app.aiScore >= 60 ? 'text-amber-500' : 'text-red-500'}`}>{app.aiScore}%</span>
+                          <div className="w-14 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${app.aiScore >= 80 ? 'bg-emerald-500' : app.aiScore >= 60 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${app.aiScore}%` }} />
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        <span className="text-xs text-gray-400">N/A</span>
+                      )}
                     </td>
                     <td className="px-5 py-3.5"><span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[app.status]}`}>{STATUS_LABELS[app.status]}</span></td>
-                    <td className="px-5 py-3.5 text-sm text-gray-500">{app.appliedDate}</td>
+                    <td className="px-5 py-3.5 text-sm text-gray-500">{new Date(app.appliedAt).toLocaleDateString()}</td>
                     <td className="px-5 py-3.5">
                       <Link to={`/applications/${app.id}`} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"><i className="fas fa-eye" /></Link>
                     </td>

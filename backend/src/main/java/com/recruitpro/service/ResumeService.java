@@ -34,7 +34,7 @@ public class ResumeService {
     }
 
     @Transactional
-    public Resume upload(UUID jobSeekerId, MultipartFile file) throws IOException {
+    public Resume upload(UUID jobSeekerId, MultipartFile file, String label) throws IOException {
         String key = storageService.upload(
                 "resumes", file.getOriginalFilename(),
                 file.getInputStream(), file.getSize(), file.getContentType()
@@ -43,10 +43,12 @@ public class ResumeService {
         Resume resume = Resume.builder()
                 .jobSeekerId(jobSeekerId)
                 .fileUrl(key)
+                .label(label)
+                .fileSize(file.getSize())
                 .build();
 
         Resume saved = resumeRepository.save(resume);
-        log.info("Resume uploaded: {} (seekerId={})", saved.getId(), jobSeekerId);
+        log.info("Resume uploaded: {} (seekerId={}, label={})", saved.getId(), jobSeekerId, label);
 
         // TODO: Trigger AI service to parse text and generate embedding
 
@@ -56,6 +58,51 @@ public class ResumeService {
     public String getDownloadUrl(UUID id) {
         Resume resume = findById(id);
         return storageService.getDownloadUrl(resume.getFileUrl());
+    }
+
+    @Transactional
+    public Resume replace(UUID id, UUID jobSeekerId, MultipartFile file, String label) throws IOException {
+        Resume resume = findById(id);
+        if (!resume.getJobSeekerId().equals(jobSeekerId)) {
+            throw new ForbiddenException("You do not own this resume");
+        }
+
+        if (file != null && !file.isEmpty()) {
+            String key = storageService.upload(
+                    "resumes", file.getOriginalFilename(),
+                    file.getInputStream(), file.getSize(), file.getContentType()
+            );
+            resume.setFileUrl(key);
+            resume.setFileSize(file.getSize());
+        }
+
+        if (label != null) {
+            resume.setLabel(label);
+        }
+
+        Resume saved = resumeRepository.save(resume);
+        log.info("Resume replaced: {} (seekerId={})", id, jobSeekerId);
+        return saved;
+    }
+
+    @Transactional
+    public Resume setPrimary(UUID id, UUID jobSeekerId) {
+        Resume resume = findById(id);
+        if (!resume.getJobSeekerId().equals(jobSeekerId)) {
+            throw new ForbiddenException("You do not own this resume");
+        }
+
+        // Unset all other primary resumes for this seeker
+        List<Resume> all = resumeRepository.findAllByJobSeekerId(jobSeekerId);
+        for (Resume r : all) {
+            if (r.getIsPrimary()) {
+                r.setIsPrimary(false);
+                resumeRepository.save(r);
+            }
+        }
+
+        resume.setIsPrimary(true);
+        return resumeRepository.save(resume);
     }
 
     @Transactional

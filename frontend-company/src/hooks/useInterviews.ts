@@ -7,7 +7,8 @@ export function useInterviews(filters?: Record<string, string>) {
     queryKey: ['company', 'interviews', filters],
     queryFn: async () => {
       const { data } = await interviewService.getInterviews(filters);
-      return data.data;
+      // Backend returns { data: { items: Interview[], stats: {...} }, meta: {...} }
+      return data.data.items;
     },
   });
 }

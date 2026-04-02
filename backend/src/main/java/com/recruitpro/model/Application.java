@@ -51,6 +51,9 @@ public class Application {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    @Column(name = "cover_letter", columnDefinition = "TEXT")
+    private String coverLetter;
+
     // ── Relations (for JOIN FETCH queries) ──────
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "job_id", insertable = false, updatable = false)
@@ -59,6 +62,10 @@ public class Application {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "job_seeker_id", insertable = false, updatable = false)
     private JobSeeker jobSeeker;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "resume_id", insertable = false, updatable = false)
+    private Resume resume;
 
     @PrePersist
     protected void onCreate() {

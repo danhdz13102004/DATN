@@ -45,11 +45,12 @@ public class ResumeController {
     @PreAuthorize("hasRole('JOBSEEKER')")
     public ResponseEntity<ApiResponse<Resume>> upload(
             @AuthenticationPrincipal UserPrincipal principal,
-            @RequestParam("file") MultipartFile file
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "label", required = false) String label
     ) throws IOException {
         UUID seekerId = jobSeekerService.findByUserId(UUID.fromString(principal.getId())).getId();
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(resumeService.upload(seekerId, file)));
+                .body(ApiResponse.ok(resumeService.upload(seekerId, file, label)));
     }
 
     @GetMapping("/{id}/download")
@@ -57,6 +58,28 @@ public class ResumeController {
     public ResponseEntity<ApiResponse<Map<String, String>>> download(@PathVariable UUID id) {
         String url = resumeService.getDownloadUrl(id);
         return ResponseEntity.ok(ApiResponse.ok(Map.of("url", url)));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('JOBSEEKER')")
+    public ResponseEntity<ApiResponse<Resume>> replace(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "label", required = false) String label
+    ) throws IOException {
+        UUID seekerId = jobSeekerService.findByUserId(UUID.fromString(principal.getId())).getId();
+        return ResponseEntity.ok(ApiResponse.ok(resumeService.replace(id, seekerId, file, label)));
+    }
+
+    @PatchMapping("/{id}/primary")
+    @PreAuthorize("hasRole('JOBSEEKER')")
+    public ResponseEntity<ApiResponse<Resume>> setPrimary(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        UUID seekerId = jobSeekerService.findByUserId(UUID.fromString(principal.getId())).getId();
+        return ResponseEntity.ok(ApiResponse.ok(resumeService.setPrimary(id, seekerId)));
     }
 
     @DeleteMapping("/{id}")

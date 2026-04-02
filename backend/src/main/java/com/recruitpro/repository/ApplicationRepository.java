@@ -23,9 +23,9 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
         JOIN js.user u
         WHERE j.companyId = :companyId
           AND a.deletedAt IS NULL
-          AND (:status IS NULL OR a.status = :status)
-          AND (:jobId IS NULL OR a.jobId = :jobId)
-          AND (:search IS NULL OR :search = '' OR LOWER(u.email) LIKE LOWER(CONCAT('%', :search, '%')))
+          AND (cast(:status as string) IS NULL OR a.status = :status)
+          AND (cast(:jobId as string) IS NULL OR a.jobId = :jobId)
+          AND (cast(:search as string) IS NULL OR :search = '' OR LOWER(u.email) LIKE LOWER(CONCAT('%', cast(:search as string), '%')))
         ORDER BY a.createdAt DESC
     """)
     Page<Application> findByCompanyFilters(
@@ -77,4 +77,49 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
         ORDER BY a.createdAt DESC
     """)
     List<Application> findSelectOptionsByCompanyId(@Param("companyId") UUID companyId);
+
+    // ── Job Seeker scoped queries ──────────────────────
+
+    @Query("""
+        SELECT a FROM Application a
+        JOIN FETCH a.job j
+        WHERE a.jobSeekerId = :seekerId
+          AND a.deletedAt IS NULL
+          AND (cast(:status as string) IS NULL OR a.status = :status)
+          AND (cast(:search as string) IS NULL OR :search = '' OR LOWER(j.title) LIKE LOWER(CONCAT('%', cast(:search as string), '%')))
+        ORDER BY a.createdAt DESC
+    """)
+    Page<Application> findByJobSeekerIdFilters(
+            @Param("seekerId") UUID seekerId,
+            @Param("status") ApplicationStatus status,
+            @Param("search") String search,
+            Pageable pageable
+    );
+
+    @Query("""
+        SELECT a FROM Application a
+        JOIN FETCH a.job j
+        LEFT JOIN FETCH j.skills
+        WHERE a.id = :id AND a.jobSeekerId = :seekerId AND a.deletedAt IS NULL
+    """)
+    Optional<Application> findDetailByIdAndJobSeekerId(
+            @Param("id") UUID id,
+            @Param("seekerId") UUID seekerId
+    );
+
+    @Query("SELECT COUNT(a) FROM Application a WHERE a.jobSeekerId = :seekerId AND a.status = :status AND a.deletedAt IS NULL")
+    long countByJobSeekerIdAndStatus(@Param("seekerId") UUID seekerId, @Param("status") ApplicationStatus status);
+
+    @Query("SELECT COUNT(a) FROM Application a WHERE a.jobSeekerId = :seekerId AND a.deletedAt IS NULL")
+    long countByJobSeekerId(@Param("seekerId") UUID seekerId);
+
+    boolean existsByJobIdAndJobSeekerIdAndDeletedAtIsNull(UUID jobId, UUID jobSeekerId);
+
+    @Query("""
+        SELECT a FROM Application a
+        JOIN FETCH a.job j
+        WHERE a.jobSeekerId = :seekerId AND a.deletedAt IS NULL
+        ORDER BY a.createdAt DESC
+    """)
+    Page<Application> findRecentByJobSeekerId(@Param("seekerId") UUID seekerId, Pageable pageable);
 }

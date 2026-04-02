@@ -2,14 +2,15 @@ export type ApplicationStatus = 'APPLIED' | 'SCREENING' | 'INTERVIEW' | 'OFFER' 
 
 export interface Application {
   id: string;
-  applicantName: string;
-  applicantEmail: string;
-  applicantInitials: string;
+  candidateName: string;
+  candidateEmail: string;
+  candidateAvatar: string | null;
   jobId: string;
   jobTitle: string;
-  aiScore: number;
+  aiScore: number | null;
   status: ApplicationStatus;
-  appliedDate: string;
+  hasScheduledInterview: boolean;
+  appliedAt: string;
 }
 
 export interface ApplicationDetail {

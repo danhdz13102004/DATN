@@ -1,12 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { applicationService } from '../services/applicationService';
+import type { Application, ApplicationStats } from '../types/application';
 
 export function useApplications(filters?: Record<string, string>) {
   return useQuery({
     queryKey: ['company', 'applications', filters],
     queryFn: async () => {
       const { data } = await applicationService.getApplications(filters);
-      return data;
+      // API shape: { success, data: { stats: {}, items: [] }, meta: {} }
+      const payload = data?.data as any;
+      const list: Application[] = Array.isArray(payload?.items) ? payload.items : [];
+      const stats: ApplicationStats | undefined = payload?.stats;
+      return { data: list, stats };
     },
   });
 }

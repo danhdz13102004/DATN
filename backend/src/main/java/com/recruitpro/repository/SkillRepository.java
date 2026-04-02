@@ -12,5 +12,7 @@ public interface SkillRepository extends JpaRepository<Skill, UUID> {
 
     Optional<Skill> findByName(String name);
 
+    Optional<Skill> findByNameIgnoreCase(String name);
+
     boolean existsByName(String name);
 }

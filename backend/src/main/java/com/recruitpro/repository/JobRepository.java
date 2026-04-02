@@ -20,9 +20,9 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
     Page<Job> findAllByCompanyId(UUID companyId, Pageable pageable);
 
     @Query("SELECT DISTINCT j FROM Job j WHERE j.status = 'PUBLISHED' AND " +
-           "(:keyword IS NULL OR LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
-           "(:jobType IS NULL OR j.jobType = :jobType) AND " +
-           "(:location IS NULL OR LOWER(j.location) LIKE LOWER(CONCAT('%', :location, '%')))")
+           "(cast(:keyword as string) IS NULL OR LOWER(j.title) LIKE LOWER(CONCAT('%', cast(:keyword as string), '%'))) AND " +
+           "(cast(:jobType as string) IS NULL OR j.jobType = :jobType) AND " +
+           "(cast(:location as string) IS NULL OR LOWER(j.location) LIKE LOWER(CONCAT('%', cast(:location as string), '%')))")
     Page<Job> findPublishedJobs(
             @Param("keyword") String keyword,
             @Param("jobType") JobType jobType,
@@ -31,10 +31,10 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
     );
 
     @Query("SELECT DISTINCT j FROM Job j JOIN j.experienceLevels el WHERE j.status = 'PUBLISHED' AND " +
-           "(:keyword IS NULL OR LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
-           "(:jobType IS NULL OR j.jobType = :jobType) AND " +
+           "(cast(:keyword as string) IS NULL OR LOWER(j.title) LIKE LOWER(CONCAT('%', cast(:keyword as string), '%'))) AND " +
+           "(cast(:jobType as string) IS NULL OR j.jobType = :jobType) AND " +
            "el IN :experienceLevels AND " +
-           "(:location IS NULL OR LOWER(j.location) LIKE LOWER(CONCAT('%', :location, '%')))")
+           "(cast(:location as string) IS NULL OR LOWER(j.location) LIKE LOWER(CONCAT('%', cast(:location as string), '%')))")
     Page<Job> findPublishedJobsWithLevels(
             @Param("keyword") String keyword,
             @Param("jobType") JobType jobType,

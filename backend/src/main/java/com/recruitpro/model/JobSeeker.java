@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
@@ -33,6 +35,15 @@ public class JobSeeker {
 
     @Column(name = "experience_years")
     private Integer experienceYears;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "job_seeker_skills",
+        joinColumns = @JoinColumn(name = "job_seeker_id"),
+        inverseJoinColumns = @JoinColumn(name = "skill_id")
+    )
+    @Builder.Default
+    private Set<Skill> skills = new HashSet<>();
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

@@ -1,6 +1,7 @@
 package com.recruitpro.repository;
 
 import com.recruitpro.model.JobSeeker;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -11,4 +12,7 @@ import java.util.UUID;
 public interface JobSeekerRepository extends JpaRepository<JobSeeker, UUID> {
 
     Optional<JobSeeker> findByUserId(UUID userId);
+
+    @EntityGraph(attributePaths = {"user", "skills"})
+    Optional<JobSeeker> findWithGraphByUserId(UUID userId);
 }

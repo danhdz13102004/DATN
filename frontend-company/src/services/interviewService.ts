@@ -4,7 +4,8 @@ import type { Interview, InterviewFormData } from '../types/interview';
 
 export const interviewService = {
   getInterviews: (params?: Record<string, string>) =>
-    api.get<ApiResponse<Interview[]>>('/company/interviews', { params }),
+    // Backend returns { data: { items: Interview[], stats: {...} }, meta: PaginationMeta }
+    api.get<ApiResponse<{ items: Interview[]; stats: unknown }>>('/company/interviews', { params }),
 
   getInterviewDetail: (id: string) =>
     api.get<ApiResponse<Interview>>(`/company/interviews/${id}`),
