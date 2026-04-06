@@ -74,6 +74,12 @@ Enum message_type {
   FILE
 }
 
+Enum message_status {
+  SENT
+  DELIVERED
+  READ
+}
+
 Enum audit_action {
   CREATE
   UPDATE
@@ -233,30 +239,74 @@ Table interviews {
 
 Table conversations {
   id uuid [pk]
-  job_id uuid
-  company_user_id uuid
-  jobseeker_id uuid
-  created_at timestamptz
+  application_id uuid [not null]       // tied to a specific job application
+  staff_id uuid [not null]             // staff member who initiated
+  job_seeker_id uuid [not null]        // job seeker in the conversation
+  is_initiated boolean [default: false] // true once staff sends first message
+  created_at timestamptz [not null]
+  updated_at timestamptz               // updated on each new message
+
+  indexes {
+    (application_id) [name: 'idx_conversations_application_id']
+    (staff_id) [name: 'idx_conversations_staff_id']
+    (job_seeker_id) [name: 'idx_conversations_job_seeker_id']
+    (application_id, staff_id, job_seeker_id) [unique, name: 'uq_conversations_participants']
+  }
 }
 
 Table messages {
   id uuid [pk]
-  conversation_id uuid
-  sender_id uuid            // references users.id — single source of truth; staff resolved via staff.user_id
-  message text
-  type message_type
-  created_at timestamptz
+  conversation_id uuid [not null]
+  sender_id uuid [not null]            // references users.id
+  content text                         // nullable for FILE type messages
+  type message_type [not null]
+  file_url varchar                     // presigned MinIO GET URL (FILE type only)
+  file_name varchar                    // original file name (FILE type only)
+  file_size_bytes bigint               // file size in bytes (FILE type only)
+  idempotency_key varchar [unique]     // client-generated UUID — prevents duplicate messages
+  status message_status [default: 'SENT']
+  created_at timestamptz [not null]
+  // hard delete per DB rules (transient data)
+
+  indexes {
+    (conversation_id) [name: 'idx_messages_conversation_id']
+    (sender_id) [name: 'idx_messages_sender_id']
+    (conversation_id, created_at) [name: 'idx_messages_conversation_created_at']
+    (idempotency_key) [unique, name: 'uq_messages_idempotency_key']
+  }
+}
+
+// Tracks per-user read position within a conversation
+Table message_reads {
+  id uuid [pk]
+  conversation_id uuid [not null]
+  user_id uuid [not null]              // the reader
+  last_read_message_id uuid [not null] // last message they've seen
+  read_at timestamptz [not null]
+
+  indexes {
+    (conversation_id, user_id) [unique, name: 'uq_message_reads_conv_user']
+    (conversation_id) [name: 'idx_message_reads_conversation_id']
+  }
 }
 
 Table notifications {
   id uuid [pk]
-  user_id uuid
-  type notification_type
-  content text
-  is_read boolean
-  reference_id uuid         // nullable — FK to the triggering entity
-  reference_type varchar    // e.g. "application", "interview", "message"
-  created_at timestamptz
+  user_id uuid [not null]
+  type notification_type [not null]
+  title varchar [not null]             // short notification title for display
+  content text [not null]
+  is_read boolean [default: false]
+  reference_id uuid                    // nullable FK to triggering entity
+  reference_type varchar               // "application" | "message" | "interview"
+  created_at timestamptz [not null]
+  // hard delete per DB rules (transient data)
+
+  indexes {
+    (user_id, is_read) [name: 'idx_notifications_user_is_read']
+    (user_id, created_at) [name: 'idx_notifications_user_created_at']
+    (user_id) [name: 'idx_notifications_user_id']
+  }
 }
 
 Table plans {
@@ -359,12 +409,16 @@ Ref: applications.resume_id > resumes.id
 Ref: interviews.application_id > applications.id
 Ref: interviews.interviewer_id > staff.id
 
-Ref: conversations.job_id > jobs.id
-Ref: conversations.company_user_id > staff.id
-Ref: conversations.jobseeker_id > job_seekers.id
+Ref: conversations.application_id > applications.id
+Ref: conversations.staff_id > staff.id
+Ref: conversations.job_seeker_id > job_seekers.id
 
 Ref: messages.conversation_id > conversations.id
 Ref: messages.sender_id > users.id
+
+Ref: message_reads.conversation_id > conversations.id
+Ref: message_reads.user_id > users.id
+Ref: message_reads.last_read_message_id > messages.id
 
 Ref: notifications.user_id > users.id
 

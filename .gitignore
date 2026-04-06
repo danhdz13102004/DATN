@@ -43,3 +43,6 @@ desktop.ini
 
 # MinIO data (local)
 minio_data/
+
+# ML model artifacts (too large for git — use DVC or manual copy)
+ai-service/models/

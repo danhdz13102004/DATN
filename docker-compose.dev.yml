@@ -7,6 +7,7 @@ volumes:
   frontend_js_node_modules:
   frontend_co_node_modules:
   frontend_ad_node_modules:
+  # ai_models named volume removed in dev — using bind mount instead
 
 services:
 
@@ -37,6 +38,7 @@ services:
       - "${AI_SERVICE_PORT:-8000}:8000"
     volumes:
       - ./ai-service/app:/app/app
+      - ./ai-service/models:/app/models   # bind-mount: drop model files here to load them
 
   # ── Frontend — Job Seeker (Hot Reload) ───────
   frontend-jobseeker:

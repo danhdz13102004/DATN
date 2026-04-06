@@ -3,9 +3,28 @@ uvicorn[standard]==0.27.1
 pydantic==2.6.1
 pydantic-settings==2.1.0
 sentence-transformers==2.3.1
+# Pin transformers/tokenizers compatible with torch==2.1.2
+# (newer transformers uses register_pytree_node removed in torch 2.1.x)
+transformers==4.37.2
+tokenizers==0.15.2
 psycopg2-binary==2.9.9
 redis==5.0.1
 numpy==1.26.4
 httpx==0.26.0
 pytest==7.4.4
 pytest-asyncio==0.23.4
+
+
+# ── PyTorch (CPU-only) ─────────────────────────────────────────────────────────
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.1.2+cpu
+torchvision==0.16.2+cpu
+
+# ── PyTorch Geometric (graph neural networks) ──────────────────────────────────
+# torch-geometric core (pure Python, from PyPI)
+torch-geometric==2.4.0
+# Pre-compiled C++ extensions — must match torch version and platform
+--find-links https://data.pyg.org/whl/torch-2.1.2+cpu.html
+torch-scatter
+torch-sparse
+torch-cluster

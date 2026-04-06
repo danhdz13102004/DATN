@@ -113,6 +113,22 @@ public class StorageService {
     }
 
     /**
+     * Download a stored object and return its raw bytes.
+     * Used for server-side processing (e.g. PDF text extraction).
+     *
+     * @param key Storage key returned by {@link #upload}
+     * @return File contents as a byte array
+     */
+    public byte[] downloadAsBytes(String key) {
+        return s3Client.getObjectAsBytes(
+                GetObjectRequest.builder()
+                        .bucket(bucket)
+                        .key(key)
+                        .build()
+        ).asByteArray();
+    }
+
+    /**
      * Delete a file by key.
      */
     public void delete(String key) {

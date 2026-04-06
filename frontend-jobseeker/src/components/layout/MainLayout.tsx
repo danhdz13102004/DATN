@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
@@ -38,7 +38,13 @@ export default function MainLayout() {
       <div style={{ marginLeft: isLg ? '260px' : 0 }}>
         <Topbar onMenuClick={() => setSidebarOpen(true)} />
         <main style={{ padding: '32px' }}>
-          <Outlet />
+          <Suspense fallback={
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+              <div className="w-8 h-8 border-[3px] border-solid border-primary/20 border-t-primary rounded-full animate-spin"></div>
+            </div>
+          }>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
 

@@ -15,27 +15,31 @@ export interface Application {
 
 export interface ApplicationDetail {
   id: string;
-  applicantName: string;
-  applicantEmail: string;
-  applicantInitials: string;
-  applicantLocation: string;
-  applicantExperience: string;
-  bio: string;
-  resumeContent: string;
-  resumeSkills: string[];
+  // Candidate info — matches backend candidateName / candidateEmail etc.
+  candidateName: string;
+  candidateEmail: string;
+  candidateAvatar: string | null;
+  candidateLocation: string | null;
+  candidateExperienceYears: number | null;
+  candidateBio: string | null;
+  // Job info
   jobId: string;
   jobTitle: string;
-  aiScore: number;
-  aiScoreDescription: string;
+  // Scoring & status
+  aiScore: number | null;
   status: ApplicationStatus;
-  appliedDate: string;
+  hasScheduledInterview: boolean;
+  // Resume
+  resumeUrl: string | null;
+  // Dates
+  appliedAt: string;
   timeline: ApplicationTimelineEntry[];
 }
 
 export interface ApplicationTimelineEntry {
-  event: string;
+  type: string;
+  description: string;
   timestamp: string;
-  color: string;
 }
 
 export interface ApplicationStats {

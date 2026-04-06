@@ -1,6 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../store/authStore';
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { ROUTES } from '../../constants';
 
 const PAGE_TITLES: Record<string, string> = {
@@ -30,10 +29,7 @@ const BTN_STYLE: React.CSSProperties = {
 export default function Topbar({ onMenuClick }: TopbarProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const logout = useAuthStore((s) => s.logout);
-  const [showMenu, setShowMenu] = useState(false);
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
 
   const isJobDetail = location.pathname.startsWith('/jobs/') && location.pathname !== '/jobs';
   const isAppDetail = location.pathname.startsWith('/applications/') && location.pathname !== '/applications';
@@ -45,18 +41,6 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
     return 'Dashboard';
   };
 
-  useEffect(() => {
-    const handle = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setShowMenu(false);
-    };
-    document.addEventListener('mousedown', handle);
-    return () => document.removeEventListener('mousedown', handle);
-  }, []);
-
-  const handleLogout = () => {
-    logout();
-    window.location.href = '/login';
-  };
 
   const btnStyle = (id: string): React.CSSProperties => ({
     ...BTN_STYLE,

@@ -1,19 +1,53 @@
-"""Model registry — singleton model store loaded once at startup."""
+"""Model registry — singleton model store loaded once at startup via FastAPI lifespan."""
 
 import logging
+import os
+import time
+from typing import Any, Dict, Optional
+
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch_geometric.nn import SAGEConv
+from sentence_transformers import SentenceTransformer
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+EMBEDDING_DIM = 768
+
+
+# ── GraphSAGE architecture (must match training config) ───────────────────────
+
+class GraphSAGE_Recommender(nn.Module):
+    def __init__(self, in_channels: int, hidden_channels: int):
+        super().__init__()
+        self.conv1 = SAGEConv(in_channels, hidden_channels)
+        self.conv2 = SAGEConv(hidden_channels, hidden_channels)
+
+    def forward(self, x: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
+        x0 = x
+        x  = self.conv1(x, edge_index)
+        x  = F.relu(x)
+        x  = F.dropout(x, p=0.1, training=self.training)
+        x  = self.conv2(x, edge_index)
+        x  = x + x0
+        return F.normalize(x, p=2, dim=1)
+
+
+# ── Registry ──────────────────────────────────────────────────────────────────
 
 class ModelRegistry:
-    """Holds loaded ML models. Loaded once at startup via FastAPI lifespan."""
+    """Holds all loaded ML models. Loaded once at startup, shared across requests."""
 
     def __init__(self):
-        self._models = {}
-        self._is_loaded = False
-        self._version = settings.model_version
+        self._models:    Dict[str, Any] = {}
+        self._is_loaded: bool           = False
+        self._version:   str            = settings.model_version
+        self._device:    torch.device   = torch.device(
+            "cuda" if torch.cuda.is_available() else "cpu"
+        )
 
     @property
     def version(self) -> str:
@@ -23,37 +57,87 @@ class ModelRegistry:
     def is_loaded(self) -> bool:
         return self._is_loaded
 
-    def load_models(self):
-        """Load all ML models from configured path."""
-        import time
+    @property
+    def device(self) -> torch.device:
+        return self._device
 
+    def load_models(self):
+        """Load GraphSAGE + NLP models from configured paths.
+
+        In development, missing model artifacts are logged as warnings and the
+        service continues to start (is_loaded stays False). In production you
+        should ensure the model volume is properly mounted before starting.
+        """
         start = time.time()
         logger.info(
-            "Loading models from %s (version: %s)", settings.model_path, self._version
+            "Loading models from '%s' (version: %s, device: %s)",
+            settings.model_path, self._version, self._device,
         )
 
-        try:
-            # Placeholder — actual model loading will be implemented in Phase 3
-            # from sentence_transformers import SentenceTransformer
-            # self._models["embedder"] = SentenceTransformer("all-MiniLM-L6-v2")
-            self._is_loaded = True
-            elapsed = time.time() - start
-            logger.info("Models loaded successfully in %.2fs", elapsed)
-        except Exception as e:
-            logger.error("Failed to load models: %s", str(e))
+        graphsage_path = os.path.join(settings.model_path, "graphsage_recommender.pt")
+        nlp_path       = os.path.join(settings.model_path, "finetuned_mpnet_job_matcher")
+
+        # ── Validate paths exist ──────────────────────────────────────────────
+        nlp_missing       = not os.path.exists(nlp_path)
+        graphsage_missing = not os.path.exists(graphsage_path)
+
+        if nlp_missing or graphsage_missing:
+            if nlp_missing:
+                logger.warning(
+                    "Fine-tuned NLP model not found at '%s'. "
+                    "Set AI_SERVICE_MODEL_PATH and mount the models volume. "
+                    "Service will start in DEGRADED mode — inference endpoints will return 503.",
+                    nlp_path,
+                )
+            if graphsage_missing:
+                logger.warning(
+                    "GraphSAGE checkpoint not found at '%s'. "
+                    "Set AI_SERVICE_MODEL_PATH and mount the models volume. "
+                    "Service will start in DEGRADED mode — inference endpoints will return 503.",
+                    graphsage_path,
+                )
             self._is_loaded = False
+            return
+
+        # ── Load NLP (SentenceTransformer) ────────────────────────────────────
+        logger.info("Loading NLP model from '%s' ...", nlp_path)
+        self._models["nlp"] = SentenceTransformer(nlp_path, device=str(self._device))
+        logger.info("NLP model loaded.")
+
+        # ── Load GraphSAGE ────────────────────────────────────────────────────
+        logger.info("Loading GraphSAGE checkpoint from '%s' ...", graphsage_path)
+        checkpoint = torch.load(graphsage_path, map_location=self._device)
+        gs_model = GraphSAGE_Recommender(
+            in_channels=EMBEDDING_DIM,
+            hidden_channels=EMBEDDING_DIM,
+        ).to(self._device)
+        gs_model.load_state_dict(checkpoint["model_state_dict"])
+        gs_model.eval()
+        self._models["graphsage"] = gs_model
+
+        elapsed = time.time() - start
+        logger.info(
+            "All models loaded in %.2fs — num_users=%s, num_items=%s",
+            elapsed,
+            checkpoint.get("num_users"),
+            checkpoint.get("num_items"),
+        )
+        self._is_loaded = True
 
     def unload_models(self):
-        """Cleanup model resources."""
+        """Release model resources on shutdown."""
         self._models.clear()
         self._is_loaded = False
-        logger.info("Models unloaded")
+        logger.info("Models unloaded.")
 
-    def get(self, name: str):
-        """Retrieve a loaded model by name."""
+    def get(self, name: str) -> Any:
+        """Retrieve a loaded model by name ('nlp' or 'graphsage')."""
         if not self._is_loaded:
-            raise RuntimeError("Models not yet loaded")
-        return self._models.get(name)
+            raise RuntimeError("Models are not yet loaded.")
+        model = self._models.get(name)
+        if model is None:
+            raise KeyError(f"No model registered under name '{name}'.")
+        return model
 
 
 model_registry = ModelRegistry()

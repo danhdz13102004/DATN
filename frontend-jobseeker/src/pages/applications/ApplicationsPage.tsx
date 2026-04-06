@@ -43,10 +43,10 @@ export default function ApplicationsPage() {
   const formatDate = (iso: string) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   const statCards = [
-    { label: 'Total Applied', value: stats?.totalApplied ?? 0, icon: 'fa-paper-plane', color: 'blue' },
-    { label: 'In Screening', value: stats?.inScreening ?? 0, icon: 'fa-search', color: 'orange' },
-    { label: 'Interview', value: stats?.inInterview ?? 0, icon: 'fa-calendar-check', color: 'purple' },
-    { label: 'Offers', value: stats?.offers ?? 0, icon: 'fa-trophy', color: 'green' },
+    { label: 'Total Applied', value: stats?.totalApplied ?? 0, icon: 'fa-paper-plane', color: 'blue' as const },
+    { label: 'In Screening', value: stats?.inScreening ?? 0, icon: 'fa-search', color: 'orange' as const },
+    { label: 'Interview', value: stats?.inInterview ?? 0, icon: 'fa-calendar-check', color: 'purple' as const },
+    { label: 'Offers', value: stats?.offers ?? 0, icon: 'fa-trophy', color: 'green' as const },
   ];
 
   return (

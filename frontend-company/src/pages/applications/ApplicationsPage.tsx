@@ -3,7 +3,7 @@ import { Link, useOutletContext } from 'react-router-dom';
 import Topbar from '../../components/layout/Topbar';
 import { useApplications } from '../../hooks/useApplications';
 import { useJobSelectOptions } from '../../hooks/useJobs';
-import { STATUS_LABELS, STATUS_COLORS } from '../../constants';
+import { ROUTES, STATUS_LABELS, STATUS_COLORS } from '../../constants';
 
 export default function ApplicationsPage() {
   const { onMenuToggle } = useOutletContext<{ onMenuToggle: () => void }>();
@@ -69,7 +69,7 @@ export default function ApplicationsPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-50">
-                {['Applicant', 'Job Position', 'AI Score', 'Status', 'Applied', ''].map((h) => (
+                {['Applicant', 'Job Position', 'AI Score', 'Status', 'Applied', 'Actions'].map((h) => (
                   <th key={h} className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-3">{h}</th>
                 ))}
               </tr>
@@ -109,7 +109,22 @@ export default function ApplicationsPage() {
                     <td className="px-5 py-3.5"><span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[app.status]}`}>{STATUS_LABELS[app.status]}</span></td>
                     <td className="px-5 py-3.5 text-sm text-gray-500">{new Date(app.appliedAt).toLocaleDateString()}</td>
                     <td className="px-5 py-3.5">
-                      <Link to={`/applications/${app.id}`} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600"><i className="fas fa-eye" /></Link>
+                      <div className="flex items-center gap-1">
+                        <Link
+                          to={`/applications/${app.id}`}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                          title="View Detail"
+                        >
+                          <i className="fas fa-eye" />
+                        </Link>
+                        <Link
+                          to={`${ROUTES.INTERVIEW_SCHEDULE}?applicationId=${app.id}`}
+                          className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors"
+                          title="Schedule Interview"
+                        >
+                          <i className="fas fa-calendar-plus" />
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))

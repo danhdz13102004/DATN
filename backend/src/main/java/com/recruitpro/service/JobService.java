@@ -28,6 +28,7 @@ public class JobService {
 
     private final JobRepository jobRepository;
     private final SkillRepository skillRepository;
+    private final AiServiceClient aiServiceClient;
 
     /**
      * Public job listing — only shows PUBLISHED jobs.
@@ -74,6 +75,12 @@ public class JobService {
 
         Job saved = jobRepository.save(job);
         log.info("Job created: {} (companyId={}, status={})", saved.getTitle(), saved.getCompanyId(), saved.getStatus());
+
+        // Async: register job node in AI graph if already published at creation time
+        if (saved.getStatus() == JobStatus.PUBLISHED) {
+            aiServiceClient.addJobNode(saved.getId(), buildJobText(saved));
+        }
+
         return saved;
     }
 
@@ -114,7 +121,14 @@ public class JobService {
 
         job.setStatus(newStatus);
         log.info("Job status changed: {} → {} (id={})", job.getStatus(), newStatus, id);
-        return jobRepository.save(job);
+        Job saved = jobRepository.save(job);
+
+        // Async: register job node in AI graph when first published
+        if (newStatus == JobStatus.PUBLISHED) {
+            aiServiceClient.addJobNode(saved.getId(), buildJobText(saved));
+        }
+
+        return saved;
     }
 
     /**
@@ -147,5 +161,19 @@ public class JobService {
             !job.getCompanyId().toString().equals(principal.getCompanyId())) {
             throw new ForbiddenException("You do not have permission to manage this job");
         }
+    }
+
+    /**
+     * Builds a combined text representation of a job for AI embedding.
+     * Concatenates title, description, and skill names for richer semantics.
+     */
+    private String buildJobText(Job job) {
+        StringBuilder sb = new StringBuilder();
+        if (job.getTitle() != null)       sb.append(job.getTitle()).append(". ");
+        if (job.getDescription() != null) sb.append(job.getDescription()).append(" ");
+        if (job.getSkills() != null) {
+            job.getSkills().forEach(s -> sb.append(s.getName()).append(" "));
+        }
+        return sb.toString().trim();
     }
 }

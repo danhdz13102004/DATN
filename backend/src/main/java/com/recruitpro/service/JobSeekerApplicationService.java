@@ -38,6 +38,7 @@ public class JobSeekerApplicationService {
     private final ResumeRepository resumeRepository;
     private final CompanyRepository companyRepository;
     private final InterviewRepository interviewRepository;
+    private final AiServiceClient aiServiceClient;
 
     public Page<JobSeekerApplicationListItemDto> listForSeeker(
             UUID seekerId, ApplicationStatus status, String search, Pageable pageable) {
@@ -200,6 +201,10 @@ public class JobSeekerApplicationService {
 
         Application saved = applicationRepository.save(application);
         log.info("Job seeker {} applied to job {} with resume {}", seekerId, jobId, resumeId);
+
+        // Async: register application edge in AI graph (resume → job)
+        aiServiceClient.registerApplication(resumeId, jobId);
+
         return saved;
     }
 

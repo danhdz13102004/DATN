@@ -9,6 +9,7 @@ volumes:
   postgres_data:
   redis_data:
   minio_data:
+  ai_models:
 
 services:
 
@@ -152,6 +153,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
+    volumes:
+      - ai_models:/app/models
     depends_on:
       db:
         condition: service_healthy

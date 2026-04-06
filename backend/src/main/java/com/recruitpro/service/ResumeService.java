@@ -23,6 +23,7 @@ public class ResumeService {
 
     private final ResumeRepository resumeRepository;
     private final StorageService storageService;
+    private final ResumePdfParser resumePdfParser;
 
     public List<Resume> findByJobSeekerId(UUID jobSeekerId) {
         return resumeRepository.findAllByJobSeekerId(jobSeekerId);
@@ -50,7 +51,11 @@ public class ResumeService {
         Resume saved = resumeRepository.save(resume);
         log.info("Resume uploaded: {} (seekerId={}, label={})", saved.getId(), jobSeekerId, label);
 
-        // TODO: Trigger AI service to parse text and generate embedding
+        // Async: download the PDF from MinIO, extract text with PDFBox,
+        // persist parsedText, then register the node in the AI graph.
+        // This runs in a background thread — the HTTP response returns immediately.
+        String fallback = (label != null && !label.isBlank()) ? label : "resume";
+        resumePdfParser.extractAndRegister(saved.getId(), key, fallback);
 
         return saved;
     }
