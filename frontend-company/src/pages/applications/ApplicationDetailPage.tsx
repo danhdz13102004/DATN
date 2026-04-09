@@ -1,6 +1,8 @@
-import { Link, useParams, useOutletContext } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useParams, useOutletContext, useNavigate } from 'react-router-dom';
 import Topbar from '../../components/layout/Topbar';
 import { useApplicationDetail, useUpdateApplicationStatus } from '../../hooks/useApplications';
+import { chatService } from '../../services/chatService';
 import { ROUTES, STATUS_LABELS, STATUS_COLORS } from '../../constants';
 import type { ApplicationStatus } from '../../types/application';
 
@@ -46,8 +48,23 @@ function getFileType(url: string): 'pdf' | 'docx' | 'image' | 'other' {
 export default function ApplicationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { onMenuToggle } = useOutletContext<{ onMenuToggle: () => void }>();
+  const navigate = useNavigate();
   const { data: app, isLoading } = useApplicationDetail(id || '');
   const updateStatus = useUpdateApplicationStatus();
+  const [messagingLoading, setMessagingLoading] = useState(false);
+
+  const handleStartConversation = async () => {
+    if (!id) return;
+    setMessagingLoading(true);
+    try {
+      const conv = await chatService.createConversation(id);
+      navigate(`/messages/${conv.id}`);
+    } catch (e) {
+      console.error('Failed to start conversation', e);
+    } finally {
+      setMessagingLoading(false);
+    }
+  };
 
   const handleStatusChange = (status: string) => {
     if (id) updateStatus.mutate({ id, status });
@@ -217,6 +234,23 @@ export default function ApplicationDetailPage() {
                   <i className="fas fa-calendar-check" /> Interview already scheduled
                 </p>
               )}
+            </div>
+
+            {/* Message Applicant */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-5">
+              <button
+                id="btn-message-applicant"
+                onClick={handleStartConversation}
+                disabled={messagingLoading}
+                className="w-full px-4 py-2.5 bg-white border-2 border-primary text-primary rounded-xl text-sm font-semibold hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2 disabled:opacity-60"
+              >
+                {messagingLoading
+                  ? <><i className="fas fa-spinner fa-spin" /> Opening chat…</>
+                  : <><i className="fas fa-comment-dots" /> Message Applicant</>}
+              </button>
+              <p className="mt-2 text-xs text-gray-400 text-center">
+                Start a direct conversation with {app.candidateName?.split(' ')[0] ?? 'the applicant'}
+              </p>
             </div>
 
             {/* AI Score */}

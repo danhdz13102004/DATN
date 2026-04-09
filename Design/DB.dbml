@@ -1,3 +1,10 @@
+// =====================================================================
+// RecruitPro — Database Schema
+// PostgreSQL 16 + pgvector
+// =====================================================================
+
+// ─── ENUMS ──────────────────────────────────────────────────────────
+
 Enum user_role {
   ADMIN
   COMPANY
@@ -29,6 +36,15 @@ Enum job_type {
   HYBRID
 }
 
+Enum experience_level {
+  INTERN
+  FRESHER
+  JUNIOR
+  MIDDLE
+  SENIOR
+  LEADER
+}
+
 Enum application_status {
   APPLIED
   SCREENING
@@ -42,6 +58,16 @@ Enum interview_status {
   PENDING
   COMPLETED
   CANCELLED
+}
+
+Enum meeting_type {
+  ONLINE
+  OFFLINE
+}
+
+Enum message_type {
+  TEXT
+  FILE
 }
 
 Enum notification_type {
@@ -69,17 +95,6 @@ Enum payment_gateway {
   STRIPE
 }
 
-Enum message_type {
-  TEXT
-  FILE
-}
-
-Enum message_status {
-  SENT
-  DELIVERED
-  READ
-}
-
 Enum audit_action {
   CREATE
   UPDATE
@@ -93,148 +108,191 @@ Enum otp_type {
   RESET_PASSWORD
 }
 
-Enum meeting_type {
-    ONLINE
-    OFFLINE
-  }
+// ─── TABLES ─────────────────────────────────────────────────────────
 
 Table users {
   id uuid [pk]
-  email varchar [unique]
-  password_hash varchar
-  role user_role
-  status user_status
+  email varchar [not null, unique]
+  password_hash varchar [not null]
+  role user_role [not null]
+  status user_status [not null]
   email_verified_at timestamptz
-  created_at timestamptz
-  updated_at timestamptz
-  deleted_at timestamptz
-}
-
-Table companies {
-  id uuid [pk]
-  name varchar
-  description text
-  website varchar
-  logo_url varchar
-  is_verified boolean
-  created_at timestamptz
-  updated_at timestamptz
-  deleted_at timestamptz
-}
-
-Table company_addresses {
-  id uuid [pk]
-  company_id uuid
-  label varchar          // e.g. "HQ", "Branch Office"
-  address_line varchar
-  city varchar
-  country varchar [default: 'Vietnam']
-  is_default boolean [default: false]
-  created_at timestamptz
-  updated_at timestamptz
-}
-
-Table staff {
-  id uuid [pk]
-  user_id uuid [unique]
-  company_id uuid
-  role company_user_role
-  created_at timestamptz
-  updated_at timestamptz
-}
-
-Table job_seekers {
-  id uuid [pk]
-  user_id uuid [unique]
-  avatar_url varchar
-  bio text
-  location varchar
-  experience_years int
-  created_at timestamptz
-  updated_at timestamptz
-}
-
-
-Enum experience_level {
-  INTERN
-  FRESHER
-  JUNIOR
-  MIDDLE
-  SENIOR
-  LEADER
-}
-
-
-Table jobs {
-  id uuid [pk]
-  company_id uuid
-  company_address_id uuid  // nullable — pick from saved or enter custom
-  title varchar
-  description text
-  experience_level experience_level
-  location varchar         // kept for custom / display location
-  salary_min int
-  salary_max int
-  job_type job_type
-  status job_status
-  embedding vector
-  created_at timestamptz
-  updated_at timestamptz
-  deleted_at timestamptz
-}
-
-Table skills {
-  id uuid [pk]
-  name varchar
-}
-
-Table job_skills {
-  id uuid [pk]
-  job_id uuid
-  skill_id uuid
-}
-
-Table resumes {
-  id uuid [pk]
-  job_seeker_id uuid
-  file_url varchar
-  parsed_text text
-  embedding vector
-  created_at timestamptz
-  updated_at timestamptz
-  deleted_at timestamptz
-}
-
-
-Table applications {
-  id uuid [pk]
-  job_id uuid
-  job_seeker_id uuid
-  resume_id uuid
-  ai_score float
-  status application_status
-  created_at timestamptz
+  created_at timestamptz [not null]
   updated_at timestamptz
   deleted_at timestamptz
 
   indexes {
-    (job_id, job_seeker_id) [unique]  // prevent duplicate applications
+    (email) [unique, name: 'uq_users_email']
+    (role) [name: 'idx_users_role']
+    (status) [name: 'idx_users_status']
   }
 }
 
+Table companies {
+  id uuid [pk]
+  name varchar [not null]
+  description text
+  website varchar
+  logo_url varchar
+  is_verified boolean [not null, default: false]
+  created_at timestamptz [not null]
+  updated_at timestamptz
+  deleted_at timestamptz
 
+  indexes {
+    (name) [name: 'idx_companies_name']
+    (is_verified) [name: 'idx_companies_is_verified']
+  }
+}
+
+Table company_addresses {
+  id uuid [pk]
+  company_id uuid [not null]
+  label varchar          // e.g. "HQ", "Branch Office"
+  address_line varchar
+  city varchar
+  country varchar [default: 'Vietnam']
+  is_default boolean [not null, default: false]
+  created_at timestamptz [not null]
+  updated_at timestamptz
+  // Enforce single is_default=true per company at application layer
+  // (DBML does not support partial unique index syntax — use Flyway migration)
+
+  indexes {
+    (company_id) [name: 'idx_company_addresses_company_id']
+  }
+}
+
+Table staff {
+  id uuid [pk]
+  user_id uuid [not null, unique]
+  company_id uuid [not null]
+  role company_user_role [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz
+  deleted_at timestamptz    // soft delete — staff can leave a company; preserve for message/audit history
+
+  indexes {
+    (company_id) [name: 'idx_staff_company_id']
+    (user_id) [unique, name: 'uq_staff_user_id']
+  }
+}
+
+Table job_seekers {
+  id uuid [pk]
+  user_id uuid [not null, unique]
+  avatar_url varchar
+  bio text
+  location varchar
+  experience_years int
+  created_at timestamptz [not null]
+  updated_at timestamptz
+  deleted_at timestamptz    // soft delete — mirrors users lifecycle; profile is business-critical
+
+  indexes {
+    (user_id) [unique, name: 'uq_job_seekers_user_id']
+  }
+}
+
+Table jobs {
+  id uuid [pk]
+  company_id uuid [not null]
+  company_address_id uuid              // nullable — pick from saved or enter custom
+  title varchar [not null]
+  description text
+  experience_level experience_level
+  location varchar                     // kept for custom / display location
+  salary_min int
+  salary_max int
+  job_type job_type [not null]
+  status job_status [not null, default: 'DRAFT']
+  embedding vector(384)                // pgvector — cosine similarity; dimension must match model output
+  created_at timestamptz [not null]
+  updated_at timestamptz
+  deleted_at timestamptz
+
+  indexes {
+    (company_id) [name: 'idx_jobs_company_id']
+    (status) [name: 'idx_jobs_status']
+    (company_id, status) [name: 'idx_jobs_company_id_status']
+    // Partial index (Flyway): CREATE INDEX idx_jobs_published ON jobs(company_id) WHERE status = 'PUBLISHED' AND deleted_at IS NULL
+  }
+}
+
+Table skills {
+  id uuid [pk]
+  name varchar [not null, unique]
+
+  indexes {
+    (name) [unique, name: 'uq_skills_name']
+  }
+}
+
+Table job_skills {
+  id uuid [pk]
+  job_id uuid [not null]
+  skill_id uuid [not null]
+
+  indexes {
+    (job_id) [name: 'idx_job_skills_job_id']
+    (skill_id) [name: 'idx_job_skills_skill_id']
+    (job_id, skill_id) [unique, name: 'uq_job_skills_job_skill']
+  }
+}
+
+Table resumes {
+  id uuid [pk]
+  job_seeker_id uuid [not null]
+  file_url varchar [not null]
+  parsed_text text
+  embedding vector(384)                // pgvector — cosine similarity; dimension must match model output
+  created_at timestamptz [not null]
+  updated_at timestamptz
+  deleted_at timestamptz
+
+  indexes {
+    (job_seeker_id) [name: 'idx_resumes_job_seeker_id']
+  }
+}
+
+Table applications {
+  id uuid [pk]
+  job_id uuid [not null]
+  job_seeker_id uuid [not null]
+  resume_id uuid                       // nullable — applicant may apply without a new resume
+  ai_score float
+  status application_status [not null, default: 'APPLIED']
+  created_at timestamptz [not null]
+  updated_at timestamptz
+  deleted_at timestamptz
+
+  indexes {
+    (job_id) [name: 'idx_applications_job_id']
+    (job_seeker_id) [name: 'idx_applications_job_seeker_id']
+    (status) [name: 'idx_applications_status']
+    (job_id, status) [name: 'idx_applications_job_id_status']
+    (job_id, job_seeker_id) [unique, name: 'uq_applications_job_seeker']  // prevent duplicate applications
+  }
+}
 
 Table interviews {
   id uuid [pk]
-  application_id uuid
-  interviewer_id uuid       // staff member conducting the interview
-  scheduled_time timestamptz
-  meeting_type meeting_type
-  meeting_link varchar
-  status interview_status
+  application_id uuid [not null]
+  interviewer_id uuid [not null]       // staff member conducting the interview
+  scheduled_time timestamptz [not null]
+  meeting_type meeting_type [not null]
+  meeting_link varchar                 // nullable for OFFLINE type
+  status interview_status [not null, default: 'PENDING']
   note text
-  created_at timestamptz
+  created_at timestamptz [not null]
   updated_at timestamptz
+
+  indexes {
+    (application_id) [name: 'idx_interviews_application_id']
+    (interviewer_id) [name: 'idx_interviews_interviewer_id']
+    (scheduled_time) [name: 'idx_interviews_scheduled_time']
+    (status) [name: 'idx_interviews_status']
+  }
 }
 
 Table conversations {
@@ -242,9 +300,9 @@ Table conversations {
   application_id uuid [not null]       // tied to a specific job application
   staff_id uuid [not null]             // staff member who initiated
   job_seeker_id uuid [not null]        // job seeker in the conversation
-  is_initiated boolean [default: false] // true once staff sends first message
+  is_initiated boolean [not null, default: false]  // true once staff sends first message
   created_at timestamptz [not null]
-  updated_at timestamptz               // updated on each new message
+  updated_at timestamptz               // bumped on every new message
 
   indexes {
     (application_id) [name: 'idx_conversations_application_id']
@@ -260,13 +318,13 @@ Table messages {
   sender_id uuid [not null]            // references users.id
   content text                         // nullable for FILE type messages
   type message_type [not null]
-  file_url varchar                     // presigned MinIO GET URL (FILE type only)
-  file_name varchar                    // original file name (FILE type only)
-  file_size_bytes bigint               // file size in bytes (FILE type only)
-  idempotency_key varchar [unique]     // client-generated UUID — prevents duplicate messages
-  status message_status [default: 'SENT']
+  file_key varchar                     // MinIO object path — FILE type only; presigned URL generated on demand
+  file_name varchar                    // original file name — FILE type only
+  file_size_bytes bigint               // file size in bytes — FILE type only
+  idempotency_key varchar              // client-generated UUID — prevents duplicate messages
   created_at timestamptz [not null]
-  // hard delete per DB rules (transient data)
+  // No updated_at — messages are immutable
+  // No deleted_at — hard delete per DB rules (transient data)
 
   indexes {
     (conversation_id) [name: 'idx_messages_conversation_id']
@@ -276,17 +334,18 @@ Table messages {
   }
 }
 
-// Tracks per-user read position within a conversation
+// Tracks per-user read position within a conversation (upserted, not appended)
 Table message_reads {
   id uuid [pk]
   conversation_id uuid [not null]
   user_id uuid [not null]              // the reader
-  last_read_message_id uuid [not null] // last message they've seen
+  last_read_message_id uuid [not null] // last message they have seen
   read_at timestamptz [not null]
 
   indexes {
     (conversation_id, user_id) [unique, name: 'uq_message_reads_conv_user']
     (conversation_id) [name: 'idx_message_reads_conversation_id']
+    (user_id) [name: 'idx_message_reads_user_id']
   }
 }
 
@@ -296,93 +355,131 @@ Table notifications {
   type notification_type [not null]
   title varchar [not null]             // short notification title for display
   content text [not null]
-  is_read boolean [default: false]
-  reference_id uuid                    // nullable FK to triggering entity
+  is_read boolean [not null, default: false]
+  reference_id uuid                    // nullable — polymorphic FK to triggering entity
   reference_type varchar               // "application" | "message" | "interview"
   created_at timestamptz [not null]
-  // hard delete per DB rules (transient data)
+  // No updated_at, no deleted_at — hard delete per DB rules (transient data)
 
   indexes {
     (user_id, is_read) [name: 'idx_notifications_user_is_read']
     (user_id, created_at) [name: 'idx_notifications_user_created_at']
-    (user_id) [name: 'idx_notifications_user_id']
   }
 }
 
 Table plans {
   id uuid [pk]
-  name varchar
-  price decimal
-  job_post_limit int
-  duration_days int
-  created_at timestamptz
+  name varchar [not null, unique]
+  price decimal [not null]
+  job_post_limit int [not null]
+  duration_days int [not null]
+  created_at timestamptz [not null]
+  updated_at timestamptz               // plans can be repriced
+
+  indexes {
+    (name) [unique, name: 'uq_plans_name']
+  }
 }
 
 Table subscriptions {
   id uuid [pk]
-  company_id uuid
-  plan_id uuid
-  start_date timestamptz
-  end_date timestamptz
-  status subscription_status
-  jobs_posted_count int [default: 0]  // tracks usage against plan.job_post_limit
-  created_at timestamptz
+  company_id uuid [not null]
+  plan_id uuid [not null]
+  start_date timestamptz [not null]
+  end_date timestamptz [not null]
+  status subscription_status [not null]
+  jobs_posted_count int [not null, default: 0]   // tracks usage against plan.job_post_limit
+  created_at timestamptz [not null]
+  updated_at timestamptz               // status changes over lifecycle
+
+  indexes {
+    (company_id) [name: 'idx_subscriptions_company_id']
+    (plan_id) [name: 'idx_subscriptions_plan_id']
+    (company_id, status) [name: 'idx_subscriptions_company_id_status']
+  }
 }
 
 Table payments {
   id uuid [pk]
-  company_id uuid
-  subscription_id uuid
-  amount decimal
-  currency varchar
-  gateway payment_gateway
-  status payment_status
-  transaction_id varchar
-  created_at timestamptz
+  company_id uuid [not null]
+  subscription_id uuid [not null]
+  amount decimal [not null]
+  currency varchar [not null, default: 'VND']
+  gateway payment_gateway [not null]
+  status payment_status [not null]
+  transaction_id varchar [unique]      // unique per gateway — prevents duplicate payment records
+  created_at timestamptz [not null]
+  updated_at timestamptz               // status changes: PENDING → SUCCESS / FAILED
+
+  indexes {
+    (company_id) [name: 'idx_payments_company_id']
+    (subscription_id) [name: 'idx_payments_subscription_id']
+    (transaction_id) [unique, name: 'uq_payments_transaction_id']
+    (status) [name: 'idx_payments_status']
+  }
 }
 
 Table audit_logs {
   id uuid [pk]
-  user_id uuid
-  action audit_action
-  entity_type varchar
-  entity_id uuid
-  metadata jsonb            // stores old/new values, IP, user-agent, etc.
-  created_at timestamptz
+  user_id uuid                         // nullable — system/automated actions may have no user
+  action audit_action [not null]
+  entity_type varchar [not null]
+  entity_id uuid [not null]
+  metadata jsonb                       // stores old/new values, IP, user-agent, etc.
+  created_at timestamptz [not null]
+  // GIN index on metadata — defined in Flyway: CREATE INDEX idx_audit_logs_metadata ON audit_logs USING gin(metadata)
+
+  indexes {
+    (user_id) [name: 'idx_audit_logs_user_id']
+    (entity_type, entity_id) [name: 'idx_audit_logs_entity']
+    (created_at) [name: 'idx_audit_logs_created_at']
+  }
 }
 
 Table otps {
   id uuid [pk]
-  email varchar
-  code varchar
-  type otp_type
-  is_used boolean [default: false]
-  attempts int [default: 0]
-  expires_at timestamptz
-  created_at timestamptz
-}
-
-// captures passive interest signals
-Table job_views {
-  id uuid [pk]
-  job_seeker_id uuid
-  job_id uuid
-  viewed_at timestamptz
-  duration_seconds int      // time spent on page, useful as weight
-}
-
-// explicit save/bookmark
-Table saved_jobs {
-  id uuid [pk]
-  job_seeker_id uuid
-  job_id uuid
-  created_at timestamptz
+  email varchar [not null]
+  code varchar [not null]
+  type otp_type [not null]
+  is_used boolean [not null, default: false]
+  attempts int [not null, default: 0]
+  expires_at timestamptz [not null]
+  created_at timestamptz [not null]
 
   indexes {
-    (job_seeker_id, job_id) [unique]
+    (email, type) [name: 'idx_otps_email_type']    // primary lookup: find active OTP by email + type
   }
 }
 
+// Captures passive interest signals for AI recommendation weighting
+Table job_views {
+  id uuid [pk]
+  job_seeker_id uuid [not null]
+  job_id uuid [not null]
+  viewed_at timestamptz [not null]     // event timestamp — serves as created_at for this append-only table
+  duration_seconds int                 // time spent on page; used as AI weight signal
+
+  indexes {
+    (job_seeker_id) [name: 'idx_job_views_job_seeker_id']
+    (job_id) [name: 'idx_job_views_job_id']
+    (job_seeker_id, job_id) [name: 'idx_job_views_seeker_job']
+  }
+}
+
+// Explicit save / bookmark
+Table saved_jobs {
+  id uuid [pk]
+  job_seeker_id uuid [not null]
+  job_id uuid [not null]
+  created_at timestamptz [not null]
+
+  indexes {
+    (job_seeker_id, job_id) [unique, name: 'uq_saved_jobs_seeker_job']
+    (job_seeker_id) [name: 'idx_saved_jobs_job_seeker_id']
+  }
+}
+
+// ─── REFERENCES ───────────────────────────────────────────────────────
 
 Ref: staff.user_id > users.id
 Ref: staff.company_id > companies.id
@@ -399,12 +496,9 @@ Ref: job_skills.skill_id > skills.id
 
 Ref: resumes.job_seeker_id > job_seekers.id
 
-
-
 Ref: applications.job_id > jobs.id
 Ref: applications.job_seeker_id > job_seekers.id
 Ref: applications.resume_id > resumes.id
-
 
 Ref: interviews.application_id > applications.id
 Ref: interviews.interviewer_id > staff.id

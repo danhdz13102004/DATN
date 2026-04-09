@@ -32,6 +32,10 @@ const ApplicationDetailPage = lazy(() => import('./pages/applications/Applicatio
 const InterviewsPage = lazy(() => import('./pages/interviews/InterviewsPage'));
 const InterviewSchedulePage = lazy(() => import('./pages/interviews/InterviewSchedulePage'));
 
+/* Chat */
+const ChatListPage = lazy(() => import('./pages/chat/ChatListPage'));
+const NotificationsPage = lazy(() => import('./pages/notifications/NotificationsPage'));
+
 /* Placeholders */
 const ComingSoonPage = lazy(() => import('./pages/ComingSoonPage'));
 
@@ -67,8 +71,9 @@ function App() {
         <Route path={ROUTES.INTERVIEW_SCHEDULE} element={<InterviewSchedulePage />} />
         <Route path={ROUTES.INTERVIEW_EDIT} element={<InterviewSchedulePage />} />
 
-        <Route path={ROUTES.MESSAGES} element={<ComingSoonPage />} />
-        <Route path={ROUTES.NOTIFICATIONS} element={<ComingSoonPage />} />
+        <Route path={ROUTES.MESSAGES} element={<ChatListPage />} />
+        <Route path="/messages/:id" element={<ChatListPage />} />
+        <Route path={ROUTES.NOTIFICATIONS} element={<NotificationsPage />} />
         <Route path={ROUTES.STAFF} element={<StaffManagementPage />} />
         <Route path={ROUTES.SUBSCRIPTIONS} element={<ComingSoonPage />} />
       </Route>

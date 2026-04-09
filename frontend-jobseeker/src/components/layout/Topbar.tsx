@@ -1,6 +1,10 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ROUTES } from '../../constants';
+import { notificationService } from '../../services/chatService';
+import { useRecruitProWebSocket } from '../../hooks/useWebSocket';
+import type { NotificationEvent } from '../../types/chat';
+import { useToast } from '../../contexts/ToastContext';
 
 const PAGE_TITLES: Record<string, string> = {
   [ROUTES.DASHBOARD]: 'Dashboard',
@@ -30,6 +34,26 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const toast = useToast();
+  const latestToastNotifIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    notificationService.unreadCount().then(setUnreadCount).catch(() => {});
+  }, []);
+
+  useRecruitProWebSocket({
+    onNotification: (e: NotificationEvent) => {
+      console.log('Received notification event:', e);
+      setUnreadCount(e.unreadCount);
+      if (!e.notification) return;
+      if (latestToastNotifIdRef.current === e.notification.id) return;
+      latestToastNotifIdRef.current = e.notification.id;
+
+      const text = e.notification.title || e.notification.content || 'You have a new notification';
+      toast.info(text, 3500);
+    },
+  });
 
   const isJobDetail = location.pathname.startsWith('/jobs/') && location.pathname !== '/jobs';
   const isAppDetail = location.pathname.startsWith('/applications/') && location.pathname !== '/applications';
@@ -125,15 +149,34 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
         {!isJobDetail && (
           <button
             style={btnStyle('bell')}
+            onClick={() => navigate(ROUTES.NOTIFICATIONS)}
+            title="Notifications"
             onMouseEnter={() => setHoveredBtn('bell')}
             onMouseLeave={() => setHoveredBtn(null)}
           >
             <i className="fas fa-bell" />
-            <span style={{
-              position: 'absolute', top: '8px', right: '8px',
-              width: '8px', height: '8px', borderRadius: '50%',
-              background: '#ef4444', border: '2px solid #fff',
-            }} />
+            {unreadCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '6px',
+                right: '4px',
+                minWidth: '16px',
+                height: '16px',
+                borderRadius: '999px',
+                background: '#ef4444',
+                border: '2px solid #fff',
+                color: '#fff',
+                fontSize: '9px',
+                fontWeight: 700,
+                lineHeight: '1',
+                padding: '0 4px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
           </button>
         )}
       </div>

@@ -16,6 +16,8 @@ const ApplicationDetailPage = lazy(() => import('./pages/applications/Applicatio
 const InterviewsPage = lazy(() => import('./pages/interviews/InterviewsPage'));
 const ResumesPage = lazy(() => import('./pages/resumes/ResumesPage'));
 const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
+const ChatListPage = lazy(() => import('./pages/chat/ChatListPage'));
+const NotificationsPage = lazy(() => import('./pages/notifications/NotificationsPage'));
 const ComingSoonPage = lazy(() => import('./pages/ComingSoonPage'));
 
 const LoadingFallback = () => (
@@ -45,8 +47,9 @@ function App() {
           <Route path={ROUTES.INTERVIEWS} element={<InterviewsPage />} />
           <Route path={ROUTES.RESUMES} element={<ResumesPage />} />
           <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
-          <Route path={ROUTES.MESSAGES} element={<ComingSoonPage />} />
-          <Route path={ROUTES.NOTIFICATIONS} element={<ComingSoonPage />} />
+          <Route path={ROUTES.MESSAGES} element={<ChatListPage />} />
+          <Route path="/messages/:id" element={<ChatListPage />} />
+          <Route path={ROUTES.NOTIFICATIONS} element={<NotificationsPage />} />
         </Route>
       </Routes>
     </Suspense>
