@@ -55,10 +55,9 @@ public class DataSeeder implements CommandLineRunner {
 
     private void seedPlans() {
         Object[][] plans = {
-            {"Free", 0.00, 3, 30},
-            {"Starter", 499000.00, 10, 30},
-            {"Professional", 1499000.00, 50, 30},
-            {"Enterprise", 4999000.00, -1, 30},  // -1 = unlimited
+            // {"Free", 0.00, 3, 30},
+            // {"Pro", 20, 20, 30},
+            // {"Premium", 100, 0, 30},
         };
 
         int inserted = 0;

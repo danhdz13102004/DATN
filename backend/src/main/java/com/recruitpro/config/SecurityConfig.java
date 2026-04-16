@@ -68,6 +68,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/plans").permitAll()
                 // Payment webhooks
                 .requestMatchers("/api/v1/payments/callback/**").permitAll()
+                // Stripe webhook — raw body, no JWT
+                .requestMatchers("/api/v1/webhook/stripe").permitAll()
                 // Health & actuator
                 .requestMatchers("/api/v1/health", "/actuator/**").permitAll()
                 // Swagger/OpenAPI

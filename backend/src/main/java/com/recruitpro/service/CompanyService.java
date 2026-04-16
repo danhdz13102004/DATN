@@ -58,7 +58,7 @@ public class CompanyService {
                 "logos", file.getOriginalFilename(),
                 file.getInputStream(), file.getSize(), file.getContentType()
         );
-        company.setLogoUrl(key);
+        company.setLogoUrl(storageService.getPublicUrl(key));
         return companyRepository.save(company);
     }
 

@@ -41,6 +41,9 @@ public class StorageService {
     @Value("${app.minio.use-ssl}")
     private boolean useSsl;
 
+    @Value("${app.minio.public-url:${app.minio.endpoint}}")
+    private String publicUrl;
+
     private S3Client s3Client;
     private S3Presigner presigner;
 
@@ -171,6 +174,6 @@ public class StorageService {
             return key;
         }
         
-        return "http://127.0.0.1:9000" + "/" + bucket + "/" + key;
+        return publicUrl.replaceAll("/+$", "") + "/" + bucket + "/" + key;
     }
 }

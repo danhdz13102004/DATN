@@ -39,6 +39,9 @@ const NotificationsPage = lazy(() => import('./pages/notifications/Notifications
 /* Placeholders */
 const ComingSoonPage = lazy(() => import('./pages/ComingSoonPage'));
 
+/* Subscription */
+const SubscriptionPage = lazy(() => import('./pages/subscription/SubscriptionPage'));
+
 const AuthFallback = () => (
   <div className="flex items-center justify-center h-screen">
     <div className="w-8 h-8 border-[3px] border-primary/20 border-t-primary rounded-full animate-spin" />
@@ -75,7 +78,7 @@ function App() {
         <Route path="/messages/:id" element={<ChatListPage />} />
         <Route path={ROUTES.NOTIFICATIONS} element={<NotificationsPage />} />
         <Route path={ROUTES.STAFF} element={<StaffManagementPage />} />
-        <Route path={ROUTES.SUBSCRIPTIONS} element={<ComingSoonPage />} />
+        <Route path={ROUTES.SUBSCRIPTIONS} element={<SubscriptionPage />} />
       </Route>
 
       {/* Fallback */}

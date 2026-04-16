@@ -45,4 +45,19 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
 
     @Query("SELECT j FROM Job j WHERE j.companyId = :companyId AND j.deletedAt IS NULL ORDER BY j.title")
     List<Job> findSelectOptionsByCompanyId(@Param("companyId") UUID companyId);
+
+    @Query("SELECT j FROM Job j WHERE j.deletedAt IS NULL AND " +
+           "(cast(:status as string) IS NULL OR j.status = :status) AND " +
+           "(cast(:keyword as string) IS NULL OR LOWER(j.title) LIKE LOWER(CONCAT('%', cast(:keyword as string), '%')))")
+    Page<Job> findAllForAdmin(
+            @Param("status") JobStatus status,
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
+
+    long countByStatus(JobStatus status);
+
+    long countByCompanyIdAndStatus(UUID companyId, JobStatus status);
+
+    List<Job> findTop10ByCompanyIdAndStatusOrderByCreatedAtDesc(UUID companyId, JobStatus status);
 }

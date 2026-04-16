@@ -13,4 +13,6 @@ public interface StaffRepository extends JpaRepository<Staff, UUID> {
     Optional<Staff> findByUserId(UUID userId);
 
     java.util.List<Staff> findAllByCompanyId(UUID companyId);
+
+    long countByCompanyId(UUID companyId);
 }

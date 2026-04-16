@@ -3,6 +3,7 @@ package com.recruitpro.dto.response;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Data
@@ -14,5 +15,7 @@ public class CompanyResponseDto {
     private String website;
     private String logoUrl;
     private boolean verified;
-
+    private Instant createdAt;
+    private long staffCount;
+    private long activeJobsCount;
 }

@@ -122,4 +122,33 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
         ORDER BY a.createdAt DESC
     """)
     Page<Application> findRecentByJobSeekerId(@Param("seekerId") UUID seekerId, Pageable pageable);
+
+    // ── Admin scoped queries ──────────────────────
+
+    @Query(value = """
+        SELECT a FROM Application a
+        JOIN FETCH a.job j
+        WHERE a.deletedAt IS NULL
+          AND (cast(:status as string) IS NULL OR a.status = :status)
+          AND (cast(:search as string) IS NULL OR :search = ''
+               OR LOWER(j.title) LIKE LOWER(CONCAT('%', cast(:search as string), '%')))
+        ORDER BY a.createdAt DESC
+    """, countQuery = """
+        SELECT COUNT(a) FROM Application a
+        JOIN a.job j
+        WHERE a.deletedAt IS NULL
+          AND (cast(:status as string) IS NULL OR a.status = :status)
+          AND (cast(:search as string) IS NULL OR :search = ''
+               OR LOWER(j.title) LIKE LOWER(CONCAT('%', cast(:search as string), '%')))
+    """)
+    Page<Application> findAllForAdmin(
+            @Param("status") ApplicationStatus status,
+            @Param("search") String search,
+            Pageable pageable
+    );
+
+    long countByStatus(ApplicationStatus status);
+
+    @Query("SELECT COUNT(a) FROM Application a WHERE a.jobId = :jobId AND a.deletedAt IS NULL")
+    long countByJobId(@Param("jobId") UUID jobId);
 }
