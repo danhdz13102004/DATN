@@ -11,6 +11,7 @@ import com.recruitpro.model.enums.ApplicationStatus;
 import com.recruitpro.model.enums.InterviewStatus;
 import com.recruitpro.model.enums.MeetingType;
 import com.recruitpro.repository.ApplicationRepository;
+import com.recruitpro.repository.CompanyRepository;
 import com.recruitpro.repository.InterviewRepository;
 import com.recruitpro.repository.StaffRepository;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,8 @@ public class InterviewService {
     private final InterviewRepository interviewRepository;
     private final ApplicationRepository applicationRepository;
     private final StaffRepository staffRepository;
+    private final CompanyRepository companyRepository;
+    private final EmailService emailService;
 
     // ── List Interviews ───────────────────────────
 
@@ -89,6 +92,29 @@ public class InterviewService {
         // Update application status to INTERVIEW
         application.setStatus(ApplicationStatus.INTERVIEW);
         applicationRepository.save(application);
+
+        // Send interview invitation email to the candidate (async — does not block the response)
+        try {
+            String candidateEmail = application.getJobSeeker().getUser().getEmail();
+            String candidateName  = application.getJobSeeker().getUser().getFullName();
+            String jobTitle       = application.getJob().getTitle();
+            String companyName    = companyRepository.findById(application.getJob().getCompanyId())
+                    .map(c -> c.getName())
+                    .orElse("Our Company");
+            String location = request.getMeetingLink();
+
+            emailService.sendInterviewScheduled(
+                    candidateEmail,
+                    candidateName,
+                    companyName,
+                    jobTitle,
+                    request.getScheduledTime(),
+                    request.getMeetingType(),
+                    location
+            );
+        } catch (Exception e) {
+            log.warn("Could not send interview invitation email: {}", e.getMessage());
+        }
 
         log.info("Interview scheduled: {} for application {} (companyId={})",
                 saved.getId(), applicationId, companyId);

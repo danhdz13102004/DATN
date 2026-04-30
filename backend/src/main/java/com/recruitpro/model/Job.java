@@ -11,6 +11,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -39,6 +40,26 @@ public class Job {
 
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "industry_id")
+    private Industry industry;
+
+    @Column(name = "responsibilities", columnDefinition = "text[]")
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    private String[] responsibilities;
+
+    @Column(name = "requirements", columnDefinition = "text[]")
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    private String[] requirements;
+
+    @Column(name = "nice_to_have_skills", columnDefinition = "text[]")
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    private String[] niceToHaveSkills;
+
+    @Column(name = "job_data_structure", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Map<String, Object> jobDataStructure;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(

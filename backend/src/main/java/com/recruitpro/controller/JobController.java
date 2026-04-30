@@ -1,29 +1,36 @@
 package com.recruitpro.controller;
 
 import com.recruitpro.dto.response.ApiResponse;
+import com.recruitpro.dto.response.JobDto;
 import com.recruitpro.dto.response.PaginationMeta;
-import com.recruitpro.model.Job;
 import com.recruitpro.model.enums.ExperienceLevel;
 import com.recruitpro.model.enums.JobType;
+import com.recruitpro.security.UserPrincipal;
 import com.recruitpro.service.JobService;
+import com.recruitpro.service.JobSeekerService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
 /**
  * Public job-browsing endpoints (no auth required).
+ * When a JOBSEEKER token is present, isSaved is populated per job.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/jobs")
 @RequiredArgsConstructor
 public class JobController {
 
     private final JobService jobService;
+    private final JobSeekerService jobSeekerService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Object>> listPublished(
@@ -31,9 +38,11 @@ public class JobController {
             @RequestParam(required = false) JobType jobType,
             @RequestParam(required = false) java.util.Set<ExperienceLevel> experienceLevels,
             @RequestParam(required = false) String location,
-            @PageableDefault(size = 20) Pageable pageable
+            @PageableDefault(size = 20) Pageable pageable,
+            @AuthenticationPrincipal UserPrincipal principal
     ) {
-        Page<Job> page = jobService.findPublishedJobs(keyword, jobType, experienceLevels, location, pageable);
+        UUID seekerId = resolveSeekerId(principal);
+        Page<JobDto> page = jobService.findPublishedJobDtos(keyword, jobType, experienceLevels, location, seekerId, pageable);
         PaginationMeta meta = PaginationMeta.builder()
                 .page(page.getNumber() + 1)
                 .pageSize(page.getSize())
@@ -43,7 +52,25 @@ public class JobController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<Job>> getById(@PathVariable UUID id) {
-        return ResponseEntity.ok(ApiResponse.ok(jobService.findById(id)));
+    public ResponseEntity<ApiResponse<JobDto>> getById(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        UUID seekerId = resolveSeekerId(principal);
+        return ResponseEntity.ok(ApiResponse.ok(jobService.findByIdAsDto(id, seekerId)));
+    }
+
+    /** Resolves the job seeker entity ID from the JWT principal, or null for guests / non-jobseekers. */
+    private UUID resolveSeekerId(UserPrincipal principal) {
+        if (principal == null || !"JOBSEEKER".equals(principal.getRole())) {
+            return null;
+        }
+        try {
+            return jobSeekerService.findByUserId(UUID.fromString(principal.getId())).getId();
+        } catch (Exception e) {
+            log.debug("Could not resolve seeker for user {}: {}", principal.getId(), e.getMessage());
+            return null;
+        }
     }
 }
+

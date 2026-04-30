@@ -1,15 +1,19 @@
 """Redis-backed graph persistence layer.
 
 Responsibilities:
-- Persist every graph mutation (add_node, process_application) to Redis.
+- Persist every graph mutation (add_node, handle_interaction) to Redis.
 - Restore full graph state into in-memory stores on service startup.
 - Re-encode NLP embeddings after restore using the loaded NLP model.
 
 Key schema (all under GRAPH_KEY_PREFIX = "graph:"):
   graph:node:<node_id>        → Redis Hash  { node_type, text_snippet }
-  graph:edges:<resume_id>     → Redis JSON string  [{"job_id": ..., "weight": ...}, ...]
+  graph:edges:<resume_id>     → Redis Hash  { job_id: cumulative_weight, … }
+  graph:job_edges:<job_id>    → Redis Hash  { resume_id: cumulative_weight, … }  (reverse)
   graph:job_catalog           → Redis List  [job_id, ...]
   graph:job_users:<job_id>    → Redis Set   {resume_id, ...}
+
+Edge persistence uses HINCRBYFLOAT so weights accumulate across interactions;
+an edge is created automatically on first write.
 """
 
 import io
@@ -40,6 +44,9 @@ def _edges_key(resume_id: str) -> str:
 
 def _job_users_key(job_id: str) -> str:
     return f"{_PFX}job_users:{job_id}"
+
+def _job_edges_key(job_id: str) -> str:
+    return f"{_PFX}job_edges:{job_id}"
 
 CATALOG_KEY = f"{_PFX}job_catalog"
 
@@ -86,12 +93,71 @@ def persist_node(node_id: str, node_type: str, text_snippet: str) -> None:
         logger.warning("graph_store.persist_node(%s) failed: %s", node_id, exc)
 
 
-def persist_edges(resume_id: str, edges: List[dict]) -> None:
-    """Overwrite the edge list for a resume in Redis."""
+def persist_edge(resume_id: str, job_id: str, weight: float) -> None:
+    """Accumulate *weight* on the edge resume→job (and its reverse) using HINCRBYFLOAT.
+
+    The Redis HASH is created automatically if it does not exist, so calling
+    this function is sufficient to both create and update edges.
+    """
     try:
-        get_redis().set(_edges_key(resume_id), json.dumps(edges))
+        r = get_redis()
+        r.hincrbyfloat(_edges_key(resume_id), job_id, weight)
+        r.hincrbyfloat(_job_edges_key(job_id), resume_id, weight)
     except Exception as exc:
-        logger.warning("graph_store.persist_edges(%s) failed: %s", resume_id, exc)
+        logger.warning("graph_store.persist_edge(%s→%s) failed: %s", resume_id, job_id, exc)
+
+
+def get_edges(resume_id: str) -> List[dict]:
+    """Return all edges for *resume_id* as a list of {job_id, weight} dicts."""
+    try:
+        raw = get_redis().hgetall(_edges_key(resume_id))
+        return [{"job_id": jid, "weight": float(w)} for jid, w in raw.items()]
+    except Exception as exc:
+        logger.warning("graph_store.get_edges(%s) failed: %s", resume_id, exc)
+        return []
+
+
+def load_edges_into_memory(edge_store: dict, job_to_users: dict) -> int:
+    """Scan Redis for all edge hashes and populate *edge_store* / *job_to_users*.
+
+    Handles legacy keys stored as JSON strings: migrates them to HASH format
+    in-place and removes the old STRING key.
+
+    Returns the total number of edges loaded.
+    """
+    r = get_redis()
+    total = 0
+    for key in r.scan_iter(f"{_PFX}edges:*"):
+        resume_id = key[len(f"{_PFX}edges:"):]
+        ktype = r.type(key)
+
+        if ktype == "hash":
+            raw = r.hgetall(key)
+            edges = [{"job_id": jid, "weight": float(w)} for jid, w in raw.items()]
+        elif ktype == "string":   # legacy JSON blob — migrate on the fly
+            try:
+                edges = json.loads(r.get(key) or "[]")
+            except (json.JSONDecodeError, Exception):
+                edges = []
+            # Migrate: write to HASH, remove old STRING key
+            if edges:
+                pipe = r.pipeline()
+                for edge in edges:
+                    pipe.hset(_edges_key(resume_id), edge["job_id"], edge["weight"])
+                    pipe.hset(_job_edges_key(edge["job_id"]), resume_id, edge["weight"])
+                pipe.delete(key)
+                pipe.execute()
+                logger.info("graph_store: migrated %d legacy JSON edge(s) for %s to HASH.", len(edges), resume_id)
+        else:
+            continue
+
+        edge_store[resume_id] = edges
+        for edge in edges:
+            users = job_to_users.setdefault(edge["job_id"], [])
+            if resume_id not in users:
+                users.append(resume_id)
+        total += len(edges)
+    return total
 
 
 def persist_job_catalog(job_id: str) -> None:
@@ -188,28 +254,20 @@ def restore_graph(
             job_catalog.append(jid)
     logger.info("graph_store: restored job_catalog with %d job(s).", len(job_catalog))
 
-    # ── 4. Restore edges ──────────────────────────────────────────────────────
-    edge_keys = list(r.scan_iter(f"{_PFX}edges:*"))
-    for key in edge_keys:
-        resume_id = key[len(f"{_PFX}edges:"):]
-        raw      = r.get(key)
-        if not raw:
-            continue
-        try:
-            edges = json.loads(raw)
-            edge_store[resume_id] = edges
-        except (json.JSONDecodeError, Exception) as exc:
-            logger.warning("graph_store: could not parse edges for %s: %s", resume_id, exc)
+    # ── 4. Restore edges (HASH format, migrates legacy JSON blobs) ──────────────
+    edge_count = load_edges_into_memory(edge_store, job_to_users)
+    logger.info("graph_store: restored %d edge(s) from Redis.", edge_count)
 
-    # ── 5. Restore job_to_users reverse index ─────────────────────────────────
+    # ── 5. Restore job_to_users reverse index (Redis Set) ────────────────────
     job_user_keys = list(r.scan_iter(f"{_PFX}job_users:*"))
     for key in job_user_keys:
-        job_id   = key[len(f"{_PFX}job_users:"):]
-        members  = r.smembers(key)
-        job_to_users[job_id] = list(members)
+        job_id  = key[len(f"{_PFX}job_users:"):]
+        members = r.smembers(key)
+        existing = set(job_to_users.get(job_id, []))
+        job_to_users[job_id] = list(existing | set(members))
 
     logger.info(
         "graph_store: restore complete — %d encoded, %d edges, %d job→user mappings.",
-        restored, len(edge_store), len(job_to_users),
+        restored, edge_count, len(job_to_users),
     )
     return restored

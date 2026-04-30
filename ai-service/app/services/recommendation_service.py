@@ -12,15 +12,30 @@ from app.services import graph_store
 logger = logging.getLogger(__name__)
 
 # ── Module-level in-memory stores (shared across requests) ────────────────────
-raw_node_store:  Dict[str, dict]         = {}   # ALL registered nodes (id → {type, text_snippet}) — no model needed
-feature_store:   Dict[str, torch.Tensor] = {}   # raw NLP embeddings
-graphsage_store: Dict[str, torch.Tensor] = {}   # GraphSAGE-updated embeddings
-edge_store:      Dict[str, List[dict]]   = {}   # resume_id → [{job_id, weight}]
-job_to_users:    Dict[str, List[str]]    = {}   # job_id → [resume_ids]
-job_catalog:     List[str]               = []   # ordered list of all job node IDs
+raw_node_store:    Dict[str, dict]         = {}   # ALL registered nodes (id → {type, text_snippet}) — no model needed
+feature_store:     Dict[str, torch.Tensor] = {}   # raw NLP embeddings
+graphsage_store:   Dict[str, torch.Tensor] = {}   # GraphSAGE-updated embeddings
+edge_store:        Dict[str, List[dict]]   = {}   # resume_id → [{job_id, weight}]
+job_to_users:      Dict[str, List[str]]    = {}   # job_id → [resume_ids]
+job_catalog:       List[str]               = []   # ordered list of all job node IDs
+job_catalog_index: Dict[str, int]          = {}   # job_id → index in job_catalog (O(1) lookup)
 
-MAX_SIMILAR_USERS = 5
+MAX_SIMILAR_USERS   = 5
 MAX_RECOMMENDATIONS = 50
+
+# ── Edge weight constants ─────────────────────────────────────────────────────
+MAX_EDGE_WEIGHT = 3.0   # hard cap per edge to prevent runaway accumulation
+DECAY           = 0.9   # multiplicative decay applied before adding new weight
+SMOOTHING_ALPHA = 0.7   # EMA blend: alpha * old + (1-alpha) * new
+
+# ── Interaction weight mapping ────────────────────────────────────────────────
+# Maps action_type → edge weight increment.  Add new actions here; the rest of
+# the system will pick them up automatically through handle_interaction().
+ACTION_WEIGHT_MAP: Dict[str, float] = {
+    "apply": 1.0,
+    "save":  0.7,
+    "click": 0.1,
+}
 
 
 def add_node(node_id: str, text: str, node_type: str, nlp_model, device) -> dict:
@@ -38,7 +53,8 @@ def add_node(node_id: str, text: str, node_type: str, nlp_model, device) -> dict
         "text_snippet": text_snippet,
         "encoded":      False,
     }
-    if node_type == "job" and node_id not in job_catalog:
+    if node_type == "job" and node_id not in job_catalog_index:
+        job_catalog_index[node_id] = len(job_catalog)
         job_catalog.append(node_id)
         graph_store.persist_job_catalog(node_id)   # ← persist to Redis
 
@@ -65,30 +81,37 @@ def add_node(node_id: str, text: str, node_type: str, nlp_model, device) -> dict
 
 
 def process_application(resume_id: str, job_id: str, weight: float, graphsage_model, device) -> dict:
-    """Register an application edge and update the resume embedding via GraphSAGE."""
+    """Update in-memory stores and re-run GraphSAGE for a resume→job interaction.
+
+    Edges are accumulated (weight added) rather than replaced.  Persistence to
+    Redis is handled by the caller (handle_interaction) via persist_edge so that
+    a single Redis write covers both the edge hash and its reverse.
+    """
     start = time.time()
 
-    # Register edge
+    # Accumulate edge weight with time decay then hard cap
     edges = edge_store.setdefault(resume_id, [])
-    found = False
     for edge in edges:
         if edge["job_id"] == job_id:
-            edge["weight"] = max(edge["weight"], weight)
-            found = True
+            edge["weight"] *= DECAY
+            edge["weight"] = min(edge["weight"] + weight, MAX_EDGE_WEIGHT)
             break
-    if not found:
+    else:
         edges.append({"job_id": job_id, "weight": weight})
 
-    # Persist edges to Redis after every change
-    graph_store.persist_edges(resume_id, edges)
-
+    # Update reverse index
     users_for_job = job_to_users.setdefault(job_id, [])
     if resume_id not in users_for_job:
         users_for_job.append(resume_id)
-        graph_store.persist_job_users(job_id, resume_id)   # ← persist to Redis
+        graph_store.persist_job_users(job_id, resume_id)
 
-    # Collect job features and similar users
-    job_features = [feature_store[e["job_id"]] * e["weight"] for e in edges]
+    # Collect job features — normalize by total weight to prevent any single
+    # job from dominating the aggregation
+    total_weight = sum(e["weight"] for e in edges) or 1.0
+    job_features = [
+        feature_store[e["job_id"]] * (e["weight"] / total_weight)
+        for e in edges
+    ]
 
     similar_users: List[str] = []
     seen: set = set()
@@ -114,7 +137,13 @@ def process_application(resume_id: str, job_id: str, weight: float, graphsage_mo
         graphsage_model=graphsage_model,
         device=device,
     )
-    graphsage_store[resume_id] = updated_vec
+    # EMA smoothing: blend old embedding with new to avoid sudden jumps
+    old_vec = graphsage_store.get(resume_id, updated_vec)
+    smoothed_vec = F.normalize(
+        SMOOTHING_ALPHA * old_vec + (1 - SMOOTHING_ALPHA) * updated_vec,
+        p=2, dim=1,
+    )
+    graphsage_store[resume_id] = smoothed_vec
 
     elapsed = time.time() - start
     logger.debug("process_application(%s→%s) in %.3fs", resume_id, job_id, elapsed)
@@ -126,64 +155,50 @@ def process_application(resume_id: str, job_id: str, weight: float, graphsage_mo
     }
 
 
-def get_recommendations(resume_id: str, top_k: int, device) -> dict:
-    """Generate hybrid content + CF recommendations for a resume."""
-    start = time.time()
+def handle_interaction(
+    resume_id: str,
+    job_id: str,
+    action_type: str,
+    graphsage_model,
+    device,
+) -> dict:
+    """Single entry-point for all user→job interactions.
 
-    top_k = min(top_k, MAX_RECOMMENDATIONS)
-    user_vec = F.normalize(graphsage_store[resume_id], p=2, dim=1)
-    job_vecs = F.normalize(
-        torch.cat([feature_store[j] for j in job_catalog], dim=0), p=2, dim=1
+    Steps:
+      1. Validate *action_type* against ACTION_WEIGHT_MAP.
+      2. Resolve weight from the map.
+      3. Persist the edge increment to Redis (HASH, idempotent accumulation).
+      4. Update in-memory stores and run GraphSAGE (via process_application).
+
+    To add a new interaction type, simply insert it into ACTION_WEIGHT_MAP.
+    No other code needs to change.
+
+    Raises:
+        ValueError: if *action_type* is not in ACTION_WEIGHT_MAP.
+    """
+    if action_type not in ACTION_WEIGHT_MAP:
+        raise ValueError(
+            f"Unknown action_type '{action_type}'. "
+            f"Valid types: {sorted(ACTION_WEIGHT_MAP)}"
+        )
+
+    weight = ACTION_WEIGHT_MAP[action_type]
+
+    # Persist edge to Redis (creates or accumulates)
+    graph_store.persist_edge(resume_id, job_id, weight)
+
+    # Update in-memory stores + re-run GraphSAGE
+    result = process_application(
+        resume_id=resume_id,
+        job_id=job_id,
+        weight=weight,
+        graphsage_model=graphsage_model,
+        device=device,
     )
+    result["action_type"] = action_type
+    result["weight"]      = weight
+    return result
 
-    with torch.no_grad():
-        content_scores = torch.matmul(user_vec, job_vecs.t()).squeeze(0)
-
-    # Collaborative filtering
-    cf_weight      = 0.3
-    content_weight = 1.0 - cf_weight
-
-    all_users   = list(graphsage_store.keys())
-    user_matrix = F.normalize(
-        torch.cat([graphsage_store[u] for u in all_users], dim=0), p=2, dim=1
-    )
-
-    with torch.no_grad():
-        user_sim = torch.matmul(user_vec, user_matrix.t()).squeeze(0)
-
-    user_sim[all_users.index(resume_id)] = -1e9
-
-    top_users  = torch.topk(user_sim, min(3, len(all_users)))
-    cf_scores  = torch.zeros(len(job_catalog), device=device)
-
-    for sim_val, idx in zip(top_users.values, top_users.indices):
-        u_id = all_users[idx.item()]
-        for edge in edge_store.get(u_id, []):
-            eid = edge["job_id"]
-            if eid in job_catalog:
-                cf_scores[job_catalog.index(eid)] += sim_val
-
-    final_scores = content_weight * content_scores + cf_weight * cf_scores
-
-    # Exclude already-applied jobs
-    for edge in edge_store.get(resume_id, []):
-        eid = edge["job_id"]
-        if eid in job_catalog:
-            final_scores[job_catalog.index(eid)] = -1e9
-
-    k = min(top_k, len(job_catalog))
-    scores, indices = torch.topk(final_scores, k)
-
-    elapsed = time.time() - start
-    logger.debug("get_recommendations(%s, top_k=%d) in %.3fs", resume_id, k, elapsed)
-
-    return {
-        "resume_id": resume_id,
-        "recommendations": [
-            {"job_id": job_catalog[i.item()], "score": round(s.item(), 4)}
-            for s, i in zip(scores, indices)
-        ],
-    }
 
 
 # ── Private helpers ───────────────────────────────────────────────────────────

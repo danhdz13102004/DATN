@@ -1,6 +1,6 @@
 import api from './api';
 import type { ApiResponse } from '../types/common';
-import type { Job, JobFormData, JobSelectOption, Skill } from '../types/job';
+import type { Industry, Job, JobFormData, JobSelectOption, Skill } from '../types/job';
 
 export const jobService = {
   getCompanyJobs: (params?: Record<string, string>) =>
@@ -28,4 +28,9 @@ export const jobService = {
 export const skillService = {
   getSkills: () =>
     api.get<ApiResponse<Skill[]>>('/skills'),
+};
+
+export const industryService = {
+  getIndustries: () =>
+    api.get<ApiResponse<Industry[]>>('/industries'),
 };

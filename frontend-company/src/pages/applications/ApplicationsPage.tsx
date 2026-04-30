@@ -62,6 +62,15 @@ export default function ApplicationsPage() {
             <option value="">All Jobs</option>
             {jobOptions?.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
           </select>
+          <select
+            className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 focus:outline-none focus:border-primary min-w-[180px]"
+            value={filters.sort ?? ''}
+            onChange={(e) => handleFilter('sort', e.target.value)}
+          >
+            <option value="">Newest First</option>
+            <option value="aiScore,desc">AI Score: High to Low</option>
+            <option value="aiScore,asc">AI Score: Low to High</option>
+          </select>
         </div>
 
         {/* Table */}
@@ -95,14 +104,14 @@ export default function ApplicationsPage() {
                     </td>
                     <td className="px-5 py-3.5 text-sm text-gray-600">{app.jobTitle}</td>
                     <td className="px-5 py-3.5">
-                      {app.aiScore != null ? (
+                      {app.aiScore != null ? (() => { const pct = Math.round(app.aiScore * 100); return (
                         <div className="flex items-center gap-2">
-                          <span className={`text-sm font-semibold ${app.aiScore >= 80 ? 'text-emerald-600' : app.aiScore >= 60 ? 'text-amber-500' : 'text-red-500'}`}>{app.aiScore}%</span>
+                          <span className={`text-sm font-semibold ${pct >= 80 ? 'text-emerald-600' : pct >= 60 ? 'text-amber-500' : 'text-red-500'}`}>{pct}%</span>
                           <div className="w-14 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full ${app.aiScore >= 80 ? 'bg-emerald-500' : app.aiScore >= 60 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${app.aiScore}%` }} />
+                            <div className={`h-full rounded-full ${pct >= 80 ? 'bg-emerald-500' : pct >= 60 ? 'bg-amber-500' : 'bg-red-500'}`} style={{ width: `${pct}%` }} />
                           </div>
                         </div>
-                      ) : (
+                      ); })() : (
                         <span className="text-xs text-gray-400">N/A</span>
                       )}
                     </td>

@@ -1,8 +1,11 @@
 package com.recruitpro.model;
 
+import com.recruitpro.dto.ResumeDataStructure;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.SQLRestriction;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -41,6 +44,11 @@ public class Resume {
     private Boolean isPrimary = false;
 
     // embedding managed by AI service — not mapped in JPA
+
+    /** Structured data extracted from the resume PDF by OpenAI. */
+    @Column(name = "resume_data_structure", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private ResumeDataStructure resumeDataStructure;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

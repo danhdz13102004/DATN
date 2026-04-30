@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { jobService } from '../../services/jobService';
@@ -18,21 +18,78 @@ export default function JobDetailPage() {
   const [coverLetter, setCoverLetter] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [isSaved, setIsSaved] = useState(false);
+  const [savePending, setSavePending] = useState(false);
+
+  // 5-second delayed click interaction — cancelled on unmount or tab hidden
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!id) return;
     Promise.all([
       jobService.getJobById(id),
       resumeService.listResumes(),
-    ]).then(([j, r]) => {
+      jobService.getSaveStatus(id).catch(() => false),
+    ]).then(([j, r, saved]) => {
       setJob(j);
       setResumes(r);
+      setIsSaved(saved as boolean);
       const primary = r.find((res: Resume) => res.isPrimary);
       if (primary) setSelectedResume(primary.id);
       else if (r.length > 0) setSelectedResume(r[0].id);
     }).catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Log click interaction after 5 s of continuous visibility
+  useEffect(() => {
+    if (!id || loading) return;
+
+    const scheduleClick = () => {
+      clickTimerRef.current = setTimeout(() => {
+        jobService.logInteraction(id, 'click');
+      }, 5000);
+    };
+
+    const cancelClick = () => {
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
+      }
+    };
+
+    scheduleClick();
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) cancelClick();
+      else scheduleClick();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      cancelClick();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [id, loading]);
+
+  const handleToggleSave = async () => {
+    if (!id || savePending) return;
+    setSavePending(true);
+    const wasSaved = isSaved;
+    setIsSaved(!wasSaved); // optimistic
+    try {
+      if (wasSaved) {
+        await jobService.unsaveJob(id);
+      } else {
+        await jobService.saveJob(id);
+        jobService.logInteraction(id, 'save');
+      }
+    } catch {
+      setIsSaved(wasSaved); // revert on error
+    } finally {
+      setSavePending(false);
+    }
+  };
 
   const handleApply = async () => {
     if (!id || !selectedResume) return;
@@ -69,12 +126,26 @@ export default function JobDetailPage() {
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center text-primary text-2xl font-bold shrink-0">
                 {job.companyName?.charAt(0) || job.title.charAt(0)}
               </div>
-              <div>
+              <div className="flex-1">
                 <h1 className="text-2xl font-bold text-text mb-1">{job.title}</h1>
                 <p className="text-text-muted text-[0.95rem]">
                   {job.companyName || 'Unknown Company'} — {job.location || 'Remote'}
                 </p>
               </div>
+              {/* Save / Unsave button */}
+              <button
+                onClick={handleToggleSave}
+                disabled={savePending}
+                title={isSaved ? 'Unsave job' : 'Save job'}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border transition-all disabled:opacity-50 ${
+                  isSaved
+                    ? 'bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100'
+                    : 'bg-white border-border text-text-muted hover:border-primary hover:text-primary'
+                }`}
+              >
+                <i className={`${isSaved ? 'fas' : 'far'} fa-bookmark`} />
+                {isSaved ? 'Saved' : 'Save'}
+              </button>
             </div>
             
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-4">

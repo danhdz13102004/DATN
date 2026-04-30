@@ -55,6 +55,7 @@ export default function JobDetailPage() {
   const infoItems = [
     { label: 'Job Type', value: JOB_TYPE_LABELS[job.jobType] ?? job.jobType },
     { label: 'Experience Level', value: job.experienceLevels?.map((l) => l.charAt(0) + l.slice(1).toLowerCase()).join(', ') || '—' },
+    { label: 'Industry', value: job.industry?.name || '—' },
     { label: 'Location', value: job.location },
     { label: 'Salary Range', value: job.salaryMin && job.salaryMax ? `$${job.salaryMin.toLocaleString()} – $${job.salaryMax.toLocaleString()}` : '—' },
     { label: 'Created', value: formatDate(job.createdAt) },
@@ -125,6 +126,36 @@ export default function JobDetailPage() {
           <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{job.description}</div>
         </div>
 
+        {/* Responsibilities */}
+        {job.responsibilities?.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-3">Responsibilities</h3>
+            <ul className="space-y-2">
+              {job.responsibilities.map((item, idx) => (
+                <li key={idx} className="flex items-start gap-2 text-sm text-gray-600">
+                  <span className="text-primary mt-0.5 shrink-0">•</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Requirements */}
+        {job.requirements?.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-3">Requirements</h3>
+            <ul className="space-y-2">
+              {job.requirements.map((item, idx) => (
+                <li key={idx} className="flex items-start gap-2 text-sm text-gray-600">
+                  <span className="text-primary mt-0.5 shrink-0">•</span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {/* Skills */}
         {job.skills?.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-6">
@@ -160,13 +191,15 @@ export default function JobDetailPage() {
                     <tr key={app.id} className="border-b border-gray-50 hover:bg-gray-50/50">
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">{app.applicantInitials}</div>
-                          <span className="text-sm font-medium">{app.applicantName}</span>
+                          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-semibold">
+                            {app.candidateName?.charAt(0).toUpperCase() ?? '?'}
+                          </div>
+                          <span className="text-sm font-medium">{app.candidateName}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-3.5"><span className={`text-sm font-semibold ${app.aiScore >= 80 ? 'text-emerald-600' : app.aiScore >= 60 ? 'text-amber-500' : 'text-red-500'}`}>{app.aiScore}%</span></td>
+                      <td className="px-5 py-3.5"><span className={`text-sm font-semibold ${(app.aiScore ?? 0) >= 80 ? 'text-emerald-600' : (app.aiScore ?? 0) >= 60 ? 'text-amber-500' : 'text-red-500'}`}>{app.aiScore != null ? `${app.aiScore}%` : '—'}</span></td>
                       <td className="px-5 py-3.5"><span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[app.status]}`}>{STATUS_LABELS[app.status]}</span></td>
-                      <td className="px-5 py-3.5 text-sm text-gray-500">{formatRelativeDate(app.appliedDate)}</td>
+                      <td className="px-5 py-3.5 text-sm text-gray-500">{formatRelativeDate(app.appliedAt)}</td>
                       <td className="px-5 py-3.5"><Link to={`/applications/${app.id}`} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100"><i className="fas fa-eye" /></Link></td>
                     </tr>
                   ))

@@ -5,7 +5,7 @@ COMPOSE_PROD = docker compose -f docker-compose.yml -f docker-compose.prod.yml
 
 # ── Development ──────────────────────────────
 
-.PHONY: build up down logs restart clean
+.PHONY: build up down logs restart restart-all restart-container clean
 
 build:
 	$(COMPOSE_DEV) build
@@ -20,7 +20,14 @@ logs:
 	$(COMPOSE_DEV) logs -f
 
 restart:
-	$(COMPOSE_DEV) down && $(COMPOSE_DEV) up -d
+	$(COMPOSE_DEV) down
+	$(COMPOSE_DEV) up -d
+
+restart-all:
+	$(COMPOSE_DEV) restart
+
+restart-container:
+	$(COMPOSE_DEV) restart $(SERVICE)
 
 clean:
 	$(COMPOSE_DEV) down -v --remove-orphans
@@ -49,7 +56,7 @@ logs-db:
 
 # ── Production ───────────────────────────────
 
-.PHONY: prod-build prod-up prod-down
+.PHONY: prod-build prod-up prod-down prod-restart prod-restart-all prod-restart-container
 
 prod-build:
 	$(COMPOSE_PROD) build
@@ -59,3 +66,13 @@ prod-up:
 
 prod-down:
 	$(COMPOSE_PROD) down
+
+prod-restart:
+	$(COMPOSE_PROD) down
+	$(COMPOSE_PROD) up -d
+
+prod-restart-all:
+	$(COMPOSE_PROD) restart
+
+prod-restart-container:
+	$(COMPOSE_PROD) restart $(SERVICE)

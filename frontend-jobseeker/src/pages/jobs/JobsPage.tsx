@@ -1,14 +1,19 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import { jobService } from '../../services/jobService';
-import type { Job, JobFilter, Skill } from '../../types/job';
+import type { Job, JobFilter, SavedJobDto, Skill } from '../../types/job';
 
 const JOB_TYPES = ['FULLTIME', 'PARTTIME', 'REMOTE', 'HYBRID'];
 const EXP_LEVELS = ['INTERN', 'FRESHER', 'JUNIOR', 'MIDDLE', 'SENIOR', 'LEADER'];
 
-function JobCard({ job, onClick }: { job: Job; onClick: () => void }) {
+function JobCard({ job, onClick, onToggleSave, savePendingId }: {
+  job: Job;
+  onClick: () => void;
+  onToggleSave: (jobId: string, e: React.MouseEvent) => void;
+  savePendingId: string | null;
+}) {
   const initial = job.companyName ? job.companyName.charAt(0).toUpperCase() : job.title.charAt(0).toUpperCase();
   const formatSalary = (min: number | null, max: number | null) => {
     if (!min && !max) return 'Negotiable';
@@ -41,6 +46,19 @@ function JobCard({ job, onClick }: { job: Job; onClick: () => void }) {
             {job.companyName || 'Company'}
           </div>
         </div>
+        {/* Save button */}
+        <button
+          onClick={(e) => onToggleSave(job.id, e)}
+          disabled={savePendingId === job.id}
+          title={job.isSaved ? 'Unsave' : 'Save'}
+          className={`p-1.5 rounded-md transition-colors disabled:opacity-40 ${
+            job.isSaved
+              ? 'text-amber-500 hover:text-amber-600'
+              : 'text-[#c8cdd9] hover:text-[#5f6780]'
+          }`}
+        >
+          <i className={`${job.isSaved ? 'fas' : 'far'} fa-bookmark text-base`} />
+        </button>
       </div>
 
       {/* Meta: location, type, level */}
@@ -95,7 +113,7 @@ function JobCard({ job, onClick }: { job: Job; onClick: () => void }) {
   );
 }
 
-type ViewMode = 'all' | 'recommended';
+type ViewMode = 'all' | 'recommended' | 'saved';
 
 export default function JobsPage() {
   const navigate = useNavigate();
@@ -105,6 +123,10 @@ export default function JobsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [filters, setFilters] = useState<JobFilter>({ page: 1, size: 12 });
   const [viewMode, setViewMode] = useState<ViewMode>('all');
+  const [savedJobs, setSavedJobs] = useState<SavedJobDto[]>([]);
+  const [savedLoading, setSavedLoading] = useState(false);
+  const [savedTotal, setSavedTotal] = useState(0);
+  const [savePendingId, setSavePendingId] = useState<string | null>(null);
 
   const fetchJobs = (f: JobFilter) => {
     setLoading(true);
@@ -118,7 +140,49 @@ export default function JobsPage() {
       .finally(() => setLoading(false));
   };
 
+  const fetchSavedJobs = () => {
+    setSavedLoading(true);
+    jobService.getSavedJobs().then((res) => {
+      setSavedJobs(res.data ?? []);
+      setSavedTotal(res.meta?.total ?? 0);
+    }).catch(console.error)
+      .finally(() => setSavedLoading(false));
+  };
+
   useEffect(() => { fetchJobs(filters); }, [filters]);
+
+  useEffect(() => {
+    if (viewMode === 'saved') fetchSavedJobs();
+  }, [viewMode]);
+
+  const handleToggleSave = async (jobId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (savePendingId === jobId) return;
+    setSavePendingId(jobId);
+
+    const job = jobs.find(j => j.id === jobId);
+    const wasSaved = job?.isSaved ?? false;
+
+    // Optimistic update in the jobs list
+    setJobs(prev => prev.map(j => j.id === jobId ? { ...j, isSaved: !wasSaved } : j));
+
+    try {
+      if (wasSaved) {
+        await jobService.unsaveJob(jobId);
+        if (viewMode === 'saved') {
+          setSavedJobs(prev => prev.filter(s => s.jobId !== jobId));
+        }
+      } else {
+        await jobService.saveJob(jobId);
+        jobService.logInteraction(jobId, 'save');
+      }
+    } catch {
+      // Revert on failure
+      setJobs(prev => prev.map(j => j.id === jobId ? { ...j, isSaved: wasSaved } : j));
+    } finally {
+      setSavePendingId(null);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -152,6 +216,21 @@ export default function JobsPage() {
             }`}
           >
             <i className="fas fa-wand-magic-sparkles" /> Recommended
+          </button>
+          <button
+            onClick={() => setViewMode('saved')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md text-[0.85rem] font-medium transition-all ${
+              viewMode === 'saved'
+                ? 'bg-white text-[#2b6de0] font-semibold shadow-sm'
+                : 'text-[#8b92a8] hover:text-[#1a1d26]'
+            }`}
+          >
+            <i className="fas fa-bookmark" /> Saved
+            {savedTotal > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full text-[0.72rem] font-bold bg-amber-100 text-amber-700">
+                {savedTotal}
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -326,6 +405,8 @@ export default function JobsPage() {
                     key={job.id}
                     job={job}
                     onClick={() => navigate(`/jobs/${job.id}`)}
+                    onToggleSave={handleToggleSave}
+                    savePendingId={savePendingId}
                   />
                 ))}
               </div>
@@ -349,6 +430,86 @@ export default function JobsPage() {
                 </div>
               )}
             </>
+          )}
+        </>
+      )}
+      {/* Saved Jobs Section */}
+      {viewMode === 'saved' && (
+        <>
+          <div
+            className="flex items-center justify-between pb-3.5"
+            style={{ borderBottom: '2px solid #eef0f4' }}
+          >
+            <h3 className="text-[1.05rem] font-semibold text-[#1a1d26] flex items-center gap-2.5">
+              <i className="fas fa-bookmark text-amber-500" />
+              Saved Jobs
+            </h3>
+            {savedTotal > 0 && (
+              <span className="px-3 py-1 rounded-full text-xs font-semibold" style={{ background: '#f1f3f7', color: '#5f6780' }}>
+                {savedTotal} saved
+              </span>
+            )}
+          </div>
+
+          {savedLoading ? (
+            <LoadingSpinner />
+          ) : savedJobs.length === 0 ? (
+            <EmptyState icon="fa-bookmark" title="No saved jobs" description="Save jobs you're interested in to review them later." />
+          ) : (
+            <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+              {savedJobs.map((saved) => (
+                <article
+                  key={saved.savedJobId}
+                  onClick={() => navigate(`/jobs/${saved.jobId}`)}
+                  className="bg-white border border-[#eef0f4] rounded-[14px] p-6 flex flex-col cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:border-[#6ea3f7] group"
+                  style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+                  onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)')}
+                  onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)')}
+                >
+                  <div className="flex items-start gap-3.5 mb-4">
+                    <div className="w-12 h-12 rounded-[10px] flex items-center justify-center font-bold text-lg shrink-0" style={{ background: 'rgba(66,135,245,0.08)', color: '#2b6de0' }}>
+                      {saved.companyName?.charAt(0).toUpperCase() || saved.jobTitle.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-[1.02rem] font-semibold text-[#1a1d26] leading-snug group-hover:text-primary transition-colors">{saved.jobTitle}</h3>
+                      <div className="text-sm text-[#5f6780] mt-0.5">{saved.companyName}</div>
+                    </div>
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        setSavePendingId(saved.jobId);
+                        try {
+                          await jobService.unsaveJob(saved.jobId);
+                          setSavedJobs(prev => prev.filter(s => s.jobId !== saved.jobId));
+                          setSavedTotal(t => Math.max(0, t - 1));
+                        } finally {
+                          setSavePendingId(null);
+                        }
+                      }}
+                      disabled={savePendingId === saved.jobId}
+                      title="Unsave"
+                      className="p-1.5 rounded-md text-amber-500 hover:text-amber-600 transition-colors disabled:opacity-40"
+                    >
+                      <i className="fas fa-bookmark text-base" />
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-3 text-[0.82rem] text-[#8b92a8] mb-3.5">
+                    {saved.location && <span className="flex items-center gap-1.5"><i className="fas fa-map-marker-alt" /> {saved.location}</span>}
+                    {saved.jobType && <span className="flex items-center gap-1.5"><i className="fas fa-clock" /> {saved.jobType.replace('FULLTIME', 'Full-time').replace('PARTTIME', 'Part-time')}</span>}
+                  </div>
+                  <div className="flex items-center justify-between mt-auto pt-4" style={{ borderTop: '1px solid #eef0f4' }}>
+                    <span className="text-[0.95rem] font-semibold text-[#2b6de0]">
+                      {saved.salaryMin && saved.salaryMax
+                        ? `$${saved.salaryMin.toLocaleString()} – $${saved.salaryMax.toLocaleString()}`
+                        : 'Negotiable'}
+                    </span>
+                    <span className="text-[0.75rem] text-[#8b92a8]">
+                      Saved {new Date(saved.savedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                </article>
+              ))}
+            </div>
           )}
         </>
       )}

@@ -238,6 +238,7 @@ public class CompanySubscriptionService {
                 .endDate(now.plus(plan.getDurationDays(), ChronoUnit.DAYS))
                 .status(SubscriptionStatus.ACTIVE)
                 .jobsPostedCount(0)
+                .allowUseAiMatching(plan.isAllowUseAiMatching())
                 .build();
         subscription = subscriptionRepository.save(subscription);
 
@@ -261,7 +262,7 @@ public class CompanySubscriptionService {
                 .planPrice(sub.getPlan().getPrice())
                 .jobPostLimit(sub.getPlan().getJobPostLimit())
                 .durationDays(sub.getPlan().getDurationDays())
-                .allowUseAiMatching(sub.getPlan().isAllowUseAiMatching())
+                .allowUseAiMatching(sub.isAllowUseAiMatching())
                 .startDate(sub.getStartDate())
                 .endDate(sub.getEndDate())
                 .status(sub.getStatus().name())

@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import com.recruitpro.dto.AiMatchingResult;
+
 import java.time.Instant;
 import java.util.List;
 
@@ -23,6 +25,7 @@ public class ApplicationDetailResponseDto {
     private String jobId;
     private String jobTitle;
     private Float aiScore;
+    private AiMatchingResult jsonMatching;
     private String status;
     private boolean hasScheduledInterview;
     private String resumeUrl;

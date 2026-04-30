@@ -4,7 +4,7 @@ import Topbar from '../../components/layout/Topbar';
 import { useApplicationDetail, useUpdateApplicationStatus } from '../../hooks/useApplications';
 import { chatService } from '../../services/chatService';
 import { ROUTES, STATUS_LABELS, STATUS_COLORS } from '../../constants';
-import type { ApplicationStatus } from '../../types/application';
+import type { ApplicationStatus, AiMatchingResult } from '../../types/application';
 
 const STATUS_FLOW: ApplicationStatus[] = ['APPLIED', 'SCREENING', 'INTERVIEW', 'OFFER', 'HIRED'];
 
@@ -43,6 +43,42 @@ function getFileType(url: string): 'pdf' | 'docx' | 'image' | 'other' {
   if (lower.includes('.docx') || lower.includes('.doc')) return 'docx';
   if (lower.match(/\.(png|jpg|jpeg|gif|webp)/)) return 'image';
   return 'other';
+}
+
+/** Render one scoring row */
+function ScoreRow({ label, value }: { label: string; value: number | null }) {
+  if (value == null) return null;
+  const pct = Math.round(value * 100);
+  const barColor = pct >= 80 ? 'bg-emerald-500' : pct >= 60 ? 'bg-amber-500' : 'bg-red-500';
+  const textColor = pct >= 80 ? 'text-emerald-600' : pct >= 60 ? 'text-amber-500' : 'text-red-500';
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-1">
+        <span className="text-xs text-gray-500 capitalize">{label}</span>
+        <span className={`text-xs font-semibold ${textColor}`}>{pct}%</span>
+      </div>
+      <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+/** Breakdown table from json_matching */
+function AiMatchingBreakdown({ matching }: { matching: AiMatchingResult }) {
+  const rows: { label: string; value: number | null }[] = [
+    { label: 'Skills', value: matching.skills },
+    { label: 'Experience', value: matching.experience },
+    { label: 'Seniority', value: matching.seniority },
+    { label: 'Industry', value: matching.industry },
+    { label: 'Nice-to-have Skills', value: matching.nice_to_have_skills },
+  ];
+  return (
+    <div className="border-t border-gray-50 pt-4 space-y-2.5">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Score Breakdown</p>
+      {rows.map((r) => <ScoreRow key={r.label} label={r.label} value={r.value} />)}
+    </div>
+  );
 }
 
 export default function ApplicationDetailPage() {
@@ -101,7 +137,7 @@ export default function ApplicationDetailPage() {
     </>
   );
 
-  const score = app.aiScore ?? 0;
+  const score = Math.round((app.aiScore ?? 0) * 100);
   const scoreColor = score >= 80 ? 'text-emerald-600' : score >= 60 ? 'text-amber-500' : 'text-red-500';
   const scoreBarColor = score >= 80 ? 'bg-emerald-500' : score >= 60 ? 'bg-amber-500' : 'bg-red-500';
   const initials = getInitials(app.candidateName);
@@ -259,14 +295,15 @@ export default function ApplicationDetailPage() {
               {app.aiScore != null ? (
                 <>
                   <div className="text-center mb-4">
-                    <div className={`text-4xl font-bold ${scoreColor}`}>{app.aiScore}%</div>
+                    <div className={`text-4xl font-bold ${scoreColor}`}>{score}%</div>
                     <div className="text-xs text-gray-400 mt-1">
                       {score >= 80 ? 'Strong match' : score >= 60 ? 'Good match' : 'Low match'}
                     </div>
                   </div>
-                  <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden mb-4">
                     <div className={`h-full rounded-full transition-all ${scoreBarColor}`} style={{ width: `${score}%` }} />
                   </div>
+                  {app.jsonMatching && <AiMatchingBreakdown matching={app.jsonMatching} />}
                 </>
               ) : (
                 <div className="text-center text-gray-400 text-sm py-2">AI score not yet calculated</div>
@@ -320,7 +357,7 @@ export default function ApplicationDetailPage() {
               </div>
             </div>
 
-            {/* Timeline */}
+            {/* Timeline
             {app.timeline?.length > 0 && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-6">
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">Activity Timeline</h3>
@@ -336,7 +373,7 @@ export default function ApplicationDetailPage() {
                   ))}
                 </div>
               </div>
-            )}
+            )} */}
           </div>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import api from './api';
-import type { Job, JobFilter } from '../types/job';
+import type { Job, JobFilter, SavedJobDto, InteractionEventType } from '../types/job';
 
 export const jobService = {
   listJobs: (filters: JobFilter = {}) => {
@@ -16,4 +16,26 @@ export const jobService = {
   },
 
   getJobById: (id: string) => api.get<{ data: Job }>(`/jobs/${id}`).then(r => r.data.data),
+
+  // ── Saved Jobs ─────────────────────────────────────────────────────────────
+
+  saveJob: (jobId: string) =>
+    api.post<{ data: SavedJobDto }>(`/jobs/${jobId}/save`).then(r => r.data.data),
+
+  unsaveJob: (jobId: string) =>
+    api.delete(`/jobs/${jobId}/save`).then(r => r.data),
+
+  getSaveStatus: (jobId: string) =>
+    api.get<{ data: { isSaved: boolean } }>(`/jobs/${jobId}/save/status`).then(r => r.data.data.isSaved),
+
+  getSavedJobs: (page = 1, size = 20) =>
+    api.get<{ data: SavedJobDto[]; meta: any }>(`/jobseeker/saved-jobs?page=${page - 1}&size=${size}`).then(r => r.data),
+
+  // ── Interactions ───────────────────────────────────────────────────────────
+
+  logInteraction: (jobId: string, eventType: InteractionEventType, resumeId?: string, metadata?: Record<string, unknown>) =>
+    api.post('/jobseeker/interactions', { jobId, eventType, resumeId, metadata }).catch(() => {
+      // Silent — interaction logging must never break UI
+    }),
 };
+

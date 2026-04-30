@@ -194,18 +194,31 @@ Table job_seekers {
   }
 }
 
+Table industries {
+  id uuid [pk, default: `gen_random_uuid()`]
+  name varchar [not null, unique]
+
+  indexes {
+    (name) [unique, name: 'uq_industries_name']
+  }
+}
+
 Table jobs {
   id uuid [pk]
   company_id uuid [not null]
   company_address_id uuid              // nullable — pick from saved or enter custom
   title varchar [not null]
   description text
+  industry_id uuid                     // nullable FK → industries
+  responsibilities text[]              // bullet points — stored as array
+  requirements text[]                  // bullet points — stored as array
   experience_level experience_level
   location varchar                     // kept for custom / display location
   salary_min int
   salary_max int
   job_type job_type [not null]
   status job_status [not null, default: 'DRAFT']
+  job_data_structure json              // structured text for AI: title + seniority + industry + skills + description + responsibilities + requirements
   embedding vector(384)                // pgvector — cosine similarity; dimension must match model output
   created_at timestamptz [not null]
   updated_at timestamptz
@@ -490,6 +503,7 @@ Ref: job_seekers.user_id > users.id
 
 Ref: jobs.company_id > companies.id
 Ref: jobs.company_address_id > company_addresses.id
+Ref: jobs.industry_id > industries.id
 
 Ref: job_skills.job_id > jobs.id
 Ref: job_skills.skill_id > skills.id

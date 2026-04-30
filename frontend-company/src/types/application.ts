@@ -1,5 +1,14 @@
 export type ApplicationStatus = 'APPLIED' | 'SCREENING' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'REJECTED';
 
+export interface AiMatchingResult {
+  overall_score: number | null;
+  skills: number | null;
+  experience: number | null;
+  seniority: number | null;
+  industry: number | null;
+  nice_to_have_skills: number | null;
+}
+
 export interface Application {
   id: string;
   candidateName: string;
@@ -27,6 +36,7 @@ export interface ApplicationDetail {
   jobTitle: string;
   // Scoring & status
   aiScore: number | null;
+  jsonMatching: AiMatchingResult | null;
   status: ApplicationStatus;
   hasScheduledInterview: boolean;
   // Resume

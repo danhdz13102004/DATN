@@ -18,7 +18,23 @@ export interface Job {
   skills: Skill[];
   createdAt: string;
   updatedAt: string;
+  isSaved?: boolean;
 }
+
+export interface SavedJobDto {
+  savedJobId: string;
+  jobId: string;
+  jobTitle: string;
+  companyName: string;
+  location: string;
+  jobType: string;
+  salaryMin: number | null;
+  salaryMax: number | null;
+  savedAt: string;
+  isSaved: boolean;
+}
+
+export type InteractionEventType = 'click' | 'save' | 'apply';
 
 export interface JobFilter {
   keyword?: string;

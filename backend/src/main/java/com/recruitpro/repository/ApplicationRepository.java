@@ -26,7 +26,6 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
           AND (cast(:status as string) IS NULL OR a.status = :status)
           AND (cast(:jobId as string) IS NULL OR a.jobId = :jobId)
           AND (cast(:search as string) IS NULL OR :search = '' OR LOWER(u.email) LIKE LOWER(CONCAT('%', cast(:search as string), '%')))
-        ORDER BY a.createdAt DESC
     """)
     Page<Application> findByCompanyFilters(
             @Param("companyId") UUID companyId,

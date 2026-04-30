@@ -1,5 +1,6 @@
 package com.recruitpro.dto.response;
 
+import com.recruitpro.dto.AiMatchingResult;
 import com.recruitpro.model.enums.ApplicationStatus;
 import com.recruitpro.model.enums.InterviewStatus;
 import com.recruitpro.model.enums.MeetingType;
@@ -17,6 +18,7 @@ public class JobSeekerApplicationDetailDto {
     private UUID id;
     private ApplicationStatus status;
     private Float aiScore;
+    private AiMatchingResult jsonMatching;
     private String coverLetter;
     private Instant appliedAt;
 

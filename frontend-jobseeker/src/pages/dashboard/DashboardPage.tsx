@@ -58,19 +58,6 @@ function StatusBadge({ value }: { value: string }) {
   );
 }
 
-// ---- Score bar ----
-function ScoreBar({ score }: { score: number }) {
-  const color = score >= 80 ? '#4287f5' : score >= 60 ? '#f59e0b' : '#ef4444';
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-      <span style={{ fontWeight: 600, color, fontSize: '0.88rem', minWidth: '36px' }}>{score}%</span>
-      <div style={{ width: '60px', height: '6px', background: '#eef0f4', borderRadius: '3px', overflow: 'hidden' }}>
-        <div style={{ width: `${score}%`, height: '100%', background: color, borderRadius: '3px' }} />
-      </div>
-    </div>
-  );
-}
-
 // ---- Avatar circle (company initial) ----
 function CompanyAvatar({ initial, color = '#2b6de0', bg = 'rgba(66,135,245,0.08)' }: { initial: string; color?: string; bg?: string }) {
   return (
@@ -202,14 +189,14 @@ export default function DashboardPage() {
           <table>
             <thead>
               <tr>
-                {['Job Position', 'Company', 'AI Score', 'Status', 'Applied', ''].map(h => (
+                {['Job Position', 'Company', 'Status', 'Applied', ''].map(h => (
                   <th key={h} style={theadTh}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {recentApps.length === 0
-                ? <EmptyRow cols={6} icon="fa-file-alt" msg="No applications yet" />
+                ? <EmptyRow cols={5} icon="fa-file-alt" msg="No applications yet" />
                 : recentApps.map(app => (
                   <tr
                     key={app.id}
@@ -224,11 +211,6 @@ export default function DashboardPage() {
                         <CompanyAvatar initial={app.companyInitial ?? app.companyName?.charAt(0) ?? '?'} />
                         <span style={{ color: '#5f6780' }}>{app.companyName}</span>
                       </div>
-                    </td>
-                    <td style={tbodyTd}>
-                      {app.aiScore != null
-                        ? <ScoreBar score={Math.round(app.aiScore)} />
-                        : <span style={{ color: '#8b92a8' }}>—</span>}
                     </td>
                     <td style={tbodyTd}><StatusBadge value={app.status} /></td>
                     <td style={{ ...tbodyTd, color: '#8b92a8' }}>{formatDate(app.appliedAt)}</td>

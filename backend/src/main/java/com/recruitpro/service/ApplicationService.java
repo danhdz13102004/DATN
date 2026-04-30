@@ -108,6 +108,7 @@ public class ApplicationService {
                 .jobId(app.getJobId().toString())
                 .jobTitle(app.getJob().getTitle())
                 .aiScore(app.getAiScore())
+                .jsonMatching(app.getJsonMatching())
                 .status(app.getStatus().name())
                 .hasScheduledInterview(applicationRepository.hasScheduledInterview(app.getId()))
                 .resumeUrl(app.getResumeId() != null

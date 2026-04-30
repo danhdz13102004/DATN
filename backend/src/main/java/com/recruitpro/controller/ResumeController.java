@@ -13,7 +13,13 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import java.io.// `IOException` is a checked exception in Java that is thrown when an input/output
+// operation fails or is interrupted. In the context of the provided code snippet,
+// `IOException` is used in the `upload` and `replace` methods to handle any
+// input/output errors that may occur when working with files, particularly when reading
+// or writing to a file. This ensures that the code can handle potential issues related
+// to file operations in a controlled manner.
+IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;

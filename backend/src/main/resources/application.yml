@@ -78,6 +78,13 @@ app:
     enabled: ${SEED_ENABLED:false}
   stripe:
     secret-key: ${STRIPE_SECRET_KEY:sk_test_51T8KMCGk0gzcyWKKPHrQbsWLahqGqjHLjkkPQgDmsOgl7mwTeMJUgRG9ol9k5eCzaGApPeEkOGGE0Eq8CL47KM9100go2ziwCN}
+    webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  openai:
+    api-key: ${OPENAI_API_KEY:}
+    model: ${OPENAI_MODEL:gpt-4o-mini}
+    base-url: ${OPENAI_BASE_URL:https://api.openai.com/v1}
+    connect-timeout-ms: ${OPENAI_CONNECT_TIMEOUT_MS:10000}
+    read-timeout-ms: ${OPENAI_READ_TIMEOUT_MS:60000}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_0b4d97785df70e4fb970b0a30fbb6601f3ddb1ee865ddbe75a97666786ccc722}
     currency: ${STRIPE_CURRENCY:usd}
 

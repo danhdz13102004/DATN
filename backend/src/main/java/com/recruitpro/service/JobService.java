@@ -1,5 +1,6 @@
 package com.recruitpro.service;
 
+import com.recruitpro.dto.response.JobDto;
 import com.recruitpro.dto.response.JobSelectOptionDto;
 import com.recruitpro.exception.ForbiddenException;
 import com.recruitpro.exception.ResourceNotFoundException;
@@ -9,17 +10,20 @@ import com.recruitpro.model.enums.ExperienceLevel;
 import com.recruitpro.model.enums.JobStatus;
 import com.recruitpro.model.enums.JobType;
 import com.recruitpro.repository.JobRepository;
+import com.recruitpro.repository.SavedJobRepository;
 import com.recruitpro.repository.SkillRepository;
 import com.recruitpro.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -28,6 +32,7 @@ public class JobService {
 
     private final JobRepository jobRepository;
     private final SkillRepository skillRepository;
+    private final SavedJobRepository savedJobRepository;
     private final AiServiceClient aiServiceClient;
 
     /**
@@ -40,6 +45,58 @@ public class JobService {
             return jobRepository.findPublishedJobsWithLevels(keyword, jobType, experienceLevels, location, pageable);
         }
         return jobRepository.findPublishedJobs(keyword, jobType, location, pageable);
+    }
+
+    /**
+     * Public job listing with isSaved populated for the given job seeker.
+     * Pass null seekerId for unauthenticated / non-jobseeker callers.
+     */
+    public Page<JobDto> findPublishedJobDtos(String keyword, JobType jobType,
+                                              Set<ExperienceLevel> experienceLevels,
+                                              String location, UUID seekerId, Pageable pageable) {
+        Page<Job> page = findPublishedJobs(keyword, jobType, experienceLevels, location, pageable);
+        Set<UUID> savedIds = seekerId != null
+                ? savedJobRepository.findJobIdsByJobSeekerId(seekerId)
+                : Collections.emptySet();
+        List<JobDto> dtos = page.getContent().stream()
+                .map(j -> toJobDto(j, savedIds.contains(j.getId())))
+                .collect(Collectors.toList());
+        return new PageImpl<>(dtos, pageable, page.getTotalElements());
+    }
+
+    /**
+     * Get job by ID with isSaved populated for the given job seeker.
+     * Pass null seekerId for unauthenticated / non-jobseeker callers.
+     */
+    public JobDto findByIdAsDto(UUID id, UUID seekerId) {
+        Job job = findById(id);
+        boolean saved = seekerId != null && savedJobRepository.existsByJobSeekerIdAndJobId(seekerId, id);
+        return toJobDto(job, saved);
+    }
+
+    private JobDto toJobDto(Job job, boolean isSaved) {
+        return JobDto.builder()
+                .id(job.getId())
+                .companyId(job.getCompanyId())
+                .companyAddressId(job.getCompanyAddressId())
+                .title(job.getTitle())
+                .description(job.getDescription())
+                .industry(job.getIndustry())
+                .responsibilities(job.getResponsibilities())
+                .requirements(job.getRequirements())
+                .niceToHaveSkills(job.getNiceToHaveSkills())
+                .jobDataStructure(job.getJobDataStructure())
+                .experienceLevels(job.getExperienceLevels())
+                .location(job.getLocation())
+                .salaryMin(job.getSalaryMin())
+                .salaryMax(job.getSalaryMax())
+                .jobType(job.getJobType())
+                .status(job.getStatus())
+                .skills(job.getSkills())
+                .createdAt(job.getCreatedAt())
+                .updatedAt(job.getUpdatedAt())
+                .isSaved(isSaved)
+                .build();
     }
 
     /**
@@ -73,12 +130,13 @@ public class JobService {
             job.setSkills(skills);
         }
 
+        String jobText = buildJobText(job);  // also sets job_data_structure
         Job saved = jobRepository.save(job);
         log.info("Job created: {} (companyId={}, status={})", saved.getTitle(), saved.getCompanyId(), saved.getStatus());
 
         // Async: register job node in AI graph if already published at creation time
         if (saved.getStatus() == JobStatus.PUBLISHED) {
-            aiServiceClient.addJobNode(saved.getId(), buildJobText(saved));
+            aiServiceClient.addJobNode(saved.getId(), jobText);
         }
 
         return saved;
@@ -94,6 +152,10 @@ public class JobService {
 
         if (updates.getTitle() != null) job.setTitle(updates.getTitle());
         if (updates.getDescription() != null) job.setDescription(updates.getDescription());
+        if (updates.getIndustry() != null) job.setIndustry(updates.getIndustry());
+        if (updates.getResponsibilities() != null) job.setResponsibilities(updates.getResponsibilities());
+        if (updates.getRequirements() != null) job.setRequirements(updates.getRequirements());
+        if (updates.getNiceToHaveSkills() != null) job.setNiceToHaveSkills(updates.getNiceToHaveSkills());
         if (updates.getExperienceLevels() != null && !updates.getExperienceLevels().isEmpty())
             job.setExperienceLevels(updates.getExperienceLevels());
         if (updates.getLocation() != null) job.setLocation(updates.getLocation());
@@ -108,6 +170,7 @@ public class JobService {
             job.setSkills(skills);
         }
 
+        buildJobText(job);  // refresh job_data_structure with latest field values
         return jobRepository.save(job);
     }
 
@@ -164,16 +227,52 @@ public class JobService {
     }
 
     /**
-     * Builds a combined text representation of a job for AI embedding.
-     * Concatenates title, description, and skill names for richer semantics.
+     * Builds the job_data_structure JSON and returns the combined text for AI embedding.
+     * Structure mirrors the Python text-building logic used by the AI service.
      */
     private String buildJobText(Job job) {
-        StringBuilder sb = new StringBuilder();
-        if (job.getTitle() != null)       sb.append(job.getTitle()).append(". ");
-        if (job.getDescription() != null) sb.append(job.getDescription()).append(" ");
-        if (job.getSkills() != null) {
-            job.getSkills().forEach(s -> sb.append(s.getName()).append(" "));
-        }
-        return sb.toString().trim();
+        String seniority = (job.getExperienceLevels() != null && !job.getExperienceLevels().isEmpty())
+                ? job.getExperienceLevels().stream().map(ExperienceLevel::name).collect(Collectors.joining(", "))
+                : "";
+        String mustHaveSkills = (job.getSkills() != null && !job.getSkills().isEmpty())
+                ? job.getSkills().stream().map(Skill::getName).collect(Collectors.joining(", "))
+                : "";
+        String niceToHaveSkills = (job.getNiceToHaveSkills() != null && job.getNiceToHaveSkills().length > 0)
+                ? String.join(", ", job.getNiceToHaveSkills())
+                : "";
+        String responsibilities = (job.getResponsibilities() != null && job.getResponsibilities().length > 0)
+                ? String.join(". ", job.getResponsibilities())
+                : "";
+        String requirements = (job.getRequirements() != null && job.getRequirements().length > 0)
+                ? String.join(". ", job.getRequirements())
+                : "";
+        String industryName = (job.getIndustry() != null) ? job.getIndustry().getName() : "";
+
+        String text = "Job Title: " + safeText(job.getTitle()) + ". " +
+                "Seniority: " + safeText(seniority) + ". " +
+                "Industry: " + safeText(industryName) + ". " +
+                "Must-have Skills: " + safeText(mustHaveSkills) + ". " +
+                "Nice-to-have Skills: " + safeText(niceToHaveSkills) + ". " +
+                "Description: " + safeText(job.getDescription()) + ". " +
+                "Responsibilities: " + safeText(responsibilities) + ". " +
+                "Requirements: " + safeText(requirements);
+
+        Map<String, Object> dataStructure = new LinkedHashMap<>();
+        dataStructure.put("job_title", safeText(job.getTitle()));
+        dataStructure.put("seniority", safeText(seniority));
+        dataStructure.put("industry", safeText(industryName));
+        dataStructure.put("must_have_skills", safeText(mustHaveSkills));
+        dataStructure.put("nice_to_have_skills", safeText(niceToHaveSkills));
+        dataStructure.put("description", safeText(job.getDescription()));
+        dataStructure.put("responsibilities", safeText(responsibilities));
+        dataStructure.put("requirements", safeText(requirements));
+        dataStructure.put("text", text);
+        job.setJobDataStructure(dataStructure);
+
+        return text;
+    }
+
+    private String safeText(String s) {
+        return (s != null && !s.isBlank()) ? s : "";
     }
 }

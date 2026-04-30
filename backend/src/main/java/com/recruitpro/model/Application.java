@@ -1,5 +1,6 @@
 package com.recruitpro.model;
 
+import com.recruitpro.dto.AiMatchingResult;
 import com.recruitpro.model.enums.ApplicationStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -35,6 +36,10 @@ public class Application {
 
     @Column(name = "ai_score")
     private Float aiScore;
+
+    @Column(name = "json_matching", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private AiMatchingResult jsonMatching;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)

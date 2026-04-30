@@ -1,5 +1,6 @@
 package com.recruitpro.service;
 
+import com.recruitpro.dto.ResumeDataStructure;
 import com.recruitpro.model.Resume;
 import com.recruitpro.repository.ResumeRepository;
 import com.recruitpro.storage.StorageService;
@@ -37,6 +38,7 @@ public class ResumePdfParser {
     private final StorageService storageService;
     private final ResumeRepository resumeRepository;
     private final AiServiceClient aiServiceClient;
+    private final OpenAiResumeStructuringService openAiResumeStructuringService;
 
     /**
      * Extracts text from a PDF resume and sends it to the AI service.
@@ -82,7 +84,7 @@ public class ResumePdfParser {
             // Continue with fallback — the AI node will still be registered
         }
 
-        // ── Step 3: persist parsedText back to the Resume entity ───────────────
+        // ── Step 3: persist parsedText + structured data back to the Resume entity ──
         final String finalText = extractedText;
         try {
             resumeRepository.findById(resumeId).ifPresent(resume -> {
@@ -92,6 +94,20 @@ public class ResumePdfParser {
             });
         } catch (Exception e) {
             log.error("[PDF] Failed to persist parsedText (resumeId={}): {}", resumeId, e.getMessage());
+        }
+
+        // ── Step 3b: call OpenAI to extract structured resume data ─────────────
+        try {
+            ResumeDataStructure dataStructure = openAiResumeStructuringService.structure(finalText);
+            if (dataStructure != null) {
+                resumeRepository.findById(resumeId).ifPresent(resume -> {
+                    resume.setResumeDataStructure(dataStructure);
+                    resumeRepository.save(resume);
+                    log.info("[OpenAI] resume_data_structure saved: resumeId={}", resumeId);
+                });
+            }
+        } catch (Exception e) {
+            log.error("[OpenAI] Failed to persist resume_data_structure (resumeId={}): {}", resumeId, e.getMessage());
         }
 
         // ── Step 4: register resume node in the AI graph ───────────────────────

@@ -12,6 +12,7 @@ import com.recruitpro.model.Interview;
 import com.recruitpro.model.Job;
 import com.recruitpro.model.Resume;
 import com.recruitpro.model.enums.ApplicationStatus;
+import com.recruitpro.model.enums.InteractionEventType;
 import com.recruitpro.repository.ApplicationRepository;
 import com.recruitpro.repository.CompanyRepository;
 import com.recruitpro.repository.InterviewRepository;
@@ -39,6 +40,7 @@ public class JobSeekerApplicationService {
     private final CompanyRepository companyRepository;
     private final InterviewRepository interviewRepository;
     private final AiServiceClient aiServiceClient;
+    private final JobInteractionService jobInteractionService;
 
     public Page<JobSeekerApplicationListItemDto> listForSeeker(
             UUID seekerId, ApplicationStatus status, String search, Pageable pageable) {
@@ -141,6 +143,7 @@ public class JobSeekerApplicationService {
                 .id(app.getId())
                 .status(app.getStatus())
                 .aiScore(app.getAiScore())
+                .jsonMatching(app.getJsonMatching())
                 .coverLetter(app.getCoverLetter())
                 .appliedAt(app.getCreatedAt())
                 .jobId(job.getId())
@@ -202,8 +205,19 @@ public class JobSeekerApplicationService {
         Application saved = applicationRepository.save(application);
         log.info("Job seeker {} applied to job {} with resume {}", seekerId, jobId, resumeId);
 
+        // Log apply interaction for behavioral tracking + AI sync
+        jobInteractionService.log(seekerId, jobId, InteractionEventType.apply, resumeId, null);
+
         // Async: register application edge in AI graph (resume → job)
         aiServiceClient.registerApplication(resumeId, jobId);
+
+        // Async: compute AI matching score if resume has structured data
+        if (resume.getResumeDataStructure() != null) {
+            aiServiceClient.matchApplication(saved.getId(), resume.getResumeDataStructure(), job);
+        } else {
+            log.info("Skipping AI match for application {} — resume {} has no structured data",
+                    saved.getId(), resumeId);
+        }
 
         return saved;
     }

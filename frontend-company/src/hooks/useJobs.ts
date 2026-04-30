@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { jobService, skillService } from '../services/jobService';
+import { jobService, skillService, industryService } from '../services/jobService';
 import type { JobFormData } from '../types/job';
 
 export function useCompanyJobs(filters?: Record<string, string>) {
@@ -85,5 +85,16 @@ export function useSkills() {
       return data.data;
     },
     staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useIndustries() {
+  return useQuery({
+    queryKey: ['industries'],
+    queryFn: async () => {
+      const { data } = await industryService.getIndustries();
+      return data.data;
+    },
+    staleTime: 30 * 60 * 1000,
   });
 }

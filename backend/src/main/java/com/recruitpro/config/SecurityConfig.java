@@ -62,6 +62,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/jobs", "/api/v1/jobs/**").permitAll()
                 // Public skill list
                 .requestMatchers(HttpMethod.GET, "/api/v1/skills").permitAll()
+                // Public industry list
+                .requestMatchers(HttpMethod.GET, "/api/v1/industries").permitAll()
                 // Public company list
                 .requestMatchers(HttpMethod.GET, "/api/v1/companies", "/api/v1/companies/**").permitAll()
                 // Public plan list

@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatsGrid from '../../components/common/StatsGrid';
 import Badge from '../../components/common/Badge';
-import ScoreBar from '../../components/common/ScoreBar';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import { applicationService } from '../../services/applicationService';
@@ -90,7 +89,6 @@ export default function ApplicationsPage() {
                 <tr className="bg-surface">
                   <th className="text-left px-5 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider">Job Position</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider">Company</th>
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider w-32">AI Score</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider">Status</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider">Applied</th>
                   <th className="text-right px-5 py-3 text-xs font-semibold text-text-muted uppercase tracking-wider">Actions</th>
@@ -109,9 +107,6 @@ export default function ApplicationsPage() {
                         <div className="w-7 h-7 bg-primary/10 rounded-lg flex items-center justify-center text-xs font-bold text-primary">{app.companyInitial}</div>
                         <span className="text-sm text-text-muted">{app.companyName}</span>
                       </div>
-                    </td>
-                    <td className="px-5 py-4 w-32">
-                      {app.aiScore != null ? <ScoreBar score={Math.round(app.aiScore)} size="sm" /> : <span className="text-xs text-text-light">—</span>}
                     </td>
                     <td className="px-5 py-4"><Badge value={app.status} /></td>
                     <td className="px-5 py-4 text-sm text-text-muted">{formatDate(app.appliedAt)}</td>

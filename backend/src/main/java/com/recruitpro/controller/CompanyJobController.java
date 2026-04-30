@@ -3,10 +3,12 @@ package com.recruitpro.controller;
 import com.recruitpro.dto.response.ApiResponse;
 import com.recruitpro.dto.response.JobSelectOptionDto;
 import com.recruitpro.dto.response.PaginationMeta;
+import com.recruitpro.model.Industry;
 import com.recruitpro.model.Job;
 import com.recruitpro.model.enums.ExperienceLevel;
 import com.recruitpro.model.enums.JobStatus;
 import com.recruitpro.model.enums.JobType;
+import com.recruitpro.repository.IndustryRepository;
 import com.recruitpro.security.UserPrincipal;
 import com.recruitpro.service.JobService;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,7 @@ import java.util.UUID;
 public class CompanyJobController {
 
     private final JobService jobService;
+    private final IndustryRepository industryRepository;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Object>> listCompanyJobs(
@@ -60,9 +63,14 @@ public class CompanyJobController {
                 ? JobStatus.valueOf((String) body.get("status"))
                 : JobStatus.DRAFT;
 
+        Industry industry = resolveIndustry(body);
         Job job = Job.builder()
                 .title((String) body.get("title"))
                 .description((String) body.get("description"))
+                .industry(industry)
+                .responsibilities(getStringArray(body, "responsibilities"))
+                .requirements(getStringArray(body, "requirements"))
+                .niceToHaveSkills(getStringArray(body, "niceToHaveSkills"))
                 .location((String) body.get("location"))
                 .salaryMin(body.get("salaryMin") != null ? (Integer) body.get("salaryMin") : null)
                 .salaryMax(body.get("salaryMax") != null ? (Integer) body.get("salaryMax") : null)
@@ -93,9 +101,14 @@ public class CompanyJobController {
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
+        Industry industry = resolveIndustry(body);
         Job updates = Job.builder()
                 .title((String) body.get("title"))
                 .description((String) body.get("description"))
+                .industry(industry)
+                .responsibilities(getStringArray(body, "responsibilities"))
+                .requirements(getStringArray(body, "requirements"))
+                .niceToHaveSkills(getStringArray(body, "niceToHaveSkills"))
                 .location((String) body.get("location"))
                 .salaryMin(body.get("salaryMin") != null ? (Integer) body.get("salaryMin") : null)
                 .salaryMax(body.get("salaryMax") != null ? (Integer) body.get("salaryMax") : null)
@@ -144,5 +157,19 @@ public class CompanyJobController {
     ) {
         UUID companyId = UUID.fromString(principal.getCompanyId());
         return ResponseEntity.ok(ApiResponse.ok(jobService.getSelectOptions(companyId)));
+    }
+
+    @SuppressWarnings("unchecked")
+    private String[] getStringArray(Map<String, Object> body, String key) {
+        Object val = body.get(key);
+        if (val == null) return null;
+        return ((List<String>) val).toArray(new String[0]);
+    }
+
+    private Industry resolveIndustry(Map<String, Object> body) {
+        Object raw = body.get("industryId");
+        if (raw == null) return null;
+        UUID industryId = UUID.fromString((String) raw);
+        return industryRepository.findById(industryId).orElse(null);
     }
 }

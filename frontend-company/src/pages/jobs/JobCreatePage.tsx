@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams, useOutletContext } from 'react-router-dom';
 import Topbar from '../../components/layout/Topbar';
-import { useJobDetail, useCreateJob, useUpdateJob, useSkills } from '../../hooks/useJobs';
+import { useJobDetail, useCreateJob, useUpdateJob, useSkills, useIndustries } from '../../hooks/useJobs';
 import { useCompanyAddresses } from '../../hooks/useCompany';
 import { useToast } from '../../contexts/ToastContext';
 import { ROUTES } from '../../constants';
@@ -17,7 +17,7 @@ const EXPERIENCE_LEVELS: { value: ExperienceLevel; label: string }[] = [
   { value: 'LEADER',  label: 'Leader'  },
 ];
 
-type FormValues = Omit<JobFormData, 'levels' | 'skillIds'>;
+type FormValues = Omit<JobFormData, 'levels' | 'skillIds' | 'responsibilities' | 'requirements' | 'niceToHaveSkills'>;
 
 export default function JobCreatePage() {
   const { id } = useParams();
@@ -27,6 +27,7 @@ export default function JobCreatePage() {
   const { data: job } = useJobDetail(id || '');
   const { data: addresses } = useCompanyAddresses();
   const { data: skills } = useSkills();
+  const { data: industries } = useIndustries();
   const createJob = useCreateJob();
   const updateJob = useUpdateJob();
 
@@ -35,6 +36,12 @@ export default function JobCreatePage() {
   const [selectedLevels, setSelectedLevels] = useState<ExperienceLevel[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState('');
+  const [responsibilities, setResponsibilities] = useState<string[]>([]);
+  const [responsibilityInput, setResponsibilityInput] = useState('');
+  const [requirements, setRequirements] = useState<string[]>([]);
+  const [requirementInput, setRequirementInput] = useState('');
+  const [niceToHaveSkills, setNiceToHaveSkills] = useState<string[]>([]);
+  const [niceToHaveSkillInput, setNiceToHaveSkillInput] = useState('');
   const toast = useToast();
 
   useEffect(() => {
@@ -42,6 +49,7 @@ export default function JobCreatePage() {
       reset({
         title: job.title,
         description: job.description,
+        industryId: job.industry?.id || '',
         jobType: job.jobType,
         location: job.location,
         salaryMin: job.salaryMin ?? undefined,
@@ -50,6 +58,9 @@ export default function JobCreatePage() {
       });
       setSelectedLevels(job.experienceLevels || []);
       setSelectedSkills(job.skills?.map((s) => s.id) || []);
+      setResponsibilities(job.responsibilities || []);
+      setRequirements(job.requirements || []);
+      setNiceToHaveSkills(job.niceToHaveSkills || []);
       // Always show manual mode when editing — saved location is a free-text string
       setLocationMode('custom');
     }
@@ -79,7 +90,14 @@ export default function JobCreatePage() {
     }
     
     try {
-      const payload: JobFormData = { ...data, levels: selectedLevels, skillIds: selectedSkills };
+      const payload: JobFormData = {
+        ...data,
+        levels: selectedLevels,
+        skillIds: selectedSkills,
+        responsibilities,
+        requirements,
+        niceToHaveSkills,
+      };
       if (isEdit) {
         await updateJob.mutateAsync({ id: id!, data: payload });
         toast.success('Job updated successfully!');
@@ -134,6 +152,126 @@ export default function JobCreatePage() {
                 placeholder="Describe the role, responsibilities, requirements..."
                 {...register('description', { required: true })}
               />
+            </div>
+
+            {/* Industry */}
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Industry</label>
+              <select
+                className="w-full px-3.5 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10"
+                {...register('industryId')}
+              >
+                <option value="">Select an industry...</option>
+                {industries?.map((ind) => (
+                  <option key={ind.id} value={ind.id}>{ind.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Responsibilities */}
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Responsibilities</label>
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 px-3.5 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10"
+                  placeholder="Type a responsibility and press Enter..."
+                  value={responsibilityInput}
+                  onChange={(e) => setResponsibilityInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const trimmed = responsibilityInput.trim();
+                      if (trimmed && !responsibilities.includes(trimmed)) {
+                        setResponsibilities([...responsibilities, trimmed]);
+                      }
+                      setResponsibilityInput('');
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="px-3.5 py-2.5 bg-primary/10 text-primary rounded-xl text-sm font-medium hover:bg-primary/20 transition-colors"
+                  onClick={() => {
+                    const trimmed = responsibilityInput.trim();
+                    if (trimmed && !responsibilities.includes(trimmed)) {
+                      setResponsibilities([...responsibilities, trimmed]);
+                    }
+                    setResponsibilityInput('');
+                  }}
+                >
+                  <i className="fas fa-plus" />
+                </button>
+              </div>
+              {responsibilities.length > 0 && (
+                <ul className="mt-2 space-y-1.5">
+                  {responsibilities.map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-2 bg-gray-50 rounded-lg px-3 py-2 text-sm">
+                      <span className="text-primary mt-0.5">•</span>
+                      <span className="flex-1">{item}</span>
+                      <button
+                        type="button"
+                        className="text-gray-400 hover:text-red-500 transition-colors ml-1 shrink-0"
+                        onClick={() => setResponsibilities(responsibilities.filter((_, i) => i !== idx))}
+                      >
+                        <i className="fas fa-times text-xs" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Requirements */}
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Requirements</label>
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 px-3.5 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10"
+                  placeholder="Type a requirement and press Enter..."
+                  value={requirementInput}
+                  onChange={(e) => setRequirementInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const trimmed = requirementInput.trim();
+                      if (trimmed && !requirements.includes(trimmed)) {
+                        setRequirements([...requirements, trimmed]);
+                      }
+                      setRequirementInput('');
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="px-3.5 py-2.5 bg-primary/10 text-primary rounded-xl text-sm font-medium hover:bg-primary/20 transition-colors"
+                  onClick={() => {
+                    const trimmed = requirementInput.trim();
+                    if (trimmed && !requirements.includes(trimmed)) {
+                      setRequirements([...requirements, trimmed]);
+                    }
+                    setRequirementInput('');
+                  }}
+                >
+                  <i className="fas fa-plus" />
+                </button>
+              </div>
+              {requirements.length > 0 && (
+                <ul className="mt-2 space-y-1.5">
+                  {requirements.map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-2 bg-gray-50 rounded-lg px-3 py-2 text-sm">
+                      <span className="text-primary mt-0.5">•</span>
+                      <span className="flex-1">{item}</span>
+                      <button
+                        type="button"
+                        className="text-gray-400 hover:text-red-500 transition-colors ml-1 shrink-0"
+                        onClick={() => setRequirements(requirements.filter((_, i) => i !== idx))}
+                      >
+                        <i className="fas fa-times text-xs" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
 
             {/* Experience Levels (multi-select pills) */}
@@ -266,7 +404,7 @@ export default function JobCreatePage() {
 
             {/* Skills */}
             <div>
-              <label className="block text-sm font-medium mb-1.5">Required Skills</label>
+              <label className="block text-sm font-medium mb-1.5">Must-have Skills</label>
               <div className="relative">
                 <input
                   className="w-full px-3.5 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10"
@@ -308,6 +446,65 @@ export default function JobCreatePage() {
                     </span>
                   ) : null;
                 })}
+              </div>
+            </div>
+
+            {/* Nice-to-have Skills */}
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Nice-to-have Skills</label>
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 px-3.5 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10"
+                  placeholder="Type a skill and press Enter..."
+                  value={niceToHaveSkillInput}
+                  onChange={(e) => setNiceToHaveSkillInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const trimmed = niceToHaveSkillInput.trim();
+                      if (trimmed && !niceToHaveSkills.includes(trimmed)) {
+                        setNiceToHaveSkills([...niceToHaveSkills, trimmed]);
+                      }
+                      setNiceToHaveSkillInput('');
+                    }
+                  }}
+                />
+                <button
+                  type="button"
+                  className="px-3.5 py-2.5 bg-primary/10 text-primary rounded-xl text-sm font-medium hover:bg-primary/20 transition-colors"
+                  onClick={() => {
+                    const trimmed = niceToHaveSkillInput.trim();
+                    if (trimmed && !niceToHaveSkills.includes(trimmed)) {
+                      setNiceToHaveSkills([...niceToHaveSkills, trimmed]);
+                    }
+                    setNiceToHaveSkillInput('');
+                  }}
+                >
+                  <i className="fas fa-plus" />
+                </button>
+              </div>
+              {niceToHaveSkills.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {niceToHaveSkills.map((skill, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium"
+                    >
+                      {skill}
+                      <button
+                        type="button"
+                        className="hover:text-red-500"
+                        onClick={() => setNiceToHaveSkills(niceToHaveSkills.filter((_, i) => i !== idx))}
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="text-xs text-gray-400 mt-1.5">
+                <i className="fas fa-info-circle mr-1" />
+                Candidates with these skills are a bonus but not required.
               </div>
             </div>
 

@@ -9,13 +9,13 @@ from app.ml.model_registry import model_registry
 from app.models.schemas import (
     AddNodeRequest,
     AddNodeData,
-    ApplyRequest,
+    InteractionRequest,
     ApplyData,
     RecommendData,
 )
 from app.services import graph_store
 from app.services import recommendation_service as svc
-
+    
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -102,9 +102,17 @@ def add_node(req: AddNodeRequest):
         }
 
 
-@router.post("/apply", response_model=dict)
-def handle_application(req: ApplyRequest):
-    """Process a job application and update the resume embedding via GraphSAGE."""
+@router.post("/interact", response_model=dict)
+def handle_interaction(req: InteractionRequest):
+    """Record a user→job interaction and update the resume embedding via GraphSAGE.
+
+    The *action_type* field maps to an edge weight via ACTION_WEIGHT_MAP:
+      - "apply" → 1.0  (strongest signal)
+      - "save"  → 0.7
+      - "view"  → 0.1  (weakest signal)
+      - "click" → 0.1  (weakest signal, same as view)
+    Weights accumulate across calls, so repeated interactions strengthen the edge.
+    """
     _guard_models_loaded()
 
     if req.resume_id not in svc.feature_store:
@@ -130,15 +138,25 @@ def handle_application(req: ApplyRequest):
 
     start = time.time()
     try:
-        data = svc.process_application(
+        data = svc.handle_interaction(
             resume_id=req.resume_id,
             job_id=req.job_id,
-            weight=req.weight,
+            action_type=req.action_type,
             graphsage_model=model_registry.get("graphsage"),
             device=model_registry.device,
         )
         logger.debug("POST /apply latency=%.3fs", time.time() - start)
         return {"success": True, "data": ApplyData(**data), "error": None, "meta": None}
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "success": False,
+                "data":    None,
+                "error":   {"code": "INVALID_ACTION_TYPE", "message": str(exc)},
+                "meta":    {"valid_action_types": sorted(svc.ACTION_WEIGHT_MAP)},
+            },
+        )
     except Exception as exc:
         logger.error("apply failed: %s", exc)
         raise HTTPException(

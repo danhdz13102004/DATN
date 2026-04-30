@@ -14,7 +14,7 @@ public class StripeConfig {
     @Value("${app.stripe.secret-key}")
     private String secretKey;
 
-    @Value("${app.stripe.webhook-secret}")
+    @Value("${app.stripe.webhook-secret:}")
     private String webhookSecret;
 
     @Value("${app.stripe.currency:usd}")

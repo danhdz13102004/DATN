@@ -7,6 +7,7 @@ from fastapi import FastAPI
 
 from app.api.graph import router as graph_router
 from app.api.health import router as health_router
+from app.api.matching import router as matching_router
 from app.api.recommendations import router as recommendations_router
 from app.core.config import settings
 from app.ml.model_registry import model_registry
@@ -57,4 +58,5 @@ app = FastAPI(
 # ── Register routers ──────────────────────────────────────────────────────────
 app.include_router(health_router,           prefix="/api/v1", tags=["health"])
 app.include_router(recommendations_router,  prefix="/api/v1", tags=["recommendations"])
+app.include_router(matching_router,         prefix="/api/v1", tags=["matching"])
 app.include_router(graph_router,            prefix="/api/v1", tags=["graph"])

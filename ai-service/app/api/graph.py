@@ -250,7 +250,13 @@ def _build_dashboard_html(focused_resume_id: str = "") -> str:
   <span><span class="ldot" style="background:#7b8cff"></span>Resume node</span>
   <span><span class="ldot" style="background:#f7a34f;border-radius:2px"></span>Job node</span>
   <span><span class="ldot" style="background:#2a2a5a;border:2px dashed #ff9944"></span>Pending embedding</span>
-  <span>Arrow = application &nbsp;|&nbsp; thickness = weight &nbsp;|&nbsp; auto-refresh: 4s</span>
+  <span style=\"display:flex;gap:12px;align-items:center;\">
+    Edge weight:
+    <span style=\"display:flex;align-items:center;gap:4px;\"><span style=\"height:2px;width:20px;background:#ff4466\"></span><span style=\"font-size:11px;color:#888\">view</span></span>
+    <span style=\"display:flex;align-items:center;gap:4px;\"><span style=\"height:4px;width:20px;background:#ffaa44\"></span><span style=\"font-size:11px;color:#888\">save</span></span>
+    <span style=\"display:flex;align-items:center;gap:4px;\"><span style=\"height:6px;width:20px;background:#44ff99\"></span><span style=\"font-size:11px;color:#888\">apply</span></span>
+  </span>
+  <span style=\"margin-left:auto;font-size:11px;color:#666;\">Auto-refresh: 4s</span>
 </div>
 
 <div id="graph">
@@ -271,6 +277,34 @@ const POLL_MS    = 4000;
 const FOCUSED_ID = '{focused_js}';
 const tip        = document.getElementById("tip");
 const empty      = document.getElementById("empty");
+let d = {{}};  // Global data snapshot
+
+// Helper: return RGB color based on weight (0.1 → red, 0.7 → orange, 1.0 → green)
+function getWeightColor(weight) {{
+  const w = Math.max(0.1, Math.min(1.0, weight));
+  if (w < 0.4) {{
+    // Red → Orange (0.1 to 0.4)
+    const t = (w - 0.1) / 0.3;
+    const r = 255;
+    const g = Math.round(68 + (170 - 68) * t);
+    const b = 70;
+    return `rgb(${{r}},${{g}},${{b}})`;
+  }} else if (w < 0.8) {{
+    // Orange → Yellow-Green (0.4 to 0.8)
+    const t = (w - 0.4) / 0.4;
+    const r = Math.round(255 - (255 - 170) * t);
+    const g = Math.round(170 + (255 - 170) * t);
+    const b = Math.round(70 - 70 * t);
+    return `rgb(${{r}},${{g}},${{b}})`;
+  }} else {{
+    // Yellow-Green → Green (0.8 to 1.0)
+    const t = (w - 0.8) / 0.2;
+    const r = Math.round(170 - (170 - 68) * t);
+    const g = 255;
+    const b = Math.round(0 + 100 * t);
+    return `rgb(${{r}},${{g}},${{b}})`;
+  }}
+}}
 
 function goFocused() {{
   const val = document.getElementById("search-input").value.trim();
@@ -297,13 +331,14 @@ const net = new vis.Network(
     edges: {{
       arrows: {{ to: {{ enabled: true, scaleFactor: 0.6 }} }},
       color:  {{ color: "#3a3a6a", highlight: "#7b8cff", hover: "#9a8cff" }},
-      smooth: {{ type: "dynamic" }},
+      smooth: {{ type: \"continuous\" }},
+      font:   {{ size: 10, align: \"middle\", color: \"#e0e0e0\" }},
     }},
     nodes: {{
       font:    {{ color: "#e0e0e0", size: 11 }},
       shadow:  {{ enabled: true, color: "rgba(0,0,0,.6)", x: 2, y: 2, size: 8 }},
     }},
-    interaction: {{ hover: true, tooltipDelay: 60, hideEdgesOnDrag: true }},
+    interaction: {{ hover: true, tooltipDelay: 60, hideEdgesOnDrag: false }},
   }}
 );
 
@@ -317,15 +352,33 @@ net.on("click", p => {{
 net.on("hoverNode", p => {{
   const n = nodes.get(p.node);
   if (!n) return;
+  const resume = n.nodeType === "resume";
+  const edgeCount = (d.edges || []).filter(e => (resume ? e.resume_id === n.id : e.job_id === n.id)).length;
   tip.innerHTML =
-    "<b style='color:#7b8cff'>" + (n.nodeType === "resume" ? "Resume" : "Job") + " node</b><br>" +
-    "ID: " + n.id + "<br>" +
-    (n.nodeType === "resume"
-      ? "<span style='color:#aaf;font-size:11px'>Click to view relations</span>"
-      : "<span style='color:#aaa;font-size:11px'>Job node</span>");
+    "<b style='color:#7b8cff'>" + (resume ? "Resume" : "Job") + " node</b><br>" +
+    "ID: " + n.id.slice(0, 20) + (n.id.length > 20 ? "..." : "") + "<br>" +
+    "<span style='color:#aaa;font-size:11px'>" + edgeCount + " relation" + (edgeCount !== 1 ? "s" : "") + "</span>" +
+    (resume ? "<br><span style='color:#aaf;font-size:11px'>Click to focus</span>" : "");
+  tip.style.display = "block";
+}});
+
+net.on("hoverEdge", p => {{
+  const e = edges.get(p.edge);
+  if (!e) return;
+  const fromNode = nodes.get(e.from);
+  const toNode = nodes.get(e.to);
+  if (!fromNode || !toNode) return;
+  const w = e.width / 5;
+  tip.innerHTML =
+    "<b style='color:#44ff99'>Edge</b><br>" +
+    "Weight: <b style='color:#ffaa44'>" + w.toFixed(3) + "</b><br>" +
+    "Action: <span style='color:#7b8cff'>" + (w < 0.2 ? "view" : w < 0.85 ? "save" : "apply") + "</span><br>" +
+    "From: " + fromNode.id.slice(0, 12) + "...<br>" +
+    "To: " + toNode.id.slice(0, 12) + "...";
   tip.style.display = "block";
 }});
 net.on("blurNode", () => {{ tip.style.display = "none"; }});
+net.on("blurEdge", () => {{ tip.style.display = "none"; }});
 document.addEventListener("mousemove", e => {{
   tip.style.left = (e.clientX + 16) + "px";
   tip.style.top  = (e.clientY + 14) + "px";
@@ -369,11 +422,19 @@ function applySnapshot(d) {{
   const inE  = new Set((d.edges || []).map(eKey));
   for (const id of edges.getIds()) {{ if (!inE.has(id)) edges.remove(id); }}
   for (const e of (d.edges || [])) {{
-    const key  = eKey(e);
+    const key   = eKey(e);
+    const w     = Math.max(0.1, Math.min(1.0, e.weight));
+    const width = Math.max(1.5, w * 5);
+    const color = getWeightColor(w);
     const item = {{
-      id: key, from: e.resume_id, to: e.job_id,
-      width: Math.max(1, e.weight * 2.5),
-      title: "weight: " + e.weight.toFixed(2),
+      id:    key,
+      from:  e.resume_id,
+      to:    e.job_id,
+      width: width,
+      color: {{ color: color, highlight: \"#88ff99\", hover: \"#aaffbb\" }},
+      title: `Weight: ${{w.toFixed(3)}} | Action: ${{ w < 0.2 ? \"view\" : w < 0.85 ? \"save\" : \"apply\" }}`,
+      label: w.toFixed(2),
+      font:  {{ size: 10, color: \"#e0e0e0\", background: {{ enabled: true, color: \"#1e1e3e\" }} }},
     }};
     edges.get(key) !== null ? edges.update(item) : edges.add(item);
   }}
@@ -396,7 +457,8 @@ async function poll() {{
       throw new Error(r.statusText);
     }}
     const body = await r.json();
-    applySnapshot(body.data);
+    d = body.data;  // Store globally for use in hover handlers
+    applySnapshot(d);
     if (_firstLoad) {{
       _firstLoad = false;
       // Force vis to recalculate canvas size and fit all nodes into view.

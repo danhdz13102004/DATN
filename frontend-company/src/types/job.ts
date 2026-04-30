@@ -2,10 +2,18 @@ export type JobStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED';
 export type JobType = 'FULLTIME' | 'PARTTIME' | 'REMOTE' | 'HYBRID';
 export type ExperienceLevel = 'INTERN' | 'FRESHER' | 'JUNIOR' | 'MIDDLE' | 'SENIOR' | 'LEADER';
 
+export interface Industry {
+  id: string;
+  name: string;
+}
+
 export interface Job {
   id: string;
   title: string;
   description: string;
+  industry: Industry | null;
+  responsibilities: string[];
+  requirements: string[];
   jobType: JobType;
   experienceLevels: ExperienceLevel[];
   location: string;
@@ -13,6 +21,7 @@ export interface Job {
   salaryMax: number | null;
   status: JobStatus;
   skills: Skill[];
+  niceToHaveSkills: string[];
   applicationCount: number;
   createdAt: string;
   updatedAt: string;
@@ -21,6 +30,9 @@ export interface Job {
 export interface JobFormData {
   title: string;
   description: string;
+  industryId?: string;
+  responsibilities: string[];
+  requirements: string[];
   jobType: JobType;
   levels: ExperienceLevel[];
   location: string;
@@ -28,6 +40,7 @@ export interface JobFormData {
   salaryMin?: number;
   salaryMax?: number;
   skillIds: string[];
+  niceToHaveSkills: string[];
   status: JobStatus;
 }
 

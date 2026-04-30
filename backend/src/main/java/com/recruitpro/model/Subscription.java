@@ -44,6 +44,9 @@ public class Subscription {
     @Column(name = "jobs_posted_count", nullable = false)
     private int jobsPostedCount;
 
+    @Column(name = "allow_use_ai_matching", nullable = false)
+    private boolean allowUseAiMatching;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
