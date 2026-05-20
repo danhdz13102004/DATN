@@ -3,6 +3,27 @@
 import re
 from typing import Dict, List, Optional, Set
 
+# ── Default scoring weights ────────────────────────────────────────────────────
+DEFAULT_WEIGHTS: Dict[str, float] = {
+    "skills":             0.40,
+    "experience":         0.20,
+    "role":               0.10,
+    "seniority":          0.15,
+    "industry":           0.10,
+    "nice_to_have_skills": 0.05,
+}
+
+# ── Seniority order & minimum years mapping ───────────────────────────────────
+_SENIORITY_ORDER = ["INTERN", "FRESHER", "JUNIOR", "MIDDLE", "SENIOR", "LEADER"]
+_SENIORITY_MIN_YEARS = {
+    "INTERN":  0,
+    "FRESHER": 0,
+    "JUNIOR":  1,
+    "MIDDLE":  3,
+    "SENIOR":  5,
+    "LEADER":  8,
+}
+
 # ── Skill alias normalisation ─────────────────────────────────────────────────
 # Maps common abbreviations / variant spellings to a canonical name (uppercase).
 _SKILL_ALIASES: Dict[str, str] = {
@@ -77,8 +98,6 @@ _INDUSTRY_TAXONOMY: Dict[str, str] = {
     "human resources": "Human Resources",
 }
 
-_SENIORITY_ORDER = ["INTERN", "FRESHER", "JUNIOR", "MIDDLE", "SENIOR", "LEADER", "LEAD"]
-
 _SENIORITY_ALIASES: Dict[str, str] = {
     "MID-LEVEL": "MIDDLE",
     "MID": "MIDDLE",
@@ -98,14 +117,20 @@ def _resolve_alias(skill: str) -> str:
     return _SKILL_ALIASES.get(skill, skill)
 
 
-def normalize_skills(skills_str: Optional[str]) -> List[str]:
-    """Split comma-separated skills, uppercase, apply aliases.
+def normalize_skills(skills_input) -> List[str]:
+    """Split comma-separated skills (or list), uppercase, apply aliases.
 
     Parenthesised qualifiers are extracted as *additional* skills rather than
     dropped, so "PHP(Laravel)" yields both "PHP" and "LARAVEL".
+    Deduplication preserves first-seen order.
     """
-    if not skills_str:
+    if not skills_input:
         return []
+    # Accept both string and list input (item 5)
+    if isinstance(skills_input, list):
+        skills_str = ", ".join(skills_input)
+    else:
+        skills_str = skills_input
     result: List[str] = []
     for part in skills_str.split(","):
         # Base skill (outside parentheses)
@@ -117,7 +142,8 @@ def normalize_skills(skills_str: Optional[str]) -> List[str]:
             token = inner.strip().upper()
             if token:
                 result.append(_resolve_alias(token))
-    return result
+    # Deduplicate while preserving order (item 3)
+    return list(dict.fromkeys(result))
 
 
 def _skill_coverage_score(resume_skills: List[str], required_skills: List[str]) -> float:
@@ -153,8 +179,8 @@ def normalize_industry(raw: Optional[str]) -> str:
 def join_bullets(bullets) -> str:
     """Flatten a list of bullet strings into one sentence string."""
     if isinstance(bullets, list):
-        return ". ".join(b.strip() for b in bullets if b and b.strip())
-    return (bullets or "").strip()
+        return ". ".join(str(b).strip() for b in bullets if b and str(b).strip())
+    return str(bullets or "").strip()
 
 
 def _word_count(text: str) -> int:
@@ -182,29 +208,45 @@ def _cosine_sim(text_a: str, text_b: str, model) -> float:
 def match_resume_job(resume: dict, job: dict, model) -> dict:
     """
     Compare a resume against a job description and return per-dimension scores.
-
+    
     resume keys (all optional):
-        skills (str), experience_bullets (str | list), seniority (str), industry (str)
+        skills (str | list), experience_bullets (str | list), seniority (str),
+        industry (str), yearsExperience (int), role (str), summary (str)
 
     job keys (all optional):
         must_have_skills (list[str]), nice_to_have_skills (list[str]),
-        responsibilities (list[str]), seniority (list[str]), industry (str)
+        responsibilities (list[str]), requirements (str),
+        seniority (list[str] | str), industry (str), job_title (str)
 
     Returns a dict with keys:
-        overall_score, skills, experience, seniority, industry, nice_to_have_skills
+        overall_score, skills, experience, role, seniority, industry,
+        nice_to_have_skills
     """
+    # Guard: require a valid model (item 6)
+    if model is None:
+        raise ValueError("A sentence-transformer model must be provided.")
+
+    weights = DEFAULT_WEIGHTS.copy()
     scores: Dict[str, float] = {}
-    weights: Dict[str, float] = {}
+
+    print("Matching resume against job:")
+    print("Resume:", resume)
+    print("Job:", job)
 
     # ── Normalise resume side ────────────────────────────────────────────────
     resume_skills_list = normalize_skills(resume.get("skills"))
     resume_skills_text = " ".join(resume_skills_list)
 
     exp_raw = resume.get("experience_bullets", "")
-    resume_exp_text = join_bullets(exp_raw) if isinstance(exp_raw, list) else (exp_raw or "").strip()
+    # Merge resume summary into experience text (item 12)
+    summary = resume.get("summary") or ""
+    bullets_text = join_bullets(exp_raw) if isinstance(exp_raw, list) else (exp_raw or "").strip()
+    resume_exp_text = (summary + ". " + bullets_text).strip() if summary else bullets_text
 
-    resume_seniority = normalize_seniority(resume.get("seniority"))
-    resume_industry  = normalize_industry(resume.get("industry"))
+    resume_seniority     = normalize_seniority(resume.get("seniority"))
+    resume_industry      = normalize_industry(resume.get("industry"))
+    resume_years_exp     = resume.get("yearsExperience")
+    resume_role          = resume.get("role") or ""
 
     # ── Normalise job side ───────────────────────────────────────────────────
     must_have_raw      = job.get("must_have_skills") or []
@@ -219,64 +261,95 @@ def match_resume_job(resume: dict, job: dict, model) -> dict:
 
     job_seniority_list = [normalize_seniority(s) for s in seniority_raw]
     job_seniority_list = [s for s in job_seniority_list if s]
-    job_industry       = normalize_industry(job.get("industry"))
+    job_industry  = normalize_industry(job.get("industry"))
+    job_title     = job.get("job_title") or ""
+
+    # Canonical skill lists for must_have — normalise to catch parenthesis
+    # expansion so both sides are symmetric (item 4)
+    must_have_normalised: List[str] = []
+    for s in must_have_raw:
+        must_have_normalised.extend(normalize_skills(s))
 
     # Canonical text representations for cosine-based dimensions
     must_have_text    = " ".join(_resolve_alias(s.strip().upper()) for s in must_have_raw if s)
     nice_to_have_text = " ".join(_resolve_alias(s.strip().upper()) for s in nice_to_have_raw if s)
+
+    # Merge requirements into experience text (item 11)
     resp_text = join_bullets(responsibilities)
+    req_text  = (job.get("requirements") or "").strip()
+    job_exp_text = resp_text + (". " + req_text if req_text else "")
 
     # ── 1. skills ↔ must_have_skills  (weight 0.40, highest) ───────────────
     # Use hybrid scoring: 70 % intersection coverage + 30 % semantic cosine.
-    # Pure cosine on keyword bags gives unexpectedly low scores because the
-    # sentence-transformer model was not designed for unordered keyword lists.
-    if resume_skills_list and must_have_raw:
-        coverage = _skill_coverage_score(resume_skills_list, must_have_raw)
+    if resume_skills_list and must_have_normalised:
+        coverage = _skill_coverage_score(resume_skills_list, must_have_normalised)
         if _enough_words(resume_skills_text) and _enough_words(must_have_text):
             cosine = _cosine_sim(resume_skills_text, must_have_text, model)
         else:
-            cosine = coverage  # fall back to coverage when text is too short
-        scores["skills"]  = 0.70 * coverage + 0.30 * cosine
-        weights["skills"] = 0.40
+            cosine = coverage
+        scores["skills"] = 0.70 * coverage + 0.30 * cosine
 
-    # ── 2. experience_bullets ↔ responsibilities  (weight 0.30) ─────────────
-    if responsibilities and _enough_words(resume_exp_text) and _enough_words(resp_text):
-        scores["experience"]  = _cosine_sim(resume_exp_text, resp_text, model)
-        weights["experience"] = 0.30
+    # ── 2. experience_bullets ↔ responsibilities+requirements  (weight 0.20) ─
+    if job_exp_text and _enough_words(resume_exp_text) and _enough_words(job_exp_text):
+        scores["experience"] = _cosine_sim(resume_exp_text, job_exp_text, model)
 
-    # ── 3. seniority ↔ seniority  (exact match, weight 0.15) ────────────────
+    # ── 3. role ↔ job_title  (weight 0.10) ──────────────────────────────────
+    # Catches fundamental role-category mismatches (item 8)
+    if resume_role and job_title and _enough_words(resume_role) and _enough_words(job_title):
+        scores["role"] = _cosine_sim(resume_role, job_title, model)
+
+    # ── 4. seniority ↔ seniority  (proximity + years experience, weight 0.15) ─
+    # Proximity scoring using index distance (item 2) blended with years exp (item 9)
     if resume_seniority and job_seniority_list:
-        scores["seniority"]  = 1.0 if resume_seniority in job_seniority_list else 0.0
-        weights["seniority"] = 0.15
+        resume_idx = _SENIORITY_ORDER.index(resume_seniority)
 
-    # ── 4. industry ↔ industry  (cosine after normalisation, weight 0.10) ───
-    if resume_industry and job_industry:
-        if resume_industry.lower() == job_industry.lower():
-            scores["industry"] = 1.0
+        # Best proximity score across all allowed seniority levels
+        best_proximity = 0.0
+        for job_sen in job_seniority_list:
+            job_idx = _SENIORITY_ORDER.index(job_sen)
+            prox = 1.0 - abs(resume_idx - job_idx) / len(_SENIORITY_ORDER)
+            best_proximity = max(best_proximity, prox)
+
+        # Years-of-experience score
+        if resume_years_exp is not None:
+            best_years_score = 0.0
+            for job_sen in job_seniority_list:
+                min_years = _SENIORITY_MIN_YEARS.get(job_sen, 1)
+                years_score = min(1.0, resume_years_exp / max(min_years, 1))
+                best_years_score = max(best_years_score, years_score)
+            # 50% label proximity + 50% years-vs-minimum check
+            scores["seniority"] = 0.5 * best_proximity + 0.5 * best_years_score
         else:
-            scores["industry"] = _cosine_sim(resume_industry, job_industry, model)
-        weights["industry"] = 0.10
+            scores["seniority"] = best_proximity
 
-    # ── 5. skills ↔ nice_to_have_skills  (bonus only, weight 0.05) ──────────
-    # Use intersection coverage — nice-to-have lists are typically short (2-4
-    # skills), so the old _enough_words gate was silently skipping this dimension.
+    # ── 5. industry ↔ industry  (exact match only, weight 0.10) ─────────────
+    # Remove cosine fallback — semantic proximity is misleading for industry
+    # labels (item 1)
+    if resume_industry and job_industry:
+        scores["industry"] = 1.0 if resume_industry.lower() == job_industry.lower() else 0.0
+
+    # ── 6. skills ↔ nice_to_have_skills  (bonus only, weight 0.05) ──────────
     if resume_skills_list and nice_to_have_raw:
-        scores["nice_to_have_skills"]  = _skill_coverage_score(resume_skills_list, nice_to_have_raw)
-        weights["nice_to_have_skills"] = 0.05
+        scores["nice_to_have_skills"] = _skill_coverage_score(
+            resume_skills_list, nice_to_have_raw
+        )
 
-    # ── Weighted overall (rebalanced if pairs were skipped) ──────────────────
-    total_weight = sum(weights.values())
+    # ── Weighted overall ─────────────────────────────────────────────────────
+    total_weight = sum(weights.get(k, 0.0) for k in scores)
     if total_weight == 0:
-        return {k: 0.0 for k in
-                ("overall_score", "skills", "experience", "seniority", "industry", "nice_to_have_skills")}
+        return {k: 0.0 for k in (
+            "overall_score", "skills", "experience", "role",
+            "seniority", "industry", "nice_to_have_skills"
+        )}
 
-    overall = sum(scores[k] * weights[k] for k in scores) / total_weight
+    overall = sum(scores.get(k, 0.0) * weights[k] for k in weights)
 
     return {
-        "overall_score":     round(overall, 4),
-        "skills":            round(scores.get("skills", 0.0), 4),
-        "experience":        round(scores.get("experience", 0.0), 4),
-        "seniority":         round(scores.get("seniority", 0.0), 4),
-        "industry":          round(scores.get("industry", 0.0), 4),
+        "overall_score":      round(overall, 4),
+        "skills":             round(scores.get("skills", 0.0), 4),
+        "experience":         round(scores.get("experience", 0.0), 4),
+        "role":               round(scores.get("role", 0.0), 4),
+        "seniority":          round(scores.get("seniority", 0.0), 4),
+        "industry":           round(scores.get("industry", 0.0), 4),
         "nice_to_have_skills": round(scores.get("nice_to_have_skills", 0.0), 4),
     }

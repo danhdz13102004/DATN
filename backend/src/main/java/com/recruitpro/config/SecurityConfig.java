@@ -56,7 +56,8 @@ public class SecurityConfig {
                     "/api/v1/auth/verify-otp",
                     "/api/v1/auth/resend-otp",
                     "/api/v1/auth/forgot-password",
-                    "/api/v1/auth/reset-password"
+                    "/api/v1/auth/reset-password",
+                    "/api/v1/auth/oauth2/google"
                 ).permitAll()
                 // Public job endpoints
                 .requestMatchers(HttpMethod.GET, "/api/v1/jobs", "/api/v1/jobs/**").permitAll()

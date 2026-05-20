@@ -4,9 +4,12 @@ import com.recruitpro.config.AiServiceConfig;
 import com.recruitpro.dto.AiMatchingResult;
 import com.recruitpro.dto.ResumeDataStructure;
 import com.recruitpro.model.Job;
+import com.recruitpro.model.enums.InteractionEventType;
 import com.recruitpro.repository.ApplicationRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -35,14 +38,17 @@ import java.util.stream.Collectors;
 public class AiServiceClient {
 
     private final RestTemplate restTemplate;
+    private final RestTemplate ocrRestTemplate;
     private final AiServiceConfig aiServiceConfig;
     private final ApplicationRepository applicationRepository;
 
     public AiServiceClient(
             @Qualifier("aiRestTemplate") RestTemplate restTemplate,
+            @Qualifier("ocrRestTemplate") RestTemplate ocrRestTemplate,
             AiServiceConfig aiServiceConfig,
             ApplicationRepository applicationRepository) {
         this.restTemplate = restTemplate;
+        this.ocrRestTemplate = ocrRestTemplate;
         this.aiServiceConfig = aiServiceConfig;
         this.applicationRepository = applicationRepository;
     }
@@ -51,13 +57,16 @@ public class AiServiceClient {
 
     /**
      * Registers a resume node in the AI graph by encoding its parsed text.
+     * The jobSeekerId is passed so the AI service can build a resume_to_user map,
+     * enabling user-level behavioral signals for click/save interactions.
      *
      * @param resumeId UUID of the resume (used as node_id)
-     * @param text     Parsed or raw text to embed
+     * @param text    Parsed or raw text to embed
+     * @param jobSeekerId UUID of the resume owner (job seeker)
      */
     @Async
-    public void addResumeNode(UUID resumeId, String text) {
-        sendAddNode(resumeId.toString(), text, "resume");
+    public void addResumeNode(UUID resumeId, String text, UUID jobSeekerId) {
+        sendAddNode(resumeId.toString(), text, "resume", jobSeekerId.toString());
     }
 
     /**
@@ -68,7 +77,7 @@ public class AiServiceClient {
      */
     @Async
     public void addJobNode(UUID jobId, String text) {
-        sendAddNode(jobId.toString(), text, "job");
+        sendAddNode(jobId.toString(), text, "job", null);
     }
 
     // ── Apply Edge ───────────────────────────────────────────────────────────
@@ -183,12 +192,12 @@ public class AiServiceClient {
     // ── Interaction Sync ─────────────────────────────────────────────────────
 
     /**
-     * Syncs a user→job interaction to the AI recommendation server so that
-     * GraphSAGE embeddings can be updated accordingly.
+     * Syncs an apply interaction to the AI recommendation server with explicit single resume.
+     * This is treated as a ground truth signal with weight = 1.0.
      *
      * @param resumeId   UUID of the job seeker's resume (graph node)
      * @param jobId      UUID of the job (graph node)
-     * @param actionType one of: "apply", "save", "view", "click"
+     * @param actionType should be "apply"
      */
     @Async
     public void syncInteraction(UUID resumeId, UUID jobId, String actionType) {
@@ -215,21 +224,61 @@ public class AiServiceClient {
         }
     }
 
+    /**
+     * Syncs a click/save interaction as a user-level behavioral signal.
+     *
+     * <p>Unlike apply events which create graph edges and update GraphSAGE embeddings,
+     * click/save events are stored as behavioral signals only and used in the
+     * preference-vector logic. The jobSeekerId is passed via the X-User-ID header.
+     *
+     * @param jobSeekerId UUID of the job seeker (user)
+     * @param jobId      UUID of the job (graph node)
+     * @param eventType should be "click" or "save"
+     */
+    @Async
+    public void recordBehavioralSignal(UUID jobSeekerId, UUID jobId, InteractionEventType eventType) {
+        String url = aiServiceConfig.getAiServiceUrl() + "/api/v1/interact";
+        HttpHeaders hdrs = new HttpHeaders();
+        hdrs.set("X-User-ID", jobSeekerId.toString());
+        Map<String, Object> body = Map.of(
+                "job_id",      jobId.toString(),
+                "action_type", eventType.name()
+        );
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, hdrs);
+        try {
+            ResponseEntity<Map<String, Object>> response =
+                    restTemplate.postForEntity(url, entity, generify(Map.class));
+            if (response.getStatusCode().is2xxSuccessful()) {
+                log.info("[AI] Behavioral signal recorded: seeker={}, job={}, action={}",
+                        jobSeekerId, jobId, eventType.name());
+            } else {
+                log.warn("[AI] Unexpected status {} for behavioral signal (seeker={}, job={}, action={})",
+                        response.getStatusCode(), jobSeekerId, jobId, eventType.name());
+            }
+        } catch (RestClientException ex) {
+            log.error("[AI] Failed to record behavioral signal (seeker={}, job={}, action={}): {}",
+                    jobSeekerId, jobId, eventType.name(), ex.getMessage());
+        }
+    }
+
+
     // ── Private helpers ───────────────────────────────────────────────────────
 
-    private void sendAddNode(String nodeId, String text, String nodeType) {
+    private void sendAddNode(String nodeId, String text, String nodeType, String userId) {
         String url = aiServiceConfig.getAiServiceUrl() + "/api/v1/add_node";
-        Map<String, Object> body = Map.of(
-                "node_id",   nodeId,
-                "text",      text,
-                "node_type", nodeType
-        );
+        Map<String, Object> body = new HashMap<>();
+        body.put("node_id", nodeId);
+        body.put("text", text);
+        body.put("node_type", nodeType);
+        if (userId != null) {
+            body.put("user_id", userId);
+        }
 
         try {
             ResponseEntity<Map<String, Object>> response =
                     restTemplate.postForEntity(url, body, generify(Map.class));
             if (response.getStatusCode().is2xxSuccessful()) {
-                log.info("[AI] Node registered: id={}, type={}", nodeId, nodeType);
+                log.info("[AI] Node registered: id={}, type={}, userId={}", nodeId, nodeType, userId);
             } else {
                 log.warn("[AI] Unexpected status {} for /add_node (id={}, type={})",
                         response.getStatusCode(), nodeId, nodeType);
@@ -243,5 +292,104 @@ public class AiServiceClient {
     @SuppressWarnings("unchecked")
     private static <T> Class<T> generify(Class<?> cls) {
         return (Class<T>) cls;
+    }
+
+    // ── PDF / OCR fallback ──────────────────────────────────────────────────────
+
+    /**
+     * Calls the AI service's OCR endpoint to extract text from a scanned PDF
+     * (one whose native text layer is too short for PDFBox).
+     *
+     * @param resumeId  UUID of the resume (used for logging/tracing only)
+     * @param pdfBase64 Base64-encoded PDF bytes
+     * @return Extracted text, or empty string if the OCR call fails
+     */
+    @SuppressWarnings("unchecked")
+    public String parsePdfFallback(UUID resumeId, String pdfBase64) {
+        String url = aiServiceConfig.getAiServiceUrl() + "/api/v1/parse-pdf";
+        Map<String, Object> body = Map.of(
+                "resume_id",   resumeId.toString(),
+                "pdf_base64",  pdfBase64
+        );
+
+        try {
+            ResponseEntity<Map<String, Object>> response =
+                    ocrRestTemplate.postForEntity(url, body, generify(Map.class));
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                Map<String, Object> body_ = response.getBody();
+                Boolean success = (Boolean) body_.get("success");
+                if (Boolean.TRUE.equals(success)) {
+                    Map<String, Object> data = (Map<String, Object>) body_.get("data");
+                    if (data != null) {
+                        String text = (String) data.get("text");
+                        String method = (String) data.getOrDefault("method", "unknown");
+                        Integer chars = (Integer) data.getOrDefault("chars_extracted", 0);
+                        log.info(
+                                "[AI] OCR parse result: resumeId={} method={} chars={}",
+                                resumeId, method, chars
+                        );
+                        return text != null ? text : "";
+                    }
+                } else {
+                    Map<String, Object> error = (Map<String, Object>) body_.get("error");
+                    log.warn(
+                            "[AI] OCR endpoint returned success=false: resumeId={} error={}",
+                            resumeId, error
+                    );
+                }
+            } else {
+                log.warn(
+                        "[AI] Unexpected status {} from /parse-pdf: resumeId={}",
+                        response.getStatusCode(), resumeId
+                );
+            }
+        } catch (RestClientException ex) {
+            log.error("[AI] OCR fallback failed: resumeId={}: {}", resumeId, ex.getMessage());
+        }
+        return "";
+    }
+
+    // ── Recommendations ─────────────────────────────────────────────────────────
+
+    /**
+     * Calls the AI service's /recommend endpoint to get ranked job recommendations
+     * for a given resume, excluding already-applied jobs.
+     *
+     * @param resumeId        Resume node ID (UUID string)
+     * @param topK            Maximum number of recommendations
+     * @param excludedJobIds  Comma-separated job IDs to exclude, or empty string
+     * @return List of recommendation maps with "job_id" and "score" keys; empty list on failure
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> getRecommendations(String resumeId, int topK, String excludedJobIds) {
+        StringBuilder urlBuilder = new StringBuilder();
+        urlBuilder.append(aiServiceConfig.getAiServiceUrl())
+                  .append("/api/v1/recommend/")
+                  .append(resumeId)
+                  .append("?top_k=").append(topK);
+        if (!excludedJobIds.isEmpty()) {
+            urlBuilder.append("&excluded_job_ids=").append(excludedJobIds);
+        }
+
+        try {
+            ResponseEntity<Map<String, Object>> response =
+                    restTemplate.getForEntity(urlBuilder.toString(), generify(Map.class));
+            Map<String, Object> body = response.getBody();
+            if (response.getStatusCode().is2xxSuccessful() && body != null) {
+                Object success = body.get("success");
+                if (Boolean.TRUE.equals(success)) {
+                    Map<String, Object> data = (Map<String, Object>) body.get("data");
+                    if (data != null) {
+                        List<Map<String, Object>> recs = (List<Map<String, Object>>) data.get("recommendations");
+                        return recs != null ? recs : List.of();
+                    }
+                }
+            }
+            log.warn("[AI] Unexpected response from /recommend: status={}", response.getStatusCode());
+            return List.of();
+        } catch (RestClientException ex) {
+            log.error("[AI] Failed to get recommendations: {}", ex.getMessage());
+            return List.of();
+        }
     }
 }

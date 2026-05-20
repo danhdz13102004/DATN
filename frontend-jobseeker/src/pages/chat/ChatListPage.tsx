@@ -120,10 +120,11 @@ export default function MessagesPage() {
   }, [activeId, currentUserId]);
 
   const handleNotification = useCallback((e: NotificationEvent) => {
+    if (!e.notification) return;
     if (e.notification.type === 'MESSAGE') {
       setConversations((prev) =>
         prev.map((c) =>
-          c.id === e.notification.referenceId
+          c.id === e.notification!.referenceId
             ? { ...c, unreadCount: c.id === activeId ? 0 : c.unreadCount + 1 }
             : c
         )

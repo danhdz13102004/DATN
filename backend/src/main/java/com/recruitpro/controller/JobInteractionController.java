@@ -28,8 +28,26 @@ public class JobInteractionController {
      * POST /api/v1/jobseeker/interactions
      *
      * <p>Logs a behavioral event (click / save / apply) from the frontend.
-     * The backend debounces duplicate click events and asynchronously syncs
-     * each interaction to the AI recommendation server.
+     *
+     * <p>For APPLY events:
+     * <pre>{@code
+     * {
+     *     "jobId": "uuid",
+     *     "eventType": "apply",
+     *     "resumeId": "uuid"  // single resume
+     * }
+     * }</pre>
+     * Uses explicit resume_id, creates a graph edge, updates GraphSAGE embedding.
+     *
+     * <p>For CLICK/SAVE events:
+     * <pre>{@code
+     * {
+     *     "jobId": "uuid",
+     *     "eventType": "click"
+     * }
+     * }</pre>
+     * Records interaction at user level as a behavioral signal.
+     * No graph edge is created. Signals feed into the preference vector only.
      */
     @PostMapping
     public ResponseEntity<ApiResponse<Void>> log(
@@ -37,13 +55,28 @@ public class JobInteractionController {
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         JobSeeker seeker = jobSeekerService.findByUserId(UUID.fromString(principal.getId()));
-        interactionService.log(
-                seeker.getId(),
-                req.getJobId(),
-                req.getEventType(),
-                req.getResumeId(),
-                req.getMetadata()
-        );
+
+        // Determine if this is an apply event (single resume) or click/save (multi-resume)
+        if (req.getEventType().isApply()) {
+            // Apply events use explicit single resume_id
+            interactionService.logWithSingleResume(
+                    seeker.getId(),
+                    req.getJobId(),
+                    req.getEventType(),
+                    req.getResumeId(),
+                    req.getMetadata()
+            );
+        } else {
+            // Click/save events use multiple resumes with soft attribution
+            interactionService.logWithMultipleResumes(
+                    seeker.getId(),
+                    req.getJobId(),
+                    req.getEventType(),
+                    req.getResumeIds(),
+                    req.getMetadata()
+            );
+        }
+
         return ResponseEntity.ok(ApiResponse.ok(null));
     }
 }

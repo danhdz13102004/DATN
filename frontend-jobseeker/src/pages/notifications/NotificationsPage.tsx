@@ -78,12 +78,13 @@ export default function NotificationsPage() {
       return;
     }
 
+    const notif = e.notification;
     setItems((prev) => {
-      const existing = prev.findIndex((n) => n.id === e.notification.id);
+      const existing = prev.findIndex((n) => n.id === notif.id);
       if (existing >= 0) {
-        return prev.map((n, idx) => (idx === existing ? e.notification : n));
+        return prev.map((n, idx) => (idx === existing ? notif : n));
       }
-      return [e.notification, ...prev];
+      return [notif, ...prev];
     });
   }, []);
 

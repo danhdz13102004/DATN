@@ -51,3 +51,8 @@ export interface User {
   companyId?: string;
   companyRole?: string;
 }
+
+export interface GoogleOAuthRequest {
+  idToken: string;
+  role: 'JOBSEEKER' | 'COMPANY';
+}

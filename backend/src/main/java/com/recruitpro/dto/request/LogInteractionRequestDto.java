@@ -2,12 +2,19 @@ package com.recruitpro.dto.request;
 
 import com.recruitpro.model.enums.InteractionEventType;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class LogInteractionRequestDto {
 
     @NotNull
@@ -16,9 +23,21 @@ public class LogInteractionRequestDto {
     @NotNull
     private InteractionEventType eventType;
 
-    /** Optional resume used for this interaction — needed for AI sync. */
+    /**
+     * Single resume ID for apply events (ground truth signals).
+     * When specified, this exact resume is used for AI sync.
+     */
     private UUID resumeId;
 
-    /** Optional metadata: source page, device type, etc. */
+    /**
+     * Multiple resume IDs for click/save events.
+     * The AI service will compute soft attribution across these resumes.
+     * Either resumeId OR resumeIds must be provided, not both.
+     */
+    private List<UUID> resumeIds;
+
+    /**
+     * Optional metadata: source page, device type, etc.
+     */
     private Map<String, Object> metadata;
 }

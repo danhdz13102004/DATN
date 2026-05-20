@@ -29,9 +29,9 @@ export default function InterviewsPage() {
   const formatTime = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
   const statCards = [
-    { label: 'Upcoming', value: stats?.upcoming ?? 0, icon: 'fa-clock', color: 'blue' },
-    { label: 'Completed', value: stats?.completed ?? 0, icon: 'fa-check-circle', color: 'green' },
-    { label: 'Cancelled', value: stats?.cancelled ?? 0, icon: 'fa-times-circle', color: 'red' },
+    { label: 'Upcoming', value: stats?.upcoming ?? 0, icon: 'fa-clock', color: 'blue' as const },
+    { label: 'Completed', value: stats?.completed ?? 0, icon: 'fa-check-circle', color: 'green' as const },
+    { label: 'Cancelled', value: stats?.cancelled ?? 0, icon: 'fa-times-circle', color: 'red' as const },
   ];
 
   return (

@@ -18,7 +18,6 @@ const ResumesPage = lazy(() => import('./pages/resumes/ResumesPage'));
 const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
 const ChatListPage = lazy(() => import('./pages/chat/ChatListPage'));
 const NotificationsPage = lazy(() => import('./pages/notifications/NotificationsPage'));
-const ComingSoonPage = lazy(() => import('./pages/ComingSoonPage'));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center h-screen">

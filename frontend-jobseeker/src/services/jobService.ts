@@ -37,5 +37,9 @@ export const jobService = {
     api.post('/jobseeker/interactions', { jobId, eventType, resumeId, metadata }).catch(() => {
       // Silent — interaction logging must never break UI
     }),
+
+  getRecommendations: (resumeId: string, topK = 12) =>
+    api.get(`/jobseeker/applications/recommendations?resumeId=${resumeId}&topK=${topK}`)
+      .then(r => r.data.data as { job: Job; score: number }[]),
 };
 

@@ -1,0 +1,14 @@
+# Primary mirror (Debian CDN)
+deb http://deb.debian.org/debian trixie main contrib non-free non-free-firmware
+deb http://deb.debian.org/debian trixie-updates main contrib non-free non-free-firmware
+deb http://security.debian.org/debian-security trixie-security main contrib non-free non-free-firmware
+
+# Fallback: Debian mirror via CDN77
+deb http://cdn-aws.deb.debian.org/debian trixie main contrib non-free non-free-firmware
+deb http://cdn-aws.deb.debian.org/debian trixie-updates main contrib non-free non-free-firmware
+deb http://cdn-aws.deb.debian.org/debian-security trixie-security main contrib non-free non-free-firmware
+
+# Fallback: Debian mirror via K的其他
+deb http://ftp.debian.org/debian trixie main contrib non-free non-free-firmware
+deb http://ftp.debian.org/debian trixie-updates main contrib non-free non-free-firmware
+deb http://security.debian.org/debian-security trixie-security main contrib non-free non-free-firmware

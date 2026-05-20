@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.Base64;
 import java.util.UUID;
 
 /**
@@ -34,6 +35,9 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class ResumePdfParser {
+
+    /** Below this character count after PDFBox, the PDF is treated as scanned/image-based. */
+    private static final int MIN_TEXT_CHARS = 100;
 
     private final StorageService storageService;
     private final ResumeRepository resumeRepository;
@@ -63,7 +67,10 @@ public class ResumePdfParser {
             log.error("[PDF] Failed to download file from storage (resumeId={}, key={}): {}",
                     resumeId, fileKey, e.getMessage());
             // Still register the node with fallback text so the graph isn't missing the node
-            aiServiceClient.addResumeNode(resumeId, fallback);
+            resumeRepository.findById(resumeId).ifPresentOrElse(
+                resume -> aiServiceClient.addResumeNode(resumeId, fallback, resume.getJobSeekerId()),
+                () -> aiServiceClient.addResumeNode(resumeId, fallback, null)
+            );
             return;
         }
 
@@ -72,22 +79,37 @@ public class ResumePdfParser {
             PDFTextStripper stripper = new PDFTextStripper();
             String raw = stripper.getText(doc);
             if (raw != null && !raw.isBlank()) {
-                // Sanitize: remove null bytes (0x00) and other control characters
-                // that PostgreSQL's UTF-8 encoding rejects
                 extractedText = sanitize(raw);
                 log.info("[PDF] Extraction successful: resumeId={}, chars={}", resumeId, extractedText.length());
             } else {
-                log.warn("[PDF] Extracted text is empty for resumeId={}, using fallback", resumeId);
+                log.warn("[PDF] Extracted text is blank for resumeId={}", resumeId);
             }
         } catch (IOException e) {
             log.error("[PDF] PDFBox extraction failed (resumeId={}): {}", resumeId, e.getMessage());
-            // Continue with fallback — the AI node will still be registered
+        }
+
+        // ── Step 2b: if PDFBox gave us too little text, fall back to OCR via AI service ─
+        if (extractedText.length() < MIN_TEXT_CHARS) {
+            log.info("[PDF] Text too short ({} < {} chars) — triggering OCR fallback for resumeId={}",
+                    extractedText.length(), MIN_TEXT_CHARS, resumeId);
+            String ocrText = aiServiceClient.parsePdfFallback(resumeId, Base64.getEncoder().encodeToString(pdfBytes));
+            if (ocrText != null && !ocrText.isBlank()) {
+                extractedText = ocrText;
+                log.info("[PDF] OCR fallback returned {} chars for resumeId={}", ocrText.length(), resumeId);
+            } else {
+                log.warn("[PDF] OCR fallback returned empty text for resumeId={}, using label as last resort", resumeId);
+                extractedText = fallback;
+            }
         }
 
         // ── Step 3: persist parsedText + structured data back to the Resume entity ──
         final String finalText = extractedText;
+        final UUID[] jobSeekerId = {null};
+        log.info("[PDF] Final text length: resumeId={}, chars={}", resumeId, finalText.length());
+        log.info("[PDF] Final text: {}", finalText);
         try {
             resumeRepository.findById(resumeId).ifPresent(resume -> {
+                jobSeekerId[0] = resume.getJobSeekerId();
                 resume.setParsedText(finalText);
                 resumeRepository.save(resume);
                 log.info("[PDF] parsedText saved: resumeId={}", resumeId);
@@ -111,7 +133,7 @@ public class ResumePdfParser {
         }
 
         // ── Step 4: register resume node in the AI graph ───────────────────────
-        aiServiceClient.addResumeNode(resumeId, finalText);
+        aiServiceClient.addResumeNode(resumeId, finalText, jobSeekerId[0]);
     }
 
     /**

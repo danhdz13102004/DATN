@@ -5,8 +5,10 @@ import com.recruitpro.dto.response.*;
 import com.recruitpro.model.Application;
 import com.recruitpro.model.enums.ApplicationStatus;
 import com.recruitpro.security.UserPrincipal;
+import com.recruitpro.service.AiServiceClient;
 import com.recruitpro.service.JobSeekerApplicationService;
 import com.recruitpro.service.JobSeekerService;
+import com.recruitpro.service.JobService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -18,8 +20,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/jobseeker/applications")
@@ -29,6 +33,8 @@ public class JobSeekerApplicationController {
 
     private final JobSeekerApplicationService applicationService;
     private final JobSeekerService jobSeekerService;
+    private final JobService jobService;
+    private final AiServiceClient aiServiceClient;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Object>> list(
@@ -86,5 +92,59 @@ public class JobSeekerApplicationController {
         UUID seekerId = jobSeekerService.findByUserId(UUID.fromString(principal.getId())).getId();
         applicationService.withdraw(id, seekerId);
         return ResponseEntity.ok(ApiResponse.ok(Map.of("message", "Application withdrawn")));
+    }
+
+    @GetMapping("/applied-job-ids")
+    public ResponseEntity<ApiResponse<List<UUID>>> getAppliedJobIds(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        UUID seekerId = jobSeekerService.findByUserId(UUID.fromString(principal.getId())).getId();
+        List<UUID> ids = applicationService.findAppliedJobIds(seekerId);
+        return ResponseEntity.ok(ApiResponse.ok(ids));
+    }
+
+    @GetMapping("/recommendations")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getRecommendations(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam UUID resumeId,
+            @RequestParam(defaultValue = "12") int topK) {
+
+        UUID seekerId = jobSeekerService.findByUserId(UUID.fromString(principal.getId())).getId();
+
+        // 1. Get applied job IDs to exclude
+        List<UUID> appliedJobIds = applicationService.findAppliedJobIds(seekerId);
+        String excluded = appliedJobIds.stream()
+                .map(UUID::toString)
+                .collect(Collectors.joining(","));
+
+        // 2. Call AI service
+        List<Map<String, Object>> aiRecommendations =
+                aiServiceClient.getRecommendations(resumeId.toString(), topK, excluded);
+
+        if (aiRecommendations == null || aiRecommendations.isEmpty()) {
+            return ResponseEntity.ok(ApiResponse.ok(List.of()));
+        }
+
+        // 3. Fetch full JobDto objects, preserving AI ordering
+        List<UUID> jobIds = aiRecommendations.stream()
+                .map(r -> UUID.fromString((String) r.get("job_id")))
+                .collect(Collectors.toList());
+        List<JobDto> jobs = jobService.findByIds(jobIds, seekerId);
+
+        // 4. Build result map: job DTO + AI score
+        Map<String, Double> scoreMap = aiRecommendations.stream()
+                .collect(Collectors.toMap(
+                        r -> (String) r.get("job_id"),
+                        r -> ((Number) r.get("score")).doubleValue(),
+                        (existing, replacement) -> existing  // keep first if duplicate (defensive)
+                ));
+
+        List<Map<String, Object>> result = jobs.stream().map(job -> {
+            Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("job", job);
+            m.put("score", scoreMap.getOrDefault(job.getId().toString(), 0.0));
+            return m;
+        }).collect(Collectors.toList());
+
+        return ResponseEntity.ok(ApiResponse.ok(result));
     }
 }

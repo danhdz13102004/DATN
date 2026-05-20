@@ -150,4 +150,9 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
 
     @Query("SELECT COUNT(a) FROM Application a WHERE a.jobId = :jobId AND a.deletedAt IS NULL")
     long countByJobId(@Param("jobId") UUID jobId);
+
+    // ── Recommendations ──────────────────────────────────────────────────────
+
+    @Query("SELECT a.jobId FROM Application a WHERE a.jobSeekerId = :seekerId AND a.deletedAt IS NULL")
+    List<UUID> findAppliedJobIdsByJobSeekerId(@Param("seekerId") UUID seekerId);
 }

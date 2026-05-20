@@ -7,6 +7,7 @@ import type {
   VerifyOtpRequest,
   ResetPasswordRequest,
   ChangePasswordRequest,
+  GoogleOAuthRequest,
 } from '../types/auth';
 
 export const authService = {
@@ -36,4 +37,7 @@ export const authService = {
 
   changePassword: (data: ChangePasswordRequest) =>
     api.put<ApiResponse<null>>('/auth/change-password', data),
+
+  googleOAuth: (data: GoogleOAuthRequest) =>
+    api.post<ApiResponse<AuthResponse>>('/auth/oauth2/google', data),
 };

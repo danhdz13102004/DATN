@@ -206,7 +206,8 @@ public class JobSeekerApplicationService {
         log.info("Job seeker {} applied to job {} with resume {}", seekerId, jobId, resumeId);
 
         // Log apply interaction for behavioral tracking + AI sync
-        jobInteractionService.log(seekerId, jobId, InteractionEventType.apply, resumeId, null);
+        // Apply events use explicit single resume with weight = 1.0 (ground truth)
+        jobInteractionService.logWithSingleResume(seekerId, jobId, InteractionEventType.apply, resumeId, null);
 
         // Async: register application edge in AI graph (resume → job)
         aiServiceClient.registerApplication(resumeId, jobId);
@@ -237,5 +238,9 @@ public class JobSeekerApplicationService {
         app.setStatus(ApplicationStatus.WITHDRAWN);
         applicationRepository.save(app);
         log.info("Job seeker {} withdrew application {}", seekerId, applicationId);
+    }
+
+    public List<UUID> findAppliedJobIds(UUID seekerId) {
+        return applicationRepository.findAppliedJobIdsByJobSeekerId(seekerId);
     }
 }

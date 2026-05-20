@@ -108,6 +108,31 @@ public class JobService {
     }
 
     /**
+     * Batch-fetch jobs by IDs with isSaved populated for the given job seeker.
+     * Returns jobs in the same order as jobIds. Skips jobs that don't exist.
+     * Pass null seekerId for unauthenticated / non-jobseeker callers.
+     */
+    public List<JobDto> findByIds(List<UUID> jobIds, UUID seekerId) {
+        if (jobIds == null || jobIds.isEmpty()) {
+            return List.of();
+        }
+        List<Job> jobs = jobRepository.findAllById(jobIds);
+        Set<UUID> savedIds = seekerId != null
+                ? savedJobRepository.findJobIdsByJobSeekerId(seekerId)
+                : Collections.emptySet();
+
+        // Preserve AI ordering
+        Set<UUID> idSet = new java.util.LinkedHashSet<>(jobIds);
+        Map<UUID, JobDto> dtoMap = jobs.stream()
+                .collect(Collectors.toMap(Job::getId, j -> toJobDto(j, savedIds.contains(j.getId()))));
+
+        return idSet.stream()
+                .filter(dtoMap::containsKey)
+                .map(dtoMap::get)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * List company's own jobs (all statuses).
      */
     public Page<Job> findByCompanyId(UUID companyId, Pageable pageable) {

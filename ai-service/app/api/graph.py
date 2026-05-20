@@ -2,10 +2,16 @@
 
 from datetime import datetime, timezone
 
+import logging
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 
+from app.ml.model_registry import model_registry
 from app.services import recommendation_service as svc
+from app.services.recommendation_service import run_graphsage_global
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -27,7 +33,7 @@ def _all_nodes_and_edges():
         for nid, meta in svc.raw_node_store.items()
     ]
     edges = [
-        {"resume_id": rid, "job_id": e["job_id"], "weight": e["weight"]}
+        {"resume_id": rid, "job_id": e["job_id"]}
         for rid, job_edges in svc.edge_store.items()
         for e in job_edges
     ]
@@ -49,7 +55,7 @@ def _subgraph_for_resume(resume_id: str):
     edges = []
     for e in svc.edge_store.get(resume_id, []):
         job_id = e["job_id"]
-        edges.append({"resume_id": resume_id, "job_id": job_id, "weight": e["weight"]})
+        edges.append({"resume_id": resume_id, "job_id": job_id})
         if job_id in svc.raw_node_store:
             job_meta = svc.raw_node_store[job_id]
             nodes.append({
@@ -59,6 +65,96 @@ def _subgraph_for_resume(resume_id: str):
             })
 
     return nodes, edges
+
+
+def _subgraph_for_job(job_id: str):
+    """Return (nodes_list, edges_list) containing only the job + all resumes that applied to it."""
+    if job_id not in svc.raw_node_store:
+        return None, None
+
+    job_meta = svc.raw_node_store[job_id]
+    nodes = [{
+        "node_id":   job_id,
+        "node_type": job_meta["node_type"],
+        "encoded":   job_meta.get("encoded", False),
+    }]
+
+    edges = []
+    for resume_id, job_edges in svc.edge_store.items():
+        for e in job_edges:
+            if e["job_id"] == job_id:
+                edges.append({"resume_id": resume_id, "job_id": job_id})
+                if resume_id in svc.raw_node_store:
+                    resume_meta = svc.raw_node_store[resume_id]
+                    nodes.append({
+                        "node_id":   resume_id,
+                        "node_type": resume_meta["node_type"],
+                        "encoded":   resume_meta.get("encoded", False),
+                    })
+
+    return nodes, edges
+
+
+def _subgraph_for_node(node_id: str):
+    """Return (nodes_list, edges_list) for a node of any type."""
+    if node_id not in svc.raw_node_store:
+        return None, None
+    meta = svc.raw_node_store[node_id]
+    if meta["node_type"] == "resume":
+        return _subgraph_for_resume(node_id)
+    else:
+        return _subgraph_for_job(node_id)
+
+
+# ── Graph refresh ─────────────────────────────────────────────────────────────
+
+@router.post("/graph/refresh", response_model=dict)
+def graph_refresh():
+    """Re-run GraphSAGE over the full in-memory graph and update graphsage_store.
+
+    Runs one forward pass over ALL nodes in feature_store using the complete
+    edge graph. Useful after bulk job syncs to bring cold-start jobs into the
+    same GNN embedding space as nodes that have interaction edges.
+
+    Returns 503 if the service is in DEGRADED mode (models not loaded).
+    """
+    if not model_registry.is_loaded:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "success": False,
+                "data":    None,
+                "error":   {"code": "DEGRADED", "message": "Models not loaded — service is in DEGRADED mode."},
+                "meta":    None,
+            },
+        )
+
+    graphsage_model = model_registry.get("graphsage")
+    device          = model_registry.device
+
+    try:
+        updated_count = run_graphsage_global(graphsage_model, device)
+    except Exception as exc:
+        logger.exception("Graph refresh failed: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "success": False,
+                "data":    None,
+                "error":   {"code": "REFRESH_ERROR", "message": str(exc)},
+                "meta":    None,
+            },
+        ) from exc
+
+    return {
+        "success": True,
+        "data": {
+            "updated_nodes": updated_count,
+            "generated_at":  _ts(),
+        },
+        "error": None,
+        "meta":  None,
+    }
 
 
 # ── Full graph snapshot ────────────────────────────────────────────────────────
@@ -89,10 +185,13 @@ def graph_snapshot():
 
 # ── Per-resume subgraph snapshot ───────────────────────────────────────────────
 
-@router.get("/graph/snapshot/{resume_id}", response_model=dict)
-def graph_snapshot_node(resume_id: str):
-    """Return the subgraph for a single resume: the resume node + all job nodes it applied to."""
-    nodes, edges = _subgraph_for_resume(resume_id)
+@router.get("/graph/snapshot/{node_id}", response_model=dict)
+def graph_snapshot_node(node_id: str):
+    """Return the subgraph for a single node: the node + all its neighbors.
+
+    Supports both resume and job nodes.
+    """
+    nodes, edges = _subgraph_for_node(node_id)
 
     if nodes is None:
         raise HTTPException(
@@ -100,20 +199,22 @@ def graph_snapshot_node(resume_id: str):
             detail={
                 "success": False,
                 "data":    None,
-                "error":   {"code": "NODE_NOT_FOUND", "message": f"Resume '{resume_id}' not found in graph."},
+                "error":   {"code": "NODE_NOT_FOUND", "message": f"Node '{node_id}' not found in graph."},
                 "meta":    None,
             },
         )
 
+    node_type = svc.raw_node_store[node_id]["node_type"]
     return {
         "success": True,
         "data": {
-            "resume_id":   resume_id,
-            "nodes":       nodes,
-            "edges":       edges,
-            "num_resumes": 1,
-            "num_jobs":    sum(1 for n in nodes if n["node_type"] == "job"),
-            "num_edges":   len(edges),
+            "node_id":      node_id,
+            "node_type":    node_type,
+            "nodes":        nodes,
+            "edges":        edges,
+            "num_resumes":  sum(1 for n in nodes if n["node_type"] == "resume"),
+            "num_jobs":     sum(1 for n in nodes if n["node_type"] == "job"),
+            "num_edges":    len(edges),
             "generated_at": _ts(),
         },
         "error": None,
@@ -123,24 +224,26 @@ def graph_snapshot_node(resume_id: str):
 
 # ── Interactive HTML dashboard ────────────────────────────────────────────────
 
-def _build_dashboard_html(focused_resume_id: str = "") -> str:
+def _build_dashboard_html(focused_node_id: str = "", focused_node_type: str = "") -> str:
     """Generate the dashboard HTML.
 
-    If focused_resume_id is non-empty the dashboard boots in focused mode:
-    it polls /graph/snapshot/<id> and only renders that resume's subgraph.
+    If focused_node_id is non-empty the dashboard boots in focused mode:
+    it polls /graph/snapshot/<id> and only renders that node's subgraph.
     The search bar auto-populates and a back link appears.
     """
-    focused_js  = focused_resume_id.replace("'", "\\'")
-    title_extra = f" \u2014 {focused_resume_id[:16]}\u2026" if focused_resume_id else ""
-    back_btn    = (
+    focused_js       = focused_node_id.replace("'", "\\'")
+    type_label       = "Resume" if focused_node_type == "resume" else ("Job" if focused_node_type == "job" else "Node")
+    title_extra      = f" \u2014 {focused_node_id[:16]}\u2026" if focused_node_id else ""
+    node_type_banner = f"{type_label}: <b id=\"focused-id\">{focused_node_id}</b>"
+    back_btn         = (
         '<a href="/api/v1/graph/view" '
         'style="font-size:12px;color:#f7a34f;text-decoration:none;'
         'border:1px solid #f7a34f;padding:3px 10px;border-radius:4px;'
         'margin-left:8px;">\u2190 All nodes</a>'
-        if focused_resume_id else ""
+        if focused_node_id else ""
     )
-    focused_banner_display = "flex" if focused_resume_id else "none"
-    click_hint_display     = "none" if focused_resume_id else "flex"
+    focused_banner_display = "flex" if focused_node_id else "none"
+    click_hint_display     = "none" if focused_node_id else "flex"
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -230,7 +333,7 @@ def _build_dashboard_html(focused_resume_id: str = "") -> str:
   <span class="stat">&#x1F4BC; Jobs: <b id="s-j">&mdash;</b></span>
   <span class="stat">&#x1F517; Edges: <b id="s-e">&mdash;</b></span>
   <div id="search-wrap">
-    <input id="search-input" type="text" placeholder="Paste resume ID to focus&hellip;" value="{focused_resume_id}" />
+    <input id="search-input" type="text" placeholder="Paste ID to focus&hellip;" value="{focused_js}" />
     <button id="search-btn" onclick="goFocused()">Focus</button>
     {back_btn}
   </div>
@@ -238,25 +341,19 @@ def _build_dashboard_html(focused_resume_id: str = "") -> str:
 </div>
 
 <div id="focused-banner">
-  &#x1F50D; Focused on resume: <b id="focused-id">{focused_resume_id}</b>
-  &nbsp;|&nbsp; showing only this node and its applied jobs
+  &#x1F50D; Focused on {node_type_banner}
+  &nbsp;|&nbsp; showing this node and its relations
 </div>
 
 <div id="click-hint">
-  &#x1F4A1; Click any <span style="color:#7b8cff">resume node</span> to focus on its relations
+  &#x1F4A1; Click any node to focus on its relations
 </div>
 
 <div id="legend">
   <span><span class="ldot" style="background:#7b8cff"></span>Resume node</span>
   <span><span class="ldot" style="background:#f7a34f;border-radius:2px"></span>Job node</span>
   <span><span class="ldot" style="background:#2a2a5a;border:2px dashed #ff9944"></span>Pending embedding</span>
-  <span style=\"display:flex;gap:12px;align-items:center;\">
-    Edge weight:
-    <span style=\"display:flex;align-items:center;gap:4px;\"><span style=\"height:2px;width:20px;background:#ff4466\"></span><span style=\"font-size:11px;color:#888\">view</span></span>
-    <span style=\"display:flex;align-items:center;gap:4px;\"><span style=\"height:4px;width:20px;background:#ffaa44\"></span><span style=\"font-size:11px;color:#888\">save</span></span>
-    <span style=\"display:flex;align-items:center;gap:4px;\"><span style=\"height:6px;width:20px;background:#44ff99\"></span><span style=\"font-size:11px;color:#888\">apply</span></span>
-  </span>
-  <span style=\"margin-left:auto;font-size:11px;color:#666;\">Auto-refresh: 4s</span>
+  <span style="margin-left:auto;font-size:11px;color:#666;">Auto-refresh: 4s</span>
 </div>
 
 <div id="graph">
@@ -278,33 +375,6 @@ const FOCUSED_ID = '{focused_js}';
 const tip        = document.getElementById("tip");
 const empty      = document.getElementById("empty");
 let d = {{}};  // Global data snapshot
-
-// Helper: return RGB color based on weight (0.1 → red, 0.7 → orange, 1.0 → green)
-function getWeightColor(weight) {{
-  const w = Math.max(0.1, Math.min(1.0, weight));
-  if (w < 0.4) {{
-    // Red → Orange (0.1 to 0.4)
-    const t = (w - 0.1) / 0.3;
-    const r = 255;
-    const g = Math.round(68 + (170 - 68) * t);
-    const b = 70;
-    return `rgb(${{r}},${{g}},${{b}})`;
-  }} else if (w < 0.8) {{
-    // Orange → Yellow-Green (0.4 to 0.8)
-    const t = (w - 0.4) / 0.4;
-    const r = Math.round(255 - (255 - 170) * t);
-    const g = Math.round(170 + (255 - 170) * t);
-    const b = Math.round(70 - 70 * t);
-    return `rgb(${{r}},${{g}},${{b}})`;
-  }} else {{
-    // Yellow-Green → Green (0.8 to 1.0)
-    const t = (w - 0.8) / 0.2;
-    const r = Math.round(170 - (170 - 68) * t);
-    const g = 255;
-    const b = Math.round(0 + 100 * t);
-    return `rgb(${{r}},${{g}},${{b}})`;
-  }}
-}}
 
 function goFocused() {{
   const val = document.getElementById("search-input").value.trim();
@@ -345,20 +415,19 @@ const net = new vis.Network(
 net.on("click", p => {{
   if (!p.nodes.length) return;
   const n = nodes.get(p.nodes[0]);
-  if (!n || n.nodeType !== "resume") return;
+  if (!n) return;
   window.location.href = "/api/v1/graph/view/" + encodeURIComponent(n.id);
 }});
 
 net.on("hoverNode", p => {{
   const n = nodes.get(p.node);
   if (!n) return;
-  const resume = n.nodeType === "resume";
-  const edgeCount = (d.edges || []).filter(e => (resume ? e.resume_id === n.id : e.job_id === n.id)).length;
+  const edgeCount = (d.edges || []).filter(e => (n.nodeType === "resume" ? e.resume_id === n.id : e.job_id === n.id)).length;
   tip.innerHTML =
-    "<b style='color:#7b8cff'>" + (resume ? "Resume" : "Job") + " node</b><br>" +
+    "<b style='color:#7b8cff'>" + (n.nodeType === "resume" ? "Resume" : "Job") + " node</b><br>" +
     "ID: " + n.id.slice(0, 20) + (n.id.length > 20 ? "..." : "") + "<br>" +
     "<span style='color:#aaa;font-size:11px'>" + edgeCount + " relation" + (edgeCount !== 1 ? "s" : "") + "</span>" +
-    (resume ? "<br><span style='color:#aaf;font-size:11px'>Click to focus</span>" : "");
+    "<br><span style='color:#aaf;font-size:11px'>Click to focus</span>";
   tip.style.display = "block";
 }});
 
@@ -368,13 +437,11 @@ net.on("hoverEdge", p => {{
   const fromNode = nodes.get(e.from);
   const toNode = nodes.get(e.to);
   if (!fromNode || !toNode) return;
-  const w = e.width / 5;
+
   tip.innerHTML =
-    "<b style='color:#44ff99'>Edge</b><br>" +
-    "Weight: <b style='color:#ffaa44'>" + w.toFixed(3) + "</b><br>" +
-    "Action: <span style='color:#7b8cff'>" + (w < 0.2 ? "view" : w < 0.85 ? "save" : "apply") + "</span><br>" +
-    "From: " + fromNode.id.slice(0, 12) + "...<br>" +
-    "To: " + toNode.id.slice(0, 12) + "...";
+    "<b style='color:#44ff99'>Apply</b><br>" +
+    "Resume: " + fromNode.id.slice(0, 12) + "...<br>" +
+    "Job: " + toNode.id.slice(0, 12) + "...";
   tip.style.display = "block";
 }});
 net.on("blurNode", () => {{ tip.style.display = "none"; }});
@@ -422,19 +489,12 @@ function applySnapshot(d) {{
   const inE  = new Set((d.edges || []).map(eKey));
   for (const id of edges.getIds()) {{ if (!inE.has(id)) edges.remove(id); }}
   for (const e of (d.edges || [])) {{
-    const key   = eKey(e);
-    const w     = Math.max(0.1, Math.min(1.0, e.weight));
-    const width = Math.max(1.5, w * 5);
-    const color = getWeightColor(w);
+    const key = eKey(e);
     const item = {{
       id:    key,
       from:  e.resume_id,
       to:    e.job_id,
-      width: width,
-      color: {{ color: color, highlight: \"#88ff99\", hover: \"#aaffbb\" }},
-      title: `Weight: ${{w.toFixed(3)}} | Action: ${{ w < 0.2 ? \"view\" : w < 0.85 ? \"save\" : \"apply\" }}`,
-      label: w.toFixed(2),
-      font:  {{ size: 10, color: \"#e0e0e0\", background: {{ enabled: true, color: \"#1e1e3e\" }} }},
+      title: "Apply",
     }};
     edges.get(key) !== null ? edges.update(item) : edges.add(item);
   }}
@@ -451,7 +511,7 @@ async function poll() {{
     if (!r.ok) {{
       if (r.status === 404) {{
         document.getElementById("empty-msg").innerHTML =
-          "Resume <code>" + FOCUSED_ID + "</code><br>not found in graph.";
+          "Node <code>" + FOCUSED_ID + "</code><br>not found in graph.";
         empty.style.display = "block";
       }}
       throw new Error(r.statusText);
@@ -485,17 +545,22 @@ setInterval(poll, POLL_MS);
 def graph_view():
     """Interactive live graph dashboard — full graph mode.
 
-    Click any resume node to drill into its focused subgraph view.
+    Click any node to drill into its focused subgraph view.
     Accessible at http://localhost:8000/api/v1/graph/view
     """
     return HTMLResponse(content=_build_dashboard_html())
 
 
-@router.get("/graph/view/{resume_id}", response_class=HTMLResponse, include_in_schema=False)
-def graph_view_focused(resume_id: str):
-    """Focused graph view for a single resume node.
+@router.get("/graph/view/{node_id}", response_class=HTMLResponse, include_in_schema=False)
+def graph_view_focused(node_id: str):
+    """Focused graph view for a single node.
 
-    Shows the resume and only the job nodes it has applied to.
-    Accessible at http://localhost:8000/api/v1/graph/view/<resume_id>
+    Shows the node and only its neighboring nodes (resume shows applied jobs;
+    job shows all resumes that applied).
+    Accessible at http://localhost:8000/api/v1/graph/view/<node_id>
     """
-    return HTMLResponse(content=_build_dashboard_html(focused_resume_id=resume_id))
+    if node_id in svc.raw_node_store:
+        node_type = svc.raw_node_store[node_id]["node_type"]
+    else:
+        node_type = ""
+    return HTMLResponse(content=_build_dashboard_html(focused_node_id=node_id, focused_node_type=node_type))

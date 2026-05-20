@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import { jobService } from '../../services/jobService';
+import { resumeService } from '../../services/resumeService';
 import type { Job, JobFilter, SavedJobDto, Skill } from '../../types/job';
+import type { Resume } from '../../types/resume';
 
 const JOB_TYPES = ['FULLTIME', 'PARTTIME', 'REMOTE', 'HYBRID'];
 const EXP_LEVELS = ['INTERN', 'FRESHER', 'JUNIOR', 'MIDDLE', 'SENIOR', 'LEADER'];
@@ -127,6 +129,11 @@ export default function JobsPage() {
   const [savedLoading, setSavedLoading] = useState(false);
   const [savedTotal, setSavedTotal] = useState(0);
   const [savePendingId, setSavePendingId] = useState<string | null>(null);
+  const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+  const [resumes, setResumes] = useState<Resume[]>([]);
+  const [recommendedJobs, setRecommendedJobs] = useState<{ job: Job; score: number }[]>([]);
+  const [recommendLoading, setRecommendLoading] = useState(false);
+  const [recommendError, setRecommendError] = useState<string | null>(null);
 
   const fetchJobs = (f: JobFilter) => {
     setLoading(true);
@@ -148,6 +155,35 @@ export default function JobsPage() {
     }).catch(console.error)
       .finally(() => setSavedLoading(false));
   };
+
+  const fetchRecommendations = (resumeId: string) => {
+    setRecommendLoading(true);
+    setRecommendError(null);
+    jobService.getRecommendations(resumeId)
+      .then(setRecommendedJobs)
+      .catch(() => setRecommendError('Failed to load recommendations. Please try again.'))
+      .finally(() => setRecommendLoading(false));
+  };
+
+  // Load resumes + auto-select primary when switching to Recommended tab
+  useEffect(() => {
+    if (viewMode === 'recommended') {
+      resumeService.listResumes()
+        .then(list => {
+          setResumes(list);
+          const primary = list.find((r: Resume) => r.isPrimary) ?? list[0] ?? null;
+          if (primary) setSelectedResumeId(primary.id);
+        })
+        .catch(() => setResumes([]));
+    }
+  }, [viewMode]);
+
+  // Auto-fetch recommendations when resume is selected (covers tab switch and resume change)
+  useEffect(() => {
+    if (viewMode === 'recommended' && selectedResumeId) {
+      fetchRecommendations(selectedResumeId);
+    }
+  }, [viewMode, selectedResumeId]);
 
   useEffect(() => { fetchJobs(filters); }, [filters]);
 
@@ -189,10 +225,8 @@ export default function JobsPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between flex-wrap gap-4 mb-2">
         <div>
-          <h2 className="text-[1.55rem] font-bold tracking-tight text-[#1a1d26]">Find Your Dream Job</h2>
-          <p className="text-[0.9rem] text-[#5f6780] mt-0.5">
-            Discover {totalJobs > 0 ? totalJobs : ''} opportunities matching your profile
-          </p>
+          <h2 className="text-[1.55rem] font-bold tracking-tight text-[#1a1d26]">Find Jobs</h2>
+
         </div>
 
         {/* View Toggle */}
@@ -293,35 +327,9 @@ export default function JobsPage() {
             onChange={(e) => setFilters(f => ({ ...f, location: e.target.value || undefined, page: 1 }))}
           />
         </div>
-
-        {/* Resume Filter Row */}
-        <div
-          className="flex items-center gap-3 mt-3 pt-3 flex-wrap"
-          style={{ borderTop: '1px solid #eef0f4' }}
-        >
-          <div className="flex items-center gap-2 text-sm font-medium text-[#5f6780] whitespace-nowrap">
-            <i className="fas fa-file-pdf text-[#ef4444]" />
-            <span>Filter by Resume</span>
-          </div>
-          <select
-            className="flex-1 min-w-[200px] px-3 py-[9px] border border-[#e2e6ed] rounded-md text-sm text-[#1a1d26] outline-none focus:border-primary bg-white cursor-pointer"
-            style={{ fontFamily: 'inherit', appearance: 'none', paddingRight: '34px',
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%235f6780' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E")`,
-              backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
-            defaultValue=""
-          >
-            <option value="">— No resume selected —</option>
-          </select>
-          <button
-            onClick={() => navigate('/resumes')}
-            className="flex items-center gap-1.5 px-3 py-[9px] text-sm text-[#5f6780] hover:bg-[#f4f6fa] hover:text-[#1a1d26] rounded-md transition-colors whitespace-nowrap"
-          >
-            <i className="fas fa-external-link-alt text-xs" /> Manage Resumes
-          </button>
-        </div>
       </div>
 
-      {/* Recommended Section (shown when 'recommended' tab or always on top) */}
+      {/* Recommended Section */}
       {viewMode === 'recommended' && (
         <div
           className="rounded-[14px] p-6 border"
@@ -346,24 +354,92 @@ export default function JobsPage() {
                 <p className="text-sm text-[#8b92a8] mt-0.5">AI-matched jobs based on your resume and profile</p>
               </div>
             </div>
-            <span
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-              style={{ background: 'rgba(139,92,246,0.08)', color: '#6d28d9' }}
-            >
-              <i className="fas fa-robot" /> AI Powered
-            </span>
+            <div className="flex items-center gap-3 flex-wrap">
+              {resumes.length > 0 ? (
+                <select
+                  className="px-3 py-[9px] border border-[#e2e6ed] rounded-md text-sm text-[#1a1d26] outline-none focus:border-primary bg-white cursor-pointer"
+                  style={{ fontFamily: 'inherit', appearance: 'none', paddingRight: '34px',
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%235f6780' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
+                  value={selectedResumeId ?? ''}
+                  onChange={(e) => setSelectedResumeId(e.target.value || null)}
+                >
+                  {resumes.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.label ?? 'Resume'} {r.isPrimary ? '(Primary)' : ''}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <button
+                  onClick={() => navigate('/resumes')}
+                  className="flex items-center gap-1.5 px-3 py-[9px] text-sm text-[#5f6780] hover:bg-[#f4f6fa] hover:text-[#1a1d26] rounded-md transition-colors whitespace-nowrap border border-[#e2e6ed]"
+                >
+                  <i className="fas fa-plus text-xs" /> Add Resume
+                </button>
+              )}
+              <span
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
+                style={{ background: 'rgba(139,92,246,0.08)', color: '#6d28d9' }}
+              >
+                <i className="fas fa-robot" /> AI Powered
+              </span>
+            </div>
           </div>
 
-          <div className="text-center py-10 text-[#8b92a8]">
-            <i className="fas fa-robot text-5xl mb-4 block opacity-20" />
-            <p className="text-sm">Upload a resume to get AI-powered job recommendations</p>
-            <button
-              onClick={() => navigate('/resumes')}
-              className="mt-4 px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-md hover:bg-[#2b6de0] transition-colors"
-            >
-              Upload Resume
-            </button>
-          </div>
+          {recommendLoading ? (
+            <LoadingSpinner />
+          ) : recommendError ? (
+            <div className="text-center py-10 text-red-500">
+              <i className="fas fa-circle-exclamation text-3xl mb-3 block" />
+              <p className="text-sm">{recommendError}</p>
+            </div>
+          ) : resumes.length === 0 ? (
+            <div className="text-center py-10 text-[#8b92a8]">
+              <i className="fas fa-file-pdf text-5xl mb-4 block opacity-20" />
+              <p className="text-sm">Upload a resume to get AI-powered job recommendations</p>
+              <button
+                onClick={() => navigate('/resumes')}
+                className="mt-4 px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-md hover:bg-[#2b6de0] transition-colors"
+              >
+                Upload Resume
+              </button>
+            </div>
+          ) : recommendedJobs.length === 0 ? (
+            <EmptyState
+              icon="fa-wand-magic-sparkles"
+              title="No recommendations yet"
+              description="Try selecting a different resume or check back when more jobs are available."
+            />
+          ) : (
+            <>
+              {/* <div className="flex items-center gap-2 mb-4 text-sm text-[#8b92a8]">
+                <i className="fas fa-check-circle text-emerald-500" />
+                Showing {recommendedJobs.length} personalized recommendations
+              </div> */}
+              <div
+                className="grid gap-5"
+                style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}
+              >
+                {recommendedJobs.map(({ job, score }) => (
+                  <div key={job.id} className="relative">
+                    <JobCard
+                      job={job}
+                      onClick={() => navigate(`/jobs/${job.id}`)}
+                      onToggleSave={handleToggleSave}
+                      savePendingId={savePendingId}
+                    />
+                    <div
+                      className="absolute top-3 right-3 px-2 py-1 rounded-md text-[0.7rem] font-semibold"
+                      style={{ background: 'rgba(139,92,246,0.1)', color: '#6d28d9' }}
+                    >
+                      {(score * 100).toFixed(0)}% match
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 

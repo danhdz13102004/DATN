@@ -93,7 +93,7 @@ public class Job {
     // embedding is managed by AI service — not mapped as JPA column to avoid pgvector deps in JPA
     // Use @Column(columnDefinition = "vector(384)") when pgvector JPA support is added
 
-    @ManyToMany(fetch = FetchType.LAZY)
+    @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
         name = "job_skills",
         joinColumns = @JoinColumn(name = "job_id"),

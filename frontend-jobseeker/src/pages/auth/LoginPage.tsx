@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { authService } from '../../services/authService';
 import { useAuthStore } from '../../store/authStore';
 import { AUTH_STRINGS, ROUTES } from '../../constants';
-import type { LoginRequest } from '../../types/auth';
+import type { LoginRequest, GoogleOAuthRequest } from '../../types/auth';
+
+declare const google: any;
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -13,9 +15,35 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
   const { register, handleSubmit, formState: { errors } } = useForm<LoginRequest>();
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || ROUTES.DASHBOARD;
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+
+  const handleGoogleResponse = async (response: { credential: string }) => {
+    setLoading(true);
+    setError('');
+    try {
+      const data: GoogleOAuthRequest = {
+        idToken: response.credential,
+        role: 'JOBSEEKER',
+      };
+      const res = await authService.googleOAuth(data);
+      const auth = res.data.data;
+      setAuth(
+        { id: auth.userId, email: auth.email, role: auth.role },
+        auth.accessToken,
+        auth.refreshToken
+      );
+      navigate(from, { replace: true });
+    } catch (err: unknown) {
+      const msg =
+        (err as { response?: { data?: { error?: { message?: string } } } })
+          ?.response?.data?.error?.message || 'Google login failed.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const onSubmit = async (data: LoginRequest) => {
     setError('');
@@ -108,12 +136,17 @@ export default function LoginPage() {
 
           <div className="flex items-center gap-4 my-7 text-text-light text-[0.85rem] before:content-[''] before:flex-1 before:h-px before:bg-border after:content-[''] after:flex-1 after:h-px after:bg-border">{AUTH_STRINGS.OR_CONTINUE}</div>
 
-          <div className="flex gap-3 mb-6">
-            <button type="button" className="flex-1 py-3 border-[1.5px] border-border rounded-[10px] bg-white cursor-pointer flex items-center justify-center gap-2 text-sm font-medium font-satoshi transition-all text-text hover:border-border-hover hover:bg-gray-50">
-              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width={20} height={20} /> Google
-            </button>
-            <button type="button" className="flex-1 py-3 border-[1.5px] border-border rounded-[10px] bg-white cursor-pointer flex items-center justify-center gap-2 text-sm font-medium font-satoshi transition-all text-text hover:border-border-hover hover:bg-gray-50">
-              <i className="fab fa-github text-lg" /> GitHub
+          <div className="flex gap-3 mb-6 justify-center items-center">
+            <button
+              onClick={() => google.accounts.id.prompt()}
+              className="flex items-center gap-2 px-4 py-2 border rounded-lg shadow-sm hover:bg-gray-50"
+            >
+              <img
+                src="https://developers.google.com/identity/images/g-logo.png"
+                alt="Google"
+                className="w-5 h-5"
+              />
+              Login with Google
             </button>
           </div>
         </div>

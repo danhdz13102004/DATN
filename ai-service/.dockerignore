@@ -6,3 +6,6 @@ venv/
 .git/
 tests/
 *.log
+models/
+app/models/
+docs/

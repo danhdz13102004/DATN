@@ -1,9 +1,10 @@
 """Recommendation API router — thin handlers delegating to recommendation_service."""
+from typing import Optional
 
 import logging
 import time
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.ml.model_registry import model_registry
 from app.models.schemas import (
@@ -12,6 +13,8 @@ from app.models.schemas import (
     InteractionRequest,
     ApplyData,
     RecommendData,
+    MultiResumeInteractionData,
+    BehavioralSignalData,
 )
 from app.services import graph_store
 from app.services import recommendation_service as svc
@@ -36,27 +39,23 @@ def _guard_models_loaded():
 
 
 @router.post("/add_node", response_model=dict)
-def add_node(req: AddNodeRequest):
-    """Register a resume or job node.
-
-    Phase 1 (always): stores node ID + type in raw_node_store so the graph
-    snapshot immediately reflects the new node.
-    Phase 2 (when models ready): NLP-encodes the text into an embedding and
-    writes it to feature_store / graphsage_store for recommendations.
-    """
+def add_node(req: AddNodeRequest, user_id: Optional[str] = None):
     import time as _time
     start = _time.time()
 
     # Phase 1: register immediately, no model needed
     text_snippet = req.text[:120] if req.text else ""
-    svc.raw_node_store[req.node_id] = {
+    node_meta = {
         "node_type":    req.node_type,
         "text_snippet": text_snippet,
         "encoded":      False,
     }
+    if user_id is not None:
+        node_meta["user_id"] = user_id
+    svc.raw_node_store[req.node_id] = node_meta
     if req.node_type == "job" and req.node_id not in svc.job_catalog:
         svc.job_catalog.append(req.node_id)
-        graph_store.persist_job_catalog(req.node_id)   # ← persist catalog
+        graph_store.persist_job_catalog(req.node_id)
 
     # Always persist node metadata to Redis (even in DEGRADED mode)
     graph_store.persist_node(req.node_id, req.node_type, text_snippet)
@@ -70,6 +69,7 @@ def add_node(req: AddNodeRequest):
                 node_type=req.node_type,
                 nlp_model=model_registry.get("nlp"),
                 device=model_registry.device,
+                user_id=user_id,
             )
             logger.debug("POST /add_node latency=%.3fs", _time.time() - start)
             return {"success": True, "data": AddNodeData(**data), "error": None, "meta": None}
@@ -85,7 +85,10 @@ def add_node(req: AddNodeRequest):
                 },
             )
     else:
-        # Models not loaded yet — node registered in raw_node_store, encoding deferred
+        # For resume nodes with user_id, also populate resume_to_user in-memory map
+        # so behavioral signals can be resolved even before encoding
+        if req.node_type == "resume" and user_id is not None:
+            svc.resume_to_user[req.node_id] = user_id
         logger.warning(
             "add_node(%s): models not loaded, node registered without embedding (DEGRADED mode).",
             req.node_id,
@@ -103,50 +106,108 @@ def add_node(req: AddNodeRequest):
 
 
 @router.post("/interact", response_model=dict)
-def handle_interaction(req: InteractionRequest):
-    """Record a user→job interaction and update the resume embedding via GraphSAGE.
+def handle_interaction(req: InteractionRequest, request: Request):
+    """Record a user→job interaction.
 
-    The *action_type* field maps to an edge weight via ACTION_WEIGHT_MAP:
-      - "apply" → 1.0  (strongest signal)
-      - "save"  → 0.7
-      - "view"  → 0.1  (weakest signal)
-      - "click" → 0.1  (weakest signal, same as view)
-    Weights accumulate across calls, so repeated interactions strengthen the edge.
+    APPLY EVENTS (single resume):
+        Creates a graph edge and updates GraphSAGE embedding.
+        Body: {"resume_id": "...", "job_id": "...", "action_type": "apply"}
+
+    CLICK/SAVE EVENTS (user-level behavioral signals):
+        Records click/save as user-level behavioral signals. NO graph edge is created.
+        NO GraphSAGE embedding update. Behavioral signals feed into preference vector only.
+        Header: X-User-ID: {job_seeker_id}
+        Body: {"job_id": "...", "action_type": "click"}
     """
     _guard_models_loaded()
 
-    if req.resume_id not in svc.feature_store:
+    action_type = req.action_type.lower()
+    job_id = req.job_id
+
+    # Validate job exists in job catalog
+    if job_id not in svc.job_catalog:
         raise HTTPException(
             status_code=404,
             detail={
                 "success": False,
                 "data":    None,
-                "error":   {"code": "NODE_NOT_FOUND", "message": f"Resume '{req.resume_id}' not found. Call /api/v1/add_node first."},
-                "meta":    None,
-            },
-        )
-    if req.job_id not in svc.feature_store:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "success": False,
-                "data":    None,
-                "error":   {"code": "NODE_NOT_FOUND", "message": f"Job '{req.job_id}' not found. Call /api/v1/add_node first."},
+                "error":   {"code": "NODE_NOT_FOUND", "message": f"Job '{job_id}' not found in job catalog."},
                 "meta":    None,
             },
         )
 
     start = time.time()
+
     try:
-        data = svc.handle_interaction(
-            resume_id=req.resume_id,
-            job_id=req.job_id,
-            action_type=req.action_type,
-            graphsage_model=model_registry.get("graphsage"),
-            device=model_registry.device,
-        )
-        logger.debug("POST /apply latency=%.3fs", time.time() - start)
-        return {"success": True, "data": ApplyData(**data), "error": None, "meta": None}
+        # ── APPLY EVENTS: single resume, creates graph edge, updates GraphSAGE ──
+        if action_type == "apply":
+            if not req.resume_id:
+                raise HTTPException(
+                    status_code=422,
+                    detail={
+                        "success": False,
+                        "data":    None,
+                        "error":   {"code": "MISSING_RESUME_ID", "message": "Apply events require 'resume_id' field."},
+                        "meta":    None,
+                    },
+                )
+
+            if req.resume_id not in svc.feature_store:
+                raise HTTPException(
+                    status_code=404,
+                    detail={
+                        "success": False,
+                        "data":    None,
+                        "error":   {"code": "NODE_NOT_FOUND", "message": f"Resume '{req.resume_id}' not found. Call /api/v1/add_node first."},
+                        "meta":    None,
+                    },
+                )
+
+            data = svc.handle_interaction(
+                resume_id=req.resume_id,
+                job_id=job_id,
+                action_type=action_type,
+                graphsage_model=model_registry.get("graphsage"),
+                device=model_registry.device,
+            )
+            logger.debug("POST /interact (apply) latency=%.3fs", time.time() - start)
+            return {"success": True, "data": ApplyData(**data), "error": None, "meta": None}
+
+        # ── CLICK/SAVE EVENTS: user-level behavioral signals only ─────────────────
+        elif action_type in ("click", "save"):
+            job_seeker_id = request.headers.get("x-user-id")
+            if not job_seeker_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "success": False,
+                        "data":    None,
+                        "error":   {"code": "MISSING_USER_ID", "message": "X-User-ID header is required for click/save events."},
+                        "meta":    None,
+                    },
+                )
+
+            svc._record_behavioral_signal(job_seeker_id, job_id, action_type)
+
+            logger.debug("POST /interact (behavioral) latency=%.3fs", time.time() - start)
+            return {
+                "success": True,
+                "data": BehavioralSignalData(
+                    job_id=job_id,
+                    action_type=action_type,
+                    user_id=job_seeker_id,
+                    message="Behavioral signal recorded.",
+                ),
+                "error": None,
+                "meta": None,
+            }
+
+        # ── UNKNOWN ACTION TYPE ─────────────────────────────────────────────────
+        else:
+            raise ValueError(
+                f"Unknown action_type '{action_type}'. Valid types: {sorted(svc.ACTION_WEIGHT_MAP)}"
+            )
+
     except ValueError as exc:
         raise HTTPException(
             status_code=422,
@@ -158,7 +219,7 @@ def handle_interaction(req: InteractionRequest):
             },
         )
     except Exception as exc:
-        logger.error("apply failed: %s", exc)
+        logger.error("interact failed: %s", exc)
         raise HTTPException(
             status_code=500,
             detail={
@@ -174,8 +235,9 @@ def handle_interaction(req: InteractionRequest):
 def recommend(
     resume_id: str,
     top_k: int = Query(default=5, ge=1, le=50),
+    excluded_job_ids: str = Query(default="", description="Comma-separated job IDs to exclude"),
 ):
-    """Return ranked job recommendations for a given resume."""
+    """Return ranked job recommendations for a given resume, optionally excluding specified jobs."""
     _guard_models_loaded()
 
     if resume_id not in svc.graphsage_store:
@@ -191,11 +253,18 @@ def recommend(
 
     if not svc.job_catalog:
         return {
-            "success": True,    
+            "success": True,
             "data":    RecommendData(resume_id=resume_id, recommendations=[]),
             "error":   None,
             "meta":    {"message": "No jobs registered yet."},
         }
+
+    excluded = [jid.strip() for jid in excluded_job_ids.split(",") if jid.strip()] if excluded_job_ids else None
+
+    logger.info(
+        "[recommend] resume_id=%s top_k=%d excluded_job_ids=%s excluded_count=%d",
+        resume_id, top_k, excluded_job_ids, len(excluded) if excluded else 0,
+    )
 
     start = time.time()
     try:
@@ -203,8 +272,20 @@ def recommend(
             resume_id=resume_id,
             top_k=top_k,
             device=model_registry.device,
+            excluded_job_ids=excluded,
         )
-        logger.debug("GET /recommend/%s latency=%.3fs", resume_id, time.time() - start)
+        elapsed = time.time() - start
+        num_recs = len(data.get("recommendations", []))
+        logger.info(
+            "[recommend] resume_id=%s returned %d recommendations in %.3fs",
+            resume_id, num_recs, elapsed,
+        )
+        if num_recs > 0:
+            top = data["recommendations"][0]
+            logger.info(
+                "[recommend] resume_id=%s top_match job_id=%s score=%.4f",
+                resume_id, top["job_id"], top["score"],
+            )
         return {"success": True, "data": RecommendData(**data), "error": None, "meta": None}
     except Exception as exc:
         logger.error("recommend failed: %s", exc)

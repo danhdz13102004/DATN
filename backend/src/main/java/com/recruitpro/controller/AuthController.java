@@ -6,6 +6,7 @@ import com.recruitpro.dto.response.AuthResponseDto;
 import com.recruitpro.dto.response.UserInfoResponseDto;
 import com.recruitpro.security.UserPrincipal;
 import com.recruitpro.service.AuthService;
+import com.recruitpro.service.GoogleOAuth2Service;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,7 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final GoogleOAuth2Service googleOAuth2Service;
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<Map<String, String>>> register(
@@ -103,5 +105,13 @@ public class AuthController {
     ) {
         UserInfoResponseDto userInfo = authService.getCurrentUser(principal);
         return ResponseEntity.ok(ApiResponse.ok(userInfo));
+    }
+
+    @PostMapping("/oauth2/google")
+    public ResponseEntity<ApiResponse<AuthResponseDto>> googleOAuth2(
+            @RequestBody @Valid GoogleOAuthRequestDto request
+    ) {
+        AuthResponseDto response = googleOAuth2Service.handleGoogleOAuth2(request);
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 }

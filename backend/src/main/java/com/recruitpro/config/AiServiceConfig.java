@@ -40,6 +40,32 @@ public class AiServiceConfig {
         return restTemplate;
     }
 
+    /**
+     * Dedicated RestTemplate for OCR / PDF-parsing calls.
+     * OCR on scanned multi-page PDFs can take up to several minutes,
+     * so we use a much longer read timeout here.
+     */
+    @Bean(name = "ocrRestTemplate")
+    public RestTemplate ocrRestTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(10_000);   // 10 s
+        factory.setReadTimeout(120_000);     // 120 s — accommodates OCR on large PDFs
+
+        RestTemplate restTemplate = new RestTemplate(factory);
+
+        restTemplate.getInterceptors().add((request, body, execution) -> {
+            String original = request.getURI().toString();
+            if (!original.startsWith("http")) {
+                throw new IllegalArgumentException(
+                        "ocrRestTemplate requires absolute URI. Use rootUri pattern or pass full URL.");
+            }
+            return execution.execute(request, body);
+        });
+
+        log.info("Configuring OCR RestTemplate (120s read timeout) — base URL: {}", aiServiceUrl);
+        return restTemplate;
+    }
+
     public String getAiServiceUrl() {
         return aiServiceUrl;
     }

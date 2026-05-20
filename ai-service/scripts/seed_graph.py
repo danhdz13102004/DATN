@@ -647,9 +647,13 @@ def phase_sync(job_records: list, seeker_records: list, ai_url: str, delay: floa
             else:
                 break
             try:
+                if action_type == "apply":
+                    payload = {"resume_id": sr["resume_id"], "job_id": jr["job_id"], "action_type": action_type}
+                else:
+                    payload = {"resume_ids": [sr["resume_id"]], "job_id": jr["job_id"], "action_type": action_type}
                 r = session.post(
                     f"{base}/api/v1/interact",
-                    json={"resume_id": sr["resume_id"], "job_id": jr["job_id"], "action_type": action_type},
+                    json=payload,
                     timeout=30,
                 )
                 r.raise_for_status()

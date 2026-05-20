@@ -41,6 +41,7 @@ services:
       - "${AI_SERVICE_PORT:-8000}:8000"
     volumes:
       - ./ai-service/app:/app/app
+      - ./ai-service/tests:/app/tests   # test suite (host → container)
       - ./ai-service/models:/app/models   # bind-mount: drop model files here to load them
 
   # ── Frontend — Job Seeker (Hot Reload) ───────
@@ -52,6 +53,7 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
+      VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     volumes:
       - ./frontend-jobseeker/src:/app/src
       - ./frontend-jobseeker/public:/app/public
@@ -71,6 +73,7 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
+      VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     volumes:
       - ./frontend-company/src:/app/src
       - ./frontend-company/public:/app/public
@@ -90,6 +93,7 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
+      VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     volumes:
       - ./frontend-admin/src:/app/src
       - ./frontend-admin/public:/app/public

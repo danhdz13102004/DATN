@@ -8,6 +8,7 @@ Responsibilities:
 Key schema (all under GRAPH_KEY_PREFIX = "graph:"):
   graph:node:<node_id>        → Redis Hash  { node_type, text_snippet }
   graph:edges:<resume_id>     → Redis Hash  { job_id: cumulative_weight, … }
+  graph:edges_ts:<resume_id>  → Redis Hash  { job_id: unix_timestamp, … }
   graph:job_edges:<job_id>    → Redis Hash  { resume_id: cumulative_weight, … }  (reverse)
   graph:job_catalog           → Redis List  [job_id, ...]
   graph:job_users:<job_id>    → Redis Set   {resume_id, ...}
@@ -19,6 +20,7 @@ an edge is created automatically on first write.
 import io
 import json
 import logging
+import time
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 import redis
@@ -47,6 +49,9 @@ def _job_users_key(job_id: str) -> str:
 
 def _job_edges_key(job_id: str) -> str:
     return f"{_PFX}job_edges:{job_id}"
+
+def _edges_ts_key(resume_id: str) -> str:
+    return f"{_PFX}edges_ts:{resume_id}"
 
 CATALOG_KEY = f"{_PFX}job_catalog"
 
@@ -103,6 +108,7 @@ def persist_edge(resume_id: str, job_id: str, weight: float) -> None:
         r = get_redis()
         r.hincrbyfloat(_edges_key(resume_id), job_id, weight)
         r.hincrbyfloat(_job_edges_key(job_id), resume_id, weight)
+        r.hset(_edges_ts_key(resume_id), job_id, time.time())
     except Exception as exc:
         logger.warning("graph_store.persist_edge(%s→%s) failed: %s", resume_id, job_id, exc)
 
@@ -134,6 +140,12 @@ def load_edges_into_memory(edge_store: dict, job_to_users: dict) -> int:
         if ktype == "hash":
             raw = r.hgetall(key)
             edges = [{"job_id": jid, "weight": float(w)} for jid, w in raw.items()]
+            # Restore timestamps; default to now for edges without a recorded timestamp
+            ts_raw = r.hgetall(_edges_ts_key(resume_id))
+            now_ts = time.time()
+            for edge in edges:
+                ts = ts_raw.get(edge["job_id"])
+                edge["updated_at"] = float(ts) if ts else now_ts
         elif ktype == "string":   # legacy JSON blob — migrate on the fly
             try:
                 edges = json.loads(r.get(key) or "[]")
@@ -141,10 +153,13 @@ def load_edges_into_memory(edge_store: dict, job_to_users: dict) -> int:
                 edges = []
             # Migrate: write to HASH, remove old STRING key
             if edges:
+                now_ts = time.time()
                 pipe = r.pipeline()
                 for edge in edges:
                     pipe.hset(_edges_key(resume_id), edge["job_id"], edge["weight"])
                     pipe.hset(_job_edges_key(edge["job_id"]), resume_id, edge["weight"])
+                    pipe.hset(_edges_ts_key(resume_id), edge["job_id"], now_ts)
+                    edge.setdefault("updated_at", now_ts)
                 pipe.delete(key)
                 pipe.execute()
                 logger.info("graph_store: migrated %d legacy JSON edge(s) for %s to HASH.", len(edges), resume_id)
@@ -238,8 +253,8 @@ def restore_graph(
         try:
             vecs_np = nlp_model.encode(texts, convert_to_numpy=True, batch_size=32, show_progress_bar=False)
             for i, node_id in enumerate(node_ids):
-                vec = torch.tensor(vecs_np[i:i+1], dtype=torch.float32).to(device)
-                vec = F.normalize(vec, p=2, dim=1)
+                vec = torch.tensor(vecs_np[i], dtype=torch.float32).squeeze(0).to(device)
+                vec = F.normalize(vec.unsqueeze(0), p=2, dim=1).squeeze(0)
                 feature_store[node_id]          = vec
                 graphsage_store[node_id]        = vec.clone()
                 raw_node_store[node_id]["encoded"] = True
@@ -252,6 +267,11 @@ def restore_graph(
     for jid in catalog_from_redis:
         if jid not in job_catalog:
             job_catalog.append(jid)
+    # Rebuild job_catalog_index so add_node doesn't create duplicates on re-sync
+    from app.services.recommendation_service import job_catalog_index as idx  # avoid circular import at top
+    idx.clear()
+    for pos, jid in enumerate(job_catalog):
+        idx[jid] = pos
     logger.info("graph_store: restored job_catalog with %d job(s).", len(job_catalog))
 
     # ── 4. Restore edges (HASH format, migrates legacy JSON blobs) ──────────────
