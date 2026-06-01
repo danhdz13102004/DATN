@@ -5,6 +5,7 @@ export interface Plan {
   jobPostLimit: number;  // 0 = unlimited
   durationDays: number;
   allowUseAiMatching: boolean;
+  autoFillLimit: number; // 0 = unlimited
   createdAt: string;
   activeSubscriptions: number;
 }
@@ -17,6 +18,8 @@ export interface ActiveSubscription {
   jobPostLimit: number;
   durationDays: number;
   allowUseAiMatching: boolean;
+  autoFillLimit: number;        // 0 = unlimited
+  autoFillUsageCount: number;    // current usage
   startDate: string;
   endDate: string;
   status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED';

@@ -9,6 +9,7 @@ RUN mvn package -DskipTests -B
 # ── Stage 2: Runtime ──────────────────────────
 FROM eclipse-temurin:17-jre-alpine
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN apk add --no-cache curl
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 USER appuser

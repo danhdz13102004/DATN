@@ -30,6 +30,7 @@ public class ApplicationService {
     private final ApplicationRepository applicationRepository;
     private final ResumeRepository resumeRepository;
     private final StorageService storageService;
+    private final CompanySubscriptionService subscriptionService;
 
     // ── List Applications ─────────────────────────
 
@@ -41,14 +42,16 @@ public class ApplicationService {
                 companyId, status, jobId, search, pageable
         );
 
+        boolean canViewAiScores = subscriptionService.canUseAiMatching(companyId);
+
         return page.map(app -> ApplicationListItemDto.builder()
                 .id(app.getId().toString())
-                .candidateName(app.getJobSeeker().getUser().getEmail()) // email as name fallback
+                .candidateName(app.getJobSeeker().getUser().getEmail())
                 .candidateEmail(app.getJobSeeker().getUser().getEmail())
                 .candidateAvatar(app.getJobSeeker().getAvatarUrl())
                 .jobId(app.getJobId().toString())
                 .jobTitle(app.getJob().getTitle())
-                .aiScore(app.getAiScore())
+                .aiScore(canViewAiScores ? app.getAiScore() : null)
                 .status(app.getStatus().name())
                 .hasScheduledInterview(applicationRepository.hasScheduledInterview(app.getId()))
                 .appliedAt(app.getCreatedAt())
@@ -107,8 +110,8 @@ public class ApplicationService {
                 .candidateBio(app.getJobSeeker().getBio())
                 .jobId(app.getJobId().toString())
                 .jobTitle(app.getJob().getTitle())
-                .aiScore(app.getAiScore())
-                .jsonMatching(app.getJsonMatching())
+                .aiScore(subscriptionService.canUseAiMatching(companyId) ? app.getAiScore() : null)
+                .jsonMatching(subscriptionService.canUseAiMatching(companyId) ? app.getJsonMatching() : null)
                 .status(app.getStatus().name())
                 .hasScheduledInterview(applicationRepository.hasScheduledInterview(app.getId()))
                 .resumeUrl(app.getResumeId() != null

@@ -96,13 +96,16 @@ export default function ForgotPasswordPage() {
   ));
 
   return (
-    <div className="flex min-h-screen font-satoshi bg-surface text-text">
+    <div className="flex min-h-screen font-sans bg-surface text-text">
       {/* Brand Panel */}
       <div className="hidden md:flex flex-col justify-center items-center w-[45%] bg-gradient-to-br from-primary-dark via-primary to-primary-light text-white p-16 relative overflow-hidden">
         <div className="absolute w-[500px] h-[500px] rounded-full bg-white/[0.06] -top-[120px] -right-[120px]" />
         <div className="absolute w-[350px] h-[350px] rounded-full bg-white/[0.04] -bottom-[80px] -left-[80px]" />
         <div className="text-4xl font-bold mb-4 flex items-center gap-3 z-10">
-          <div className="w-[52px] h-[52px] bg-white/20 rounded-[14px] flex items-center justify-center text-2xl backdrop-blur-sm">R</div>
+          <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" fill="none">
+            <circle cx="32" cy="32" r="30" fill="#4fd1d9"/>
+            <path d="M39.6 18.2c1.1.5 2 1.1 2.7 2c.6.7 1.1 1.5 1.5 2.4c.4.9.5 1.9.5 3.1c0 1.4-.3 2.7-1 4.1s-1.8 2.3-3.4 2.8c1.3.5 2.3 1.3 2.8 2.3c.6 1 .8 2.5.8 4.5v1.9c0 1.3.1 2.2.2 2.7c.2.7.5 1.3 1.1 1.7v.7h-6.7c-.2-.6-.3-1.2-.4-1.6c-.2-.8-.2-1.6-.3-2.5v-2.7c0-1.8-.3-3.1-1-3.7c-.6-.6-1.8-.9-3.5-.9H27v11.4h-5.9v-29H35c2 .1 3.6.4 4.6.8m-12.5 4.3v7.8h6.5c1.3 0 2.3-.2 2.9-.5c1.1-.6 1.7-1.6 1.7-3.3c0-1.8-.6-2.9-1.7-3.5c-.6-.3-1.6-.5-2.8-.5h-6.6" fill="#ffffff"/>
+          </svg>
           RecruitPro
         </div>
         <p className="text-lg opacity-90 max-w-[380px] text-center leading-relaxed z-10">Don't worry, we'll help you get back into your account safely and securely.</p>
@@ -123,9 +126,9 @@ export default function ForgotPasswordPage() {
               <form onSubmit={emailForm.handleSubmit(handleSendOtp)}>
                 <div className="mb-5">
                   <label className="block font-medium text-sm mb-1.5">Email Address <span className="text-red-500">*</span></label>
-                  <input type="email" className="w-full px-3.5 py-3 border-[1.5px] border-border rounded-[10px] text-sm font-satoshi focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10" placeholder="you@company.com" {...emailForm.register('email', { required: true })} />
+                  <input type="email" className="w-full px-3.5 py-3 border-[1.5px] border-border rounded-[10px] text-sm font-sans focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10" placeholder="you@company.com" {...emailForm.register('email', { required: true })} />
                 </div>
-                <button type="submit" className="w-full py-3.5 bg-primary text-white rounded-[10px] text-[0.95rem] font-semibold font-satoshi flex items-center justify-center gap-2 hover:bg-primary-hover transition-all disabled:opacity-60" disabled={loading}>
+                <button type="submit" className="w-full py-3.5 bg-primary text-white rounded-[10px] text-[0.95rem] font-semibold font-sans flex items-center justify-center gap-2 hover:bg-primary-hover transition-all disabled:opacity-60" disabled={loading}>
                   <i className="fas fa-paper-plane" /> {AUTH_STRINGS.FORGOT_BUTTON}
                 </button>
               </form>
@@ -142,7 +145,7 @@ export default function ForgotPasswordPage() {
               <p className="text-text-muted text-[0.95rem] mb-6">We've sent a 6-digit code to <strong>{email}</strong></p>
               <div className="flex gap-2.5 justify-center mb-6">
                 {otp.map((digit, i) => (
-                  <input key={i} id={`otp-${i}`} type="text" maxLength={1} className={`w-[52px] h-[58px] border-[1.5px] rounded-xl text-center text-2xl font-bold font-satoshi focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 ${digit ? 'border-primary bg-primary/[0.04]' : 'border-border'}`} value={digit} onChange={(e) => handleOtpInput(i, e.target.value)} onKeyDown={(e) => handleOtpKeyDown(i, e)} />
+                  <input key={i} id={`otp-${i}`} type="text" maxLength={1} className={`w-[52px] h-[58px] border-[1.5px] rounded-xl text-center text-2xl font-bold font-sans focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 ${digit ? 'border-primary bg-primary/[0.04]' : 'border-border'}`} value={digit} onChange={(e) => handleOtpInput(i, e.target.value)} onKeyDown={(e) => handleOtpKeyDown(i, e)} />
                 ))}
               </div>
               <div className="text-center text-sm text-text-muted mb-6">
@@ -166,12 +169,12 @@ export default function ForgotPasswordPage() {
               <form onSubmit={pwdForm.handleSubmit(handleResetPassword)} className="space-y-4">
                 <div>
                   <label className="block font-medium text-sm mb-1.5">New Password <span className="text-red-500">*</span></label>
-                  <input type="password" className="w-full px-3.5 py-3 border-[1.5px] border-border rounded-[10px] text-sm font-satoshi focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10" placeholder="Enter new password" {...pwdForm.register('newPassword', { required: true, minLength: 8 })} />
+                  <input type="password" className="w-full px-3.5 py-3 border-[1.5px] border-border rounded-[10px] text-sm font-sans focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10" placeholder="Enter new password" {...pwdForm.register('newPassword', { required: true, minLength: 8 })} />
                   <div className="text-xs text-text-light mt-1">Minimum 8 characters with at least one uppercase letter and one number</div>
                 </div>
                 <div>
                   <label className="block font-medium text-sm mb-1.5">Confirm New Password <span className="text-red-500">*</span></label>
-                  <input type="password" className="w-full px-3.5 py-3 border-[1.5px] border-border rounded-[10px] text-sm font-satoshi focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10" placeholder="Confirm new password" {...pwdForm.register('confirmPassword', { required: true })} />
+                  <input type="password" className="w-full px-3.5 py-3 border-[1.5px] border-border rounded-[10px] text-sm font-sans focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10" placeholder="Confirm new password" {...pwdForm.register('confirmPassword', { required: true })} />
                 </div>
                 <button type="submit" className="w-full py-3.5 bg-primary text-white rounded-[10px] text-[0.95rem] font-semibold flex items-center justify-center gap-2 hover:bg-primary-hover transition-all disabled:opacity-60" disabled={loading}>
                   <i className="fas fa-save" /> Reset Password

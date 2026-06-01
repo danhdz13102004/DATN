@@ -112,6 +112,7 @@ export interface AdminPlan {
   jobPostLimit: number;     // 0 = unlimited
   durationDays: number;
   allowUseAiMatching: boolean;
+  autoFillLimit: number;    // 0 = unlimited
   createdAt: string;
   activeSubscriptions: number;
 }
@@ -135,6 +136,7 @@ export interface CreatePlanRequest {
   durationDays: number;
   jobPostLimit: number;
   allowUseAiMatching: boolean;
+  autoFillLimit: number;    // 0 = unlimited
 }
 
 // ── Application ──────────────────────────────────────────

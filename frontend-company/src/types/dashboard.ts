@@ -6,7 +6,7 @@ export interface DashboardStats {
   jobsTrend: number;
   applicationsTrend: number;
   interviewsPending: number;
-  messagesUnread: number;
+  newMessagesUnread: number;
 }
 
 export interface RecentApplication {

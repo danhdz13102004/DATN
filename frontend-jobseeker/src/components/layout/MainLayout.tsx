@@ -26,7 +26,10 @@ export default function MainLayout() {
   const initials = namePart.slice(0, 2).toUpperCase();
 
   return (
-    <div className="min-h-screen" style={{ background: '#f4f6fa', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+    <div
+      className="min-h-screen"
+      style={{ background: '#F8FAFC', fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
+    >
       <Sidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -34,15 +37,24 @@ export default function MainLayout() {
         onLogout={() => setShowLogoutModal(true)}
       />
 
-      {/* Content offset = exact sidebar width (260px) */}
-      <div style={{ marginLeft: isLg ? '260px' : 0 }}>
+      {/* Main content area */}
+      <div
+        style={{ marginLeft: isLg ? '272px' : 0 }}
+        className="min-h-screen flex flex-col transition-all duration-300"
+      >
         <Topbar onMenuClick={() => setSidebarOpen(true)} />
-        <main style={{ padding: '32px' }}>
-          <Suspense fallback={
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
-              <div className="w-8 h-8 border-[3px] border-solid border-primary/20 border-t-primary rounded-full animate-spin"></div>
-            </div>
-          }>
+
+        {/* Page content */}
+        <main
+          className="p-6 lg:p-8 flex-1 max-w-screen-2xl mx-auto w-full"
+        >
+          <Suspense
+            fallback={
+              <div className="flex items-center justify-center" style={{ minHeight: '60vh' }}>
+                <div className="w-10 h-10 border-[3px] border-solid border-blue-100 border-t-primary rounded-full animate-spin" />
+              </div>
+            }
+          >
             <Outlet />
           </Suspense>
         </main>

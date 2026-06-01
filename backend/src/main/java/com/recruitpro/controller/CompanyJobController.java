@@ -1,8 +1,10 @@
 package com.recruitpro.controller;
 
+import com.recruitpro.dto.JobAutoFillDto;
 import com.recruitpro.dto.response.ApiResponse;
 import com.recruitpro.dto.response.JobSelectOptionDto;
 import com.recruitpro.dto.response.PaginationMeta;
+import com.recruitpro.exception.BadRequestException;
 import com.recruitpro.model.Industry;
 import com.recruitpro.model.Job;
 import com.recruitpro.model.enums.ExperienceLevel;
@@ -10,8 +12,11 @@ import com.recruitpro.model.enums.JobStatus;
 import com.recruitpro.model.enums.JobType;
 import com.recruitpro.repository.IndustryRepository;
 import com.recruitpro.security.UserPrincipal;
+import com.recruitpro.service.CompanySubscriptionService;
+import com.recruitpro.service.JobAutoFillService;
 import com.recruitpro.service.JobService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
@@ -20,6 +25,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -29,6 +35,7 @@ import java.util.UUID;
 /**
  * Company-scoped job management endpoints under /api/v1/company/jobs.
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/company/jobs")
 @PreAuthorize("hasRole('COMPANY')")
@@ -36,15 +43,21 @@ import java.util.UUID;
 public class CompanyJobController {
 
     private final JobService jobService;
+    private final JobAutoFillService jobAutoFillService;
     private final IndustryRepository industryRepository;
+    private final CompanySubscriptionService subscriptionService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Object>> listCompanyJobs(
             @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(required = false) JobStatus status,
+            @RequestParam(required = false) JobType type,
+            @RequestParam(required = false) ExperienceLevel level,
+            @RequestParam(required = false) String search,
             @PageableDefault(size = 20) Pageable pageable
     ) {
         UUID companyId = UUID.fromString(principal.getCompanyId());
-        Page<Job> page = jobService.findByCompanyId(companyId, pageable);
+        Page<Job> page = jobService.findByCompanyId(companyId, status, type, level, search, pageable);
         PaginationMeta meta = PaginationMeta.builder()
                 .page(page.getNumber() + 1)
                 .pageSize(page.getSize())
@@ -157,6 +170,33 @@ public class CompanyJobController {
     ) {
         UUID companyId = UUID.fromString(principal.getCompanyId());
         return ResponseEntity.ok(ApiResponse.ok(jobService.getSelectOptions(companyId)));
+    }
+
+    /**
+     * Auto-fills job form fields from an uploaded file (PDF or image).
+     * The file is sent through OCR then OpenAI structured extraction.
+     * Requires the company to have an active subscription with remaining auto-fill uses.
+     */
+    @PostMapping("/auto-fill")
+    public ResponseEntity<ApiResponse<JobAutoFillDto>> autoFillFromFile(
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        UUID companyId = UUID.fromString(principal.getCompanyId());
+
+        if (!subscriptionService.canUseAutoFill(companyId)) {
+            throw new BadRequestException("Auto-fill usage limit reached. Please upgrade your plan to continue using this feature.");
+        }
+
+        log.info("[CompanyJob] Auto-fill request: filename={}, size={}, contentType={}",
+                 file.getOriginalFilename(), file.getSize(), file.getContentType());
+
+        JobAutoFillDto dto = jobAutoFillService.autoFill(file);
+
+        // Increment usage counter
+        subscriptionService.incrementAutoFillUsage(companyId);
+
+        return ResponseEntity.ok(ApiResponse.ok(dto));
     }
 
     @SuppressWarnings("unchecked")

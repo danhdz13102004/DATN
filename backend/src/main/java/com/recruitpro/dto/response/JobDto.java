@@ -38,6 +38,9 @@ public class JobDto {
     private Instant createdAt;
     private Instant updatedAt;
 
+    // Company name for list view (populated from company lookup)
+    private String companyName;
+
     @JsonProperty("isSaved")
     private boolean isSaved;
 }

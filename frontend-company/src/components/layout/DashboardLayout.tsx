@@ -4,13 +4,11 @@ import Sidebar from './Sidebar';
 import ChangePasswordModal from '../ui/ChangePasswordModal';
 import LogoutModal from '../ui/LogoutModal';
 import { useUserProfile } from '../../hooks/useCompany';
+import LoadingSpinner from '../common/LoadingSpinner';
 
 const ContentLoader = () => (
   <div className="flex-1 flex items-center justify-center p-10">
-    <div className="flex flex-col items-center gap-3">
-      <div className="w-8 h-8 border-[3px] border-primary/20 border-t-primary rounded-full animate-spin" />
-      <span className="text-sm text-gray-400">Loading...</span>
-    </div>
+    <LoadingSpinner size="lg" label="Loading..." />
   </div>
 );
 
@@ -31,7 +29,7 @@ export default function DashboardLayout() {
     .toUpperCase();
 
   return (
-    <div className="min-h-screen bg-[#f4f6fa]">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-background to-emerald-50/30">
       <Sidebar
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}

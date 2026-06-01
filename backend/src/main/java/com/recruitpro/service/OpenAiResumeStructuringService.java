@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.recruitpro.config.OpenAiConfig;
+import com.recruitpro.dto.JobAutoFillDto;
 import com.recruitpro.dto.ResumeDataStructure;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -66,6 +67,43 @@ public class OpenAiResumeStructuringService {
             - experience_bullets should contain the 5–10 most impactful bullet points.
             """;
 
+    private static final String JOB_SYSTEM_PROMPT = """
+            You are a job description parser. Extract structured job posting information \
+            from the text and return a single JSON object — no markdown fences, no explanation, only JSON.
+
+            JSON schema:
+            {
+              "job_title":           "<primary job title>",
+              "description":         "<full job description>",
+              "job_type":            "<FULLTIME|PARTTIME|REMOTE|HYBRID>",
+              "experience_levels":   ["<INTERN|FRESHER|JUNIOR|MIDDLE|SENIOR|LEADER>", ...],
+              "location":            "<city or remote>",
+              "salary_min":          <integer USD>,
+              "salary_max":          <integer USD>,
+              "industry":            "<one of the allowed industry names below>",
+              "responsibilities":    ["bullet 1", "bullet 2", ...],
+              "requirements":        ["bullet 1", "bullet 2", ...],
+              "must_have_skills":   ["skill 1", "skill 2", ...],
+              "nice_to_have_skills": ["skill 1", "skill 2", ...]
+            }
+
+            Rules:
+            - Use null for numbers and [] for empty arrays when not determinable.
+            - Infer job_type from keywords (remote, part-time, etc.).
+            - experience_levels is an ARRAY — a job posting may hire multiple levels \
+            (e.g. ["JUNIOR","MIDDLE","SENIOR"]). Include every level mentioned in the text.
+            - Infer experience levels from seniority keywords (e.g. "3+ years" -> JUNIOR/MIDDLE, \
+            "5+ years" -> MIDDLE/SENIOR).
+            - skills should be technical and professional only.
+            - industry MUST be one of these exact values (case-sensitive):
+              Technology & IT | Finance & Banking | Healthcare & Medical | Education | \
+              Manufacturing | Retail & E-commerce | Marketing & Advertising | Legal & Compliance | \
+              Real Estate | Media & Entertainment | Transportation & Logistics | Food & Beverage | \
+              Construction | Government & Public Sector | Non-profit & NGO | Energy & Utilities | \
+              Telecommunications | Consulting | Human Resources | Agriculture
+              Pick the closest match. If no match at all, use null.
+            """;
+
     // ─────────────────────────────────────────────────────────────────────────
     // Public API
     // ─────────────────────────────────────────────────────────────────────────
@@ -117,8 +155,89 @@ public class OpenAiResumeStructuringService {
         }
     }
 
+    /**
+     * Sends {@code rawText} (extracted from a job posting file) to OpenAI and returns
+     * a structured {@link JobAutoFillDto}.
+     * Returns {@code null} if the call fails or the response cannot be parsed.
+     *
+     * @param rawText Raw text extracted from the job posting file via OCR
+     */
+    public JobAutoFillDto structureJob(String rawText) {
+        if (rawText == null || rawText.isBlank()) {
+            log.warn("[OpenAI] Skipping job structuring — text is blank");
+            return null;
+        }
+
+        if (openAiConfig.getApiKey() == null || openAiConfig.getApiKey().isBlank()) {
+            log.warn("[OpenAI] Skipping job structuring — OPENAI_API_KEY is not configured");
+            return null;
+        }
+
+        String baseUrl = openAiConfig.getBaseUrl();
+        if (baseUrl == null || baseUrl.isBlank() || !baseUrl.startsWith("http")) {
+            log.warn("[OpenAI] Skipping job structuring — base-url is not configured or not absolute: '{}'", baseUrl);
+            return null;
+        }
+
+        // Truncate to ~12 000 chars to stay within token limits
+        String truncated = rawText.length() > 12_000
+                ? rawText.substring(0, 12_000)
+                : rawText;
+
+        Map<String, Object> requestBody = buildJobRequestBody(truncated);
+        String url = baseUrl + "/chat/completions";
+
+        try {
+            ResponseEntity<String> response = restTemplate.postForEntity(url, requestBody, String.class);
+
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                log.warn("[OpenAI] Unexpected status {} for job structuring: {}",
+                         response.getStatusCode(), response.getBody());
+                return null;
+            }
+
+            return parseJobResponse(response.getBody());
+
+        } catch (RestClientException ex) {
+            log.error("[OpenAI] Job structuring HTTP call failed: {}", ex.getMessage());
+            return null;
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
-    // Private helpers
+    // Private helpers — job path
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private Map<String, Object> buildJobRequestBody(String userContent) {
+        return Map.of(
+                "model", openAiConfig.getModel(),
+                "temperature", 0,
+                "response_format", Map.of("type", "json_object"),
+                "messages", List.of(
+                        Map.of("role", "system", "content", JOB_SYSTEM_PROMPT),
+                        Map.of("role", "user",   "content", userContent)
+                )
+        );
+    }
+
+    private JobAutoFillDto parseJobResponse(String responseBody) {
+        try {
+            JsonNode root    = MAPPER.readTree(responseBody);
+            String   content = root.path("choices").get(0)
+                                   .path("message").path("content").asText();
+
+            JobAutoFillDto result = MAPPER.readValue(content, JobAutoFillDto.class);
+            log.info("[OpenAI] Job structuring successful — title={}", result.getJobTitle());
+            return result;
+
+        } catch (JsonProcessingException | NullPointerException e) {
+            log.error("[OpenAI] Failed to parse job structuring response: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Private helpers — resume path
     // ─────────────────────────────────────────────────────────────────────────
 
     private Map<String, Object> buildRequestBody(String userContent) {

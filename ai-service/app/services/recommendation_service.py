@@ -256,67 +256,6 @@ def get_weight_multiplier(confidence: float) -> float:
         return WEIGHT_MULTIPLIER_LOW
 
 
-def compute_attributions(
-    resume_ids: List[str],
-    job_id: str,
-    event_weight: float,
-) -> tuple[List[dict], float, float]:
-
-    if len(resume_ids) == 1:
-        single_prob = 1.0
-        confidence = 1.0
-    else:
-        similarities = compute_similarity(resume_ids, job_id)
-        probabilities = softmax(similarities)
-        confidence = compute_confidence(probabilities)
-
-    weight_multiplier = get_weight_multiplier(confidence)
-    confidence_level = get_confidence_level(confidence)
-
-    attributions = []
-    total_weight = 0.0
-
-    if confidence_level == "low":
-        logger.info(
-            "Interaction ignored: confidence=%.3f < %.3f (job=%s, resumes=%s)",
-            confidence, CONFIDENCE_LOW, job_id, resume_ids
-        )
-        for resume_id in resume_ids:
-            attributions.append({
-                "resume_id": resume_id,
-                "attribution_probability": 1.0 / len(resume_ids) if len(resume_ids) > 1 else 1.0,
-                "confidence": confidence,
-                "final_weight": 0.0,
-                "edge_created": False,
-            })
-        return attributions, 0.0, confidence
-
-    for i, resume_id in enumerate(resume_ids):
-        if len(resume_ids) == 1:
-            prob = 1.0
-        else:
-            prob = probabilities[i] if i < len(probabilities) else 0.0
-
-        final_weight = event_weight * weight_multiplier * prob
-        total_weight += final_weight
-
-        attributions.append({
-            "resume_id": resume_id,
-            "attribution_probability": prob,
-            "confidence": confidence,
-            "final_weight": final_weight,
-            "edge_created": final_weight > 0,
-        })
-
-        if final_weight > 0:
-            logger.debug(
-                "Attribution: resume=%s prob=%.3f final_weight=%.4f",
-                resume_id, prob, final_weight
-            )
-
-    return attributions, total_weight, confidence
-
-
 def add_node(node_id: str, text: str, node_type: str, nlp_model, device, user_id: Optional[str] = None) -> dict:
     """Encode text and register a resume or job node.
 
@@ -583,8 +522,10 @@ def _run_graphsage_local(
         j       = 1 + i
         job_vec = feature_store[edge["job_id"]]
         cos_sim = float(F.cosine_similarity(resume_vec.unsqueeze(0), job_vec.unsqueeze(0)).item())
-        w       = max(cos_sim ** 2, 1e-4)
-        local_edges  += [[0, j], [j, 0]]
+        w       = (cos_sim + 1) / 2  # Maps -1..1 to 0..1
+        if w < 1e-4:
+            w = 1e-4
+        local_edges  += [[0, j], [j, 0]]  # bidirectional
         edge_weights += [w, w]
 
     # ── job↔user edges: semantic weight only (no behavioral signal for 2-hop) ─
@@ -596,8 +537,10 @@ def _run_graphsage_local(
                 u        = user_local_idx[u_id]
                 user_vec = feature_store[u_id]
                 cos_sim  = float(F.cosine_similarity(job_vec.unsqueeze(0), user_vec.unsqueeze(0)).item())
-                w        = max(cos_sim ** 2, 1e-4)
-                local_edges  += [[j, u], [u, j]]
+                w        = (cos_sim + 1) / 2  # Maps -1..1 to 0..1
+                if w < 1e-4:
+                    w = 1e-4
+                local_edges  += [[j, u], [u, j]]  # bidirectional
                 edge_weights += [w, w]
 
     if local_edges:
@@ -665,7 +608,9 @@ def run_graphsage_global(graphsage_model, device) -> int:
             dst     = node_idx[job_id]
             job_vec = feature_store[job_id]
             cos_sim = float(F.cosine_similarity(resume_vec.unsqueeze(0), job_vec.unsqueeze(0)).item())
-            w       = max(cos_sim ** 2, 1e-4)   # pure semantic — matches training distribution
+            w       = (cos_sim + 1) / 2  # Maps -1..1 to 0..1
+            if w < 1e-4:
+                w = 1e-4
             all_edges   += [[src, dst], [dst, src]]
             all_weights += [w, w]
 

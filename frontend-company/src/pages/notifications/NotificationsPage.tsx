@@ -5,13 +5,14 @@ import { ROUTES } from '../../constants';
 import { useRecruitProWebSocket } from '../../hooks/useWebSocket';
 import { notificationService } from '../../services/chatService';
 import type { Notification, NotificationEvent } from '../../types/chat';
+import EmptyState from '../../components/common/EmptyState';
 
 const TABS = [
-  { key: 'ALL', label: 'All' },
-  { key: 'UNREAD', label: 'Unread' },
-  { key: 'JOB_APPLIED', label: 'Applications' },
-  { key: 'INTERVIEW_INVITE', label: 'Interviews' },
-  { key: 'MESSAGE', label: 'Messages' },
+  { key: 'ALL',                label: 'All'          },
+  { key: 'UNREAD',             label: 'Unread'       },
+  { key: 'JOB_APPLIED',        label: 'Applications' },
+  { key: 'INTERVIEW_INVITE',   label: 'Interviews'   },
+  { key: 'MESSAGE',            label: 'Messages'     },
 ] as const;
 
 type TabKey = (typeof TABS)[number]['key'];
@@ -20,37 +21,31 @@ function timeAgo(iso: string) {
   const now = Date.now();
   const ts = new Date(iso).getTime();
   if (!Number.isFinite(ts)) return '';
-
   const diff = Math.max(0, Math.floor((now - ts) / 1000));
   if (diff < 60) return 'Just now';
-  if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} hr ago`;
   if (diff < 172800) return 'Yesterday';
-  return new Date(ts).toLocaleDateString();
+  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function itemIcon(type: Notification['type']) {
-  switch (type) {
-    case 'JOB_APPLIED':
-      return { icon: 'fa-file-alt', cls: 'bg-primary/10 text-primary' };
-    case 'INTERVIEW_INVITE':
-      return { icon: 'fa-calendar-check', cls: 'bg-amber-100 text-amber-600' };
-    case 'MESSAGE':
-      return { icon: 'fa-comment', cls: 'bg-sky-100 text-sky-600' };
-    case 'APPLICATION_UPDATE':
-      return { icon: 'fa-arrow-right-arrow-left', cls: 'bg-rose-100 text-rose-600' };
-    default:
-      return { icon: 'fa-bell', cls: 'bg-gray-100 text-gray-500' };
-  }
+const ICON_STYLE: Record<string, { icon: string; bg: string; text: string }> = {
+  JOB_APPLIED:        { icon: 'fa-file-alt',         bg: 'bg-emerald-100', text: 'text-emerald-600' },
+  INTERVIEW_INVITE:   { icon: 'fa-calendar-check', bg: 'bg-amber-100',   text: 'text-amber-600'   },
+  MESSAGE:            { icon: 'fa-comment',          bg: 'bg-sky-100',     text: 'text-sky-600'     },
+  APPLICATION_UPDATE:  { icon: 'fa-arrow-right-arrow-left', bg: 'bg-rose-100', text: 'text-rose-600'  },
+  SYSTEM:             { icon: 'fa-bell',              bg: 'bg-gray-100',    text: 'text-gray-500'    },
+};
+
+function getIconStyle(type: Notification['type']) {
+  return ICON_STYLE[type] ?? ICON_STYLE['SYSTEM'];
 }
 
 function toTargetPath(n: Notification) {
   if (n.type === 'MESSAGE') {
     return n.referenceId ? `/messages/${n.referenceId}` : ROUTES.MESSAGES;
   }
-  if (n.type === 'INTERVIEW_INVITE') {
-    return ROUTES.INTERVIEWS;
-  }
+  if (n.type === 'INTERVIEW_INVITE') return ROUTES.INTERVIEWS;
   if (n.type === 'JOB_APPLIED' || n.type === 'APPLICATION_UPDATE') {
     if (n.referenceType?.toUpperCase().includes('APPLICATION') && n.referenceId) {
       return `/applications/${n.referenceId}`;
@@ -79,13 +74,13 @@ export default function NotificationsPage() {
       notificationService.list(0, 100).then((res) => setItems(res.content)).catch(() => {});
       return;
     }
-
+    const incoming = e.notification;
     setItems((prev) => {
-      const existing = prev.findIndex((n) => n.id === e.notification.id);
+      const existing = prev.findIndex((n) => n.id === incoming.id);
       if (existing >= 0) {
-        return prev.map((n, idx) => (idx === existing ? e.notification : n));
+        return prev.map((n, idx) => (idx === existing ? incoming : n));
       }
-      return [e.notification, ...prev];
+      return [incoming, ...prev];
     });
   }, []);
 
@@ -110,17 +105,11 @@ export default function NotificationsPage() {
 
   const handleMarkAllRead = async () => {
     setItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    try {
-      await notificationService.markAllRead();
-    } catch {
-      // Keep optimistic state for smoother UX if endpoint is eventually consistent.
-    }
+    try { await notificationService.markAllRead(); } catch { /* keep optimistic state */ }
   };
 
   const handleOpen = (n: Notification) => {
-    if (!n.isRead) {
-      void handleMarkRead(n.id);
-    }
+    if (!n.isRead) void handleMarkRead(n.id);
     const target = toTargetPath(n);
     if (target) navigate(target);
   };
@@ -128,38 +117,45 @@ export default function NotificationsPage() {
   return (
     <>
       <Topbar title="Notifications" onMenuToggle={onMenuToggle} />
+      <div className="p-6 lg:p-8 max-w-full mx-8 space-y-6">
 
-      <div className="p-6 space-y-5">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        {/* Page Header */}
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Notifications</h2>
+            <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Notifications</h2>
             <p className="text-sm text-gray-500 mt-1">Stay updated with your recruitment activities.</p>
           </div>
           <button
             onClick={handleMarkAllRead}
             disabled={unreadCount === 0}
-            className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 hover:-translate-y-px hover:shadow-sm transition-all duration-200 disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:shadow-none"
           >
-            <i className="fas fa-check-double mr-2" />
+            <i className="fas fa-check-double text-xs" />
             Mark All Read
+            {unreadCount > 0 && (
+              <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] text-center">
+                {unreadCount}
+              </span>
+            )}
           </button>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-2 flex flex-wrap gap-2">
+        {/* Tabs */}
+        <div className="tab-segmented max-w-fit">
           {TABS.map((tab) => {
             const isActive = activeTab === tab.key;
+            const count = tab.key === 'UNREAD' ? unreadCount : 0;
             return (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive ? 'bg-primary text-white' : 'text-gray-600 hover:bg-gray-100'
-                }`}
               >
                 {tab.label}
-                {tab.key === 'UNREAD' && unreadCount > 0 && (
-                  <span className={`ml-2 inline-flex min-w-5 h-5 px-1.5 items-center justify-center rounded-full text-[11px] ${isActive ? 'bg-white/25 text-white' : 'bg-red-500 text-white'}`}>
-                    {unreadCount > 99 ? '99+' : unreadCount}
+                {count > 0 && (
+                  <span className={`ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold ${
+                    isActive ? 'bg-white/25 text-white' : 'bg-red-500 text-white'
+                  }`}>
+                    {count > 99 ? '99+' : count}
                   </span>
                 )}
               </button>
@@ -167,55 +163,83 @@ export default function NotificationsPage() {
           })}
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-50 overflow-hidden divide-y divide-gray-100">
+        {/* Notification List */}
+        <div className="bg-white rounded-2xl shadow-card border border-gray-100 overflow-hidden">
           {loading ? (
-            <div className="py-12 flex justify-center">
+            <div className="py-16 flex justify-center">
               <div className="w-7 h-7 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-16 text-center text-gray-400">
-              <i className="fas fa-bell-slash text-3xl text-gray-200 mb-3 block" />
-              <p className="text-sm font-medium">No notifications</p>
-            </div>
+            <EmptyState
+              icon="fa-bell-slash"
+              title="No notifications"
+              description={
+                activeTab === 'UNREAD'
+                  ? "You're all caught up! No unread notifications."
+                  : activeTab === 'ALL'
+                  ? "You're all caught up! No notifications yet."
+                  : `No ${TABS.find((t) => t.key === activeTab)?.label?.toLowerCase() ?? ''} notifications.`
+              }
+            />
           ) : (
-            filtered.map((n) => {
-              const icon = itemIcon(n.type);
-              return (
-                <article
-                  key={n.id}
-                  className={`px-5 py-4 flex gap-3 items-start cursor-pointer hover:bg-gray-50/60 transition-colors ${!n.isRead ? 'bg-primary/5' : ''}`}
-                  onClick={() => handleOpen(n)}
-                >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${icon.cls}`}>
-                    <i className={`fas ${icon.icon}`} />
-                  </div>
+            <div>
+              {filtered.map((n, idx) => {
+                const iconStyle = getIconStyle(n.type);
+                const isUnread = !n.isRead;
+                return (
+                  <article
+                    key={n.id}
+                    className={`
+                      group relative px-5 py-4 flex items-start gap-4 cursor-pointer
+                      hover:bg-gray-50/60 transition-all duration-150 border-b border-gray-50 last:border-0
+                      ${isUnread ? 'notification-unread' : ''}
+                    `}
+                    style={{
+                      animationDelay: `${idx * 40}ms`,
+                      borderLeft: isUnread ? '3px solid #11d134' : '3px solid transparent',
+                    }}
+                    onClick={() => handleOpen(n)}
+                  >
+                    {/* Icon */}
+                    <div className={`w-10 h-10 rounded-xl ${iconStyle.bg} ${iconStyle.text} flex items-center justify-center shrink-0 mt-0.5 shadow-sm`}>
+                      <i className={`fas ${iconStyle.icon}`} />
+                    </div>
 
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-700 leading-relaxed">
-                      <strong className="text-gray-900">{n.title}</strong>
-                      {n.content ? ` - ${n.content}` : ''}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1.5">
-                      <i className="fas fa-clock mr-1" />
-                      {timeAgo(n.createdAt)}
-                    </p>
-                  </div>
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 leading-snug">
+                            {n.title}
+                          </p>
+                          {n.content && (
+                            <p className="text-sm text-gray-500 mt-0.5 leading-relaxed">
+                              {n.content}
+                            </p>
+                          )}
+                        </div>
 
-                  {!n.isRead && (
-                    <button
-                      className="w-7 h-7 rounded-full hover:bg-gray-100 text-primary transition-colors"
-                      title="Mark as read"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void handleMarkRead(n.id);
-                      }}
-                    >
-                      <i className="fas fa-circle text-[10px]" />
-                    </button>
-                  )}
-                </article>
-              );
-            })
+                        {/* Unread dot + time */}
+                        <div className="flex flex-col items-end gap-1.5 shrink-0">
+                          <span className="text-[11px] text-gray-400 whitespace-nowrap">
+                            {timeAgo(n.createdAt)}
+                          </span>
+                          {isUnread && (
+                            <button
+                              className="opacity-0 group-hover:opacity-100 w-6 h-6 rounded-full flex items-center justify-center text-primary hover:bg-emerald-50 transition-all duration-150"
+                              title="Mark as read"
+                              onClick={(e) => { e.stopPropagation(); void handleMarkRead(n.id); }}
+                            >
+                              <i className="fas fa-circle text-[8px]" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
           )}
         </div>
       </div>

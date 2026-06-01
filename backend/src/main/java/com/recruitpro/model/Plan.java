@@ -35,6 +35,13 @@ public class Plan {
     @Column(name = "allow_use_ai_matching", nullable = false)
     private boolean allowUseAiMatching;
 
+    /**
+     * Max AI auto-fill uses per subscription period.
+     * 0 means unlimited.
+     */
+    @Column(name = "auto_fill_limit", nullable = false)
+    private int autoFillLimit;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

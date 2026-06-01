@@ -1,23 +1,31 @@
 package com.recruitpro.service;
 
+import com.recruitpro.dto.response.JobDetailDto;
 import com.recruitpro.dto.response.JobDto;
 import com.recruitpro.dto.response.JobSelectOptionDto;
 import com.recruitpro.exception.ForbiddenException;
 import com.recruitpro.exception.ResourceNotFoundException;
+import com.recruitpro.model.Company;
+import com.recruitpro.model.CompanyAddress;
 import com.recruitpro.model.Job;
 import com.recruitpro.model.Skill;
 import com.recruitpro.model.enums.ExperienceLevel;
 import com.recruitpro.model.enums.JobStatus;
 import com.recruitpro.model.enums.JobType;
-import com.recruitpro.repository.JobRepository;
-import com.recruitpro.repository.SavedJobRepository;
-import com.recruitpro.repository.SkillRepository;
+import com.recruitpro.repository.*;
 import com.recruitpro.security.UserPrincipal;
+import com.recruitpro.storage.StorageService;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,17 +42,22 @@ public class JobService {
     private final SkillRepository skillRepository;
     private final SavedJobRepository savedJobRepository;
     private final AiServiceClient aiServiceClient;
+    private final CompanyRepository companyRepository;
+    private final CompanyAddressRepository companyAddressRepository;
+    private final StaffRepository staffRepository;
+    private final StorageService storageService;
 
     /**
      * Public job listing — only shows PUBLISHED jobs.
      */
     public Page<Job> findPublishedJobs(String keyword, JobType jobType,
                                         java.util.Set<ExperienceLevel> experienceLevels,
-                                        String location, Pageable pageable) {
+                                        String location, Double salaryMin, Double salaryMax,
+                                        Pageable pageable) {
         if (experienceLevels != null && !experienceLevels.isEmpty()) {
-            return jobRepository.findPublishedJobsWithLevels(keyword, jobType, experienceLevels, location, pageable);
+            return jobRepository.findPublishedJobsWithLevels(keyword, jobType, experienceLevels, location, salaryMin, salaryMax, pageable);
         }
-        return jobRepository.findPublishedJobs(keyword, jobType, location, pageable);
+        return jobRepository.findPublishedJobs(keyword, jobType, location, salaryMin, salaryMax, pageable);
     }
 
     /**
@@ -53,8 +66,9 @@ public class JobService {
      */
     public Page<JobDto> findPublishedJobDtos(String keyword, JobType jobType,
                                               Set<ExperienceLevel> experienceLevels,
-                                              String location, UUID seekerId, Pageable pageable) {
-        Page<Job> page = findPublishedJobs(keyword, jobType, experienceLevels, location, pageable);
+                                              String location, Double salaryMin, Double salaryMax,
+                                              UUID seekerId, Pageable pageable) {
+        Page<Job> page = findPublishedJobs(keyword, jobType, experienceLevels, location, salaryMin, salaryMax, pageable);
         Set<UUID> savedIds = seekerId != null
                 ? savedJobRepository.findJobIdsByJobSeekerId(seekerId)
                 : Collections.emptySet();
@@ -74,7 +88,84 @@ public class JobService {
         return toJobDto(job, saved);
     }
 
+    /**
+     * Get job detail by ID with full company information for the job detail page.
+     * Pass null seekerId for unauthenticated / non-jobseeker callers.
+     */
+    public JobDetailDto findByIdAsJobDetailDto(UUID id, UUID seekerId) {
+        Job job = findById(id);
+        boolean saved = seekerId != null && savedJobRepository.existsByJobSeekerIdAndJobId(seekerId, id);
+        return toJobDetailDto(job, saved);
+    }
+
+    private JobDetailDto toJobDetailDto(Job job, boolean isSaved) {
+        // Fetch company info
+        JobDetailDto.CompanyDetailDto companyDto = null;
+        if (job.getCompanyId() != null) {
+            companyDto = companyRepository.findById(job.getCompanyId()).map(company -> {
+                // Get company address for location
+                String companyLocation = job.getLocation();
+                List<CompanyAddress> addresses = companyAddressRepository.findAllByCompanyId(company.getId());
+                if (companyLocation == null && !addresses.isEmpty()) {
+                    CompanyAddress defaultAddr = addresses.stream()
+                            .filter(CompanyAddress::isDefault)
+                            .findFirst()
+                            .orElse(addresses.get(0));
+                    companyLocation = defaultAddr.getCity() != null ? defaultAddr.getCity() :
+                            (defaultAddr.getAddressLine() != null ? defaultAddr.getAddressLine() : null);
+                }
+
+                return JobDetailDto.CompanyDetailDto.builder()
+                        .id(company.getId())
+                        .name(company.getName())
+                        .description(company.getDescription())
+                        .website(company.getWebsite())
+                        .logoUrl(storageService.getPublicUrl(company.getLogoUrl()))
+                        .verified(company.isVerified())
+                        .location(companyLocation)
+                        .industry(job.getIndustry() != null ? job.getIndustry().getName() : null)
+                        .staffCount(staffRepository.countByCompanyId(company.getId()))
+                        .foundedAt(company.getFoundedAt())
+                        .benefits(company.getBenefits())
+                        .activeJobsCount(jobRepository.countByCompanyIdAndStatus(company.getId(), JobStatus.PUBLISHED))
+                        .build();
+            }).orElse(null);
+        }
+
+        return JobDetailDto.builder()
+                .id(job.getId())
+                .companyId(job.getCompanyId())
+                .companyAddressId(job.getCompanyAddressId())
+                .title(job.getTitle())
+                .description(job.getDescription())
+                .industry(job.getIndustry())
+                .responsibilities(job.getResponsibilities())
+                .requirements(job.getRequirements())
+                .niceToHaveSkills(job.getNiceToHaveSkills())
+                .jobDataStructure(job.getJobDataStructure())
+                .experienceLevels(job.getExperienceLevels())
+                .location(job.getLocation())
+                .salaryMin(job.getSalaryMin())
+                .salaryMax(job.getSalaryMax())
+                .jobType(job.getJobType())
+                .status(job.getStatus())
+                .skills(job.getSkills())
+                .createdAt(job.getCreatedAt())
+                .updatedAt(job.getUpdatedAt())
+                .isSaved(isSaved)
+                .company(companyDto)
+                .build();
+    }
+
     private JobDto toJobDto(Job job, boolean isSaved) {
+        // Fetch company name for list view (lightweight lookup)
+        String companyName = null;
+        if (job.getCompanyId() != null) {
+            companyName = companyRepository.findById(job.getCompanyId())
+                    .map(Company::getName)
+                    .orElse(null);
+        }
+
         return JobDto.builder()
                 .id(job.getId())
                 .companyId(job.getCompanyId())
@@ -95,6 +186,7 @@ public class JobService {
                 .skills(job.getSkills())
                 .createdAt(job.getCreatedAt())
                 .updatedAt(job.getUpdatedAt())
+                .companyName(companyName)
                 .isSaved(isSaved)
                 .build();
     }
@@ -133,10 +225,46 @@ public class JobService {
     }
 
     /**
-     * List company's own jobs (all statuses).
+     * List company's own jobs with optional filters.
      */
-    public Page<Job> findByCompanyId(UUID companyId, Pageable pageable) {
-        return jobRepository.findAllByCompanyId(companyId, pageable);
+    public Page<Job> findByCompanyId(UUID companyId, JobStatus status, JobType jobType,
+                                     ExperienceLevel level, String search, Pageable pageable) {
+        Specification<Job> spec = Specification.where(hasCompanyId(companyId))
+                .and(status != null ? hasStatus(status) : Specification.where(null))
+                .and(jobType != null ? hasJobType(jobType) : Specification.where(null))
+                .and(level != null ? hasLevel(level) : Specification.where(null))
+                .and(search != null && !search.isBlank() ? titleContains(search) : Specification.where(null));
+        return jobRepository.findAll(spec, pageable);
+    }
+
+    private static Specification<Job> hasCompanyId(UUID companyId) {
+        return (Root<Job> root, CriteriaQuery<?> query, CriteriaBuilder cb) -> {
+            if (query.getResultType() != Long.class && query.getResultType() != long.class) {
+                root.fetch("experienceLevels", JoinType.LEFT);
+                root.fetch("skills", JoinType.LEFT);
+                query.distinct(true);
+            }
+            return cb.equal(root.get("companyId"), companyId);
+        };
+    }
+
+    private static Specification<Job> hasStatus(JobStatus status) {
+        return (root, query, cb) -> cb.equal(root.get("status"), status);
+    }
+
+    private static Specification<Job> hasJobType(JobType jobType) {
+        return (root, query, cb) -> cb.equal(root.get("jobType"), jobType);
+    }
+
+    private static Specification<Job> hasLevel(ExperienceLevel level) {
+        return (root, query, cb) -> {
+            Join<Job, ExperienceLevel> levelJoin = root.join("experienceLevels", JoinType.INNER);
+            return cb.equal(levelJoin, level);
+        };
+    }
+
+    private static Specification<Job> titleContains(String search) {
+        return (root, query, cb) -> cb.like(cb.lower(root.get("title")), "%" + search.toLowerCase() + "%");
     }
 
     /**

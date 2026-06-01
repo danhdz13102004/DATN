@@ -35,6 +35,17 @@ public class Company {
     @Column(name = "is_verified", nullable = false)
     private boolean verified;
 
+    @Column(name = "employee_count_min")
+    private Integer employeeCountMin;
+
+    @Column(name = "employee_count_max")
+    private Integer employeeCountMax;
+
+    @Column(columnDefinition = "TEXT")
+    private String benefits;
+
+    private Instant foundedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

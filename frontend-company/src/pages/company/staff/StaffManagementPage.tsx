@@ -1,638 +1,476 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useOutletContext } from 'react-router-dom';
 import Topbar from '../../../components/layout/Topbar';
-import { useAuthStore } from '../../../store/authStore';
-import { useToast } from '../../../contexts/ToastContext';
 import {
-  useStaff,
-  useCreateStaff,
-  useDeleteStaff,
-  useUpdateStaffName,
+  useStaff, useCreateStaff, useUpdateStaffName, useDeleteStaff,
 } from '../../../hooks/useStaff';
-import type { StaffMember } from '../../../types/staff';
+import type { StaffMember, CreateStaffRequest, UpdateStaffRequest } from '../../../types/staff';
+import PageHeader from '../../../components/common/PageHeader';
+import EmptyState from '../../../components/common/EmptyState';
 
-/* ─── Avatar color palette ─── */
-const AVATAR_COLORS = [
-  { bg: 'bg-emerald-100', text: 'text-emerald-600' },
-  { bg: 'bg-sky-100', text: 'text-sky-600' },
-  { bg: 'bg-amber-100', text: 'text-amber-600' },
-  { bg: 'bg-rose-100', text: 'text-rose-600' },
-  { bg: 'bg-violet-100', text: 'text-violet-600' },
-  { bg: 'bg-teal-100', text: 'text-teal-600' },
-  { bg: 'bg-indigo-100', text: 'text-indigo-600' },
-  { bg: 'bg-pink-100', text: 'text-pink-600' },
+const ROLE_LABELS: Record<string, string> = {
+  OWNER: 'Owner',
+  HR: 'HR Manager',
+  RECRUITER: 'Recruiter',
+};
+
+const ROLE_COLORS: Record<string, { text: string; bg: string; border: string }> = {
+  OWNER:     { text: '#7C3AED', bg: '#EDE9FE', border: 'rgba(124,58,237,0.15)' },
+  HR:        { text: '#0891B2', bg: '#E0F2FE', border: 'rgba(8,145,178,0.15)' },
+  RECRUITER: { text: '#059669', bg: '#D1FAE5', border: 'rgba(5,150,105,0.15)' },
+};
+
+const AVATAR_GRADIENTS = [
+  'from-emerald-50 to-teal-50 text-emerald-600',
+  'from-blue-50 to-indigo-50 text-blue-600',
+  'from-violet-50 to-purple-50 text-violet-600',
+  'from-amber-50 to-orange-50 text-amber-600',
+  'from-rose-50 to-pink-50 text-rose-600',
 ];
 
-const getAvatarColor = (str: string) =>
-  AVATAR_COLORS[Math.abs([...str].reduce((a, c) => a + c.charCodeAt(0), 0)) % AVATAR_COLORS.length];
-
-const ROLE_BADGE: Record<string, string> = {
-  OWNER: 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200',
-  HR: 'bg-sky-50 text-sky-600 ring-1 ring-sky-200',
-  RECRUITER: 'bg-amber-50 text-amber-600 ring-1 ring-amber-200',
-};
+function avatarGradient(name: string | null | undefined) {
+  if (!name) return AVATAR_GRADIENTS[0];
+  const idx = name.charCodeAt(0) % AVATAR_GRADIENTS.length;
+  return AVATAR_GRADIENTS[idx];
+}
 
 export default function StaffManagementPage() {
   const { onMenuToggle } = useOutletContext<{ onMenuToggle: () => void }>();
-  const { user } = useAuthStore();
-  const toast = useToast();
+  const { data: members, isLoading, isError, error } = useStaff();
+  const createStaff = useCreateStaff();
+  const updateStaffName = useUpdateStaffName();
+  const deleteStaff = useDeleteStaff();
 
-  const { data: staffList = [], isLoading } = useStaff();
-  const createMutation = useCreateStaff();
-  const deleteMutation = useDeleteStaff();
-  const updateNameMutation = useUpdateStaffName();
+  const [inviteModal, setInviteModal] = useState(false);
+  const [editModal, setEditModal] = useState<{ open: boolean; member?: StaffMember }>({ open: false });
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; member?: StaffMember }>({ open: false });
 
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
-  const [deletingStaff, setDeletingStaff] = useState<StaffMember | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const { register: inviteRegister, handleSubmit: inviteSubmit, formState: { errors: inviteErrors }, reset: inviteReset } = useForm<CreateStaffRequest>();
+  const { register: editRegister, handleSubmit: editSubmit, formState: { errors: editErrors }, reset: editReset } = useForm<UpdateStaffRequest>();
 
-  // Create form
-  const [createEmail, setCreateEmail] = useState('');
-  const [createName, setCreateName] = useState('');
-  const [createRole, setCreateRole] = useState<'HR' | 'RECRUITER'>('HR');
-  const [createPassword, setCreatePassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPwd, setShowPwd] = useState(false);
-  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
-
-  // Edit form
-  const [editName, setEditName] = useState('');
-
-  const isOwner = user?.companyRole === 'OWNER';
-
-  /* ─── Helpers ─── */
-  const getInitials = (name?: string, email?: string) => {
-    if (name) {
-      const parts = name.trim().split(/\s+/);
-      if (parts.length > 1) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-      return name.substring(0, 2).toUpperCase();
-    }
-    return email ? email.substring(0, 2).toUpperCase() : '?';
+  const handleInvite = async (data: CreateStaffRequest) => {
+    const payload: CreateStaffRequest = {
+      ...data,
+      role: 'HR',
+      password: data.password?.trim() || '12345678',
+    };
+    await createStaff.mutateAsync(payload);
+    setInviteModal(false);
+    inviteReset();
   };
 
-  const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-  const filteredStaff = staffList.filter((s) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      s.email.toLowerCase().includes(q) ||
-      (s.fullName && s.fullName.toLowerCase().includes(q)) ||
-      s.role.toLowerCase().includes(q)
-    );
-  });
-
-  /* ─── Stats (derived) ─── */
-  const totalStaff = staffList.length;
-  const ownerCount = staffList.filter((s) => s.role === 'OWNER').length;
-  const hrCount = staffList.filter((s) => s.role === 'HR').length;
-  const recruiterCount = staffList.filter((s) => s.role === 'RECRUITER').length;
-
-  /* ─── Handlers ─── */
-  const resetCreateForm = () => {
-    setCreateEmail('');
-    setCreateName('');
-    setCreateRole('HR');
-    setCreatePassword('');
-    setConfirmPassword('');
-    setShowPwd(false);
-    setShowConfirmPwd(false);
-  };
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (createPassword !== confirmPassword) {
-      toast.error('Passwords do not match');
-      return;
-    }
-    try {
-      await createMutation.mutateAsync({ email: createEmail, fullName: createName, password: createPassword, role: createRole });
-      toast.success('Staff member created successfully');
-      setIsCreateOpen(false);
-      resetCreateForm();
-    } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || 'Failed to create staff');
-    }
-  };
-
-  const handleEdit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingStaff) return;
-    try {
-      await updateNameMutation.mutateAsync({ id: editingStaff.id, data: { fullName: editName } });
-      toast.success('Profile updated successfully');
-      setIsEditOpen(false);
-      setEditingStaff(null);
-    } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || 'Failed to update profile');
-    }
+  const handleUpdate = async (data: UpdateStaffRequest) => {
+    if (!editModal.member) return;
+    await updateStaffName.mutateAsync({ id: editModal.member.id, data });
+    setEditModal({ open: false });
   };
 
   const handleDelete = async () => {
-    if (!deletingStaff) return;
-    try {
-      await deleteMutation.mutateAsync(deletingStaff.id);
-      toast.success('Staff member removed');
-      setIsDeleteOpen(false);
-      setDeletingStaff(null);
-    } catch (err: any) {
-      toast.error(err.response?.data?.error?.message || 'Failed to remove staff');
-    }
+    if (!deleteModal.member) return;
+    await deleteStaff.mutateAsync(deleteModal.member.id);
+    setDeleteModal({ open: false });
   };
 
-  const openEdit = (s: StaffMember) => {
-    setEditingStaff(s);
-    setEditName(s.fullName || '');
-    setIsEditOpen(true);
+  const roleStats = {
+    total: members?.length || 0,
+    owners: members?.filter((m: StaffMember) => m.role === 'OWNER').length || 0,
+    hr: members?.filter((m: StaffMember) => m.role === 'HR').length || 0,
+    recruiters: members?.filter((m: StaffMember) => m.role === 'RECRUITER').length || 0,
   };
-
-  const openDelete = (s: StaffMember) => {
-    setDeletingStaff(s);
-    setIsDeleteOpen(true);
-  };
-
-  /* ─── Stat Card Helper ─── */
-  const statCards = [
-    { label: 'Total Staff', value: totalStaff, icon: 'fa-users', color: 'bg-primary/10 text-primary' },
-    { label: 'Owners', value: ownerCount, icon: 'fa-user-shield', color: 'bg-emerald-100 text-emerald-600' },
-    { label: 'HR', value: hrCount, icon: 'fa-user-tie', color: 'bg-sky-100 text-sky-600' },
-    { label: 'Recruiters', value: recruiterCount, icon: 'fa-headset', color: 'bg-amber-100 text-amber-600' },
-  ];
-
-  /* ─── Shared CSS classes ─── */
-  const inputCls =
-    'w-full px-3.5 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 transition-all duration-150';
-  const modalOverlayCls =
-    'fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[60] flex items-center justify-center p-4';
-  const modalCls = 'bg-white rounded-2xl shadow-2xl w-full max-w-md animate-scale-in';
 
   return (
     <>
       <Topbar title="Staff Management" onMenuToggle={onMenuToggle} />
-      <div className="p-6 space-y-6">
-        {/* ── Header ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">Team Members</h2>
-            <p className="text-sm text-gray-500 mt-1">Manage your company's staff and roles</p>
-          </div>
-          {isOwner && (
-            <button
-              className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover transition-all shadow-sm shadow-primary/20 flex items-center gap-2 self-start"
-              onClick={() => setIsCreateOpen(true)}
-            >
-              <i className="fas fa-user-plus" /> Create Staff
-            </button>
-          )}
-        </div>
+      <div className="p-6 lg:p-8 max-w-full mx-8 space-y-6">
 
-        {/* ── Stats ── */}
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          {statCards.map((c) => (
-            <div
-              key={c.label}
-              className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 hover:shadow-md transition-shadow"
+        <PageHeader
+          title="Staff Management"
+          description="Manage your company's team members and their roles"
+          action={
+            <button
+              onClick={() => { setInviteModal(true); inviteReset(); }}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover hover:-translate-y-px hover:shadow-md transition-all duration-200 shadow-sm"
             >
-              <div className="flex items-start gap-4">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${c.color}`}>
-                  <i className={`fas ${c.icon} text-base`} />
+              <i className="fas fa-user-plus text-xs" />
+              Invite Member
+            </button>
+          }
+        />
+
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {[
+            { label: 'Total Members', value: roleStats.total,       icon: 'fa-users',       bg: 'from-blue-50 to-indigo-50',    border: 'border-blue-100/50',    iconBg: 'bg-blue-100',    iconColor: 'text-blue-600' },
+            { label: 'HR Managers',    value: roleStats.hr,          icon: 'fa-id-card',     bg: 'from-amber-50 to-orange-50',    border: 'border-amber-100/50',  iconBg: 'bg-amber-100',  iconColor: 'text-amber-600' },
+            { label: 'Recruiters',     value: roleStats.recruiters,   icon: 'fa-user-tie',    bg: 'from-emerald-50 to-green-50',   border: 'border-emerald-100/50', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+          ].map((s, idx) => (
+            <div
+              key={s.label}
+              className={`animate-fadeSlideUp group relative overflow-hidden bg-gradient-to-br ${s.bg} border ${s.border} rounded-2xl p-5 hover:-translate-y-0.5 transition-all duration-200 cursor-default`}
+              style={{ animationDelay: `${idx * 100}ms` }}
+            >
+              <div className="absolute -bottom-4 -right-4 w-20 h-20 rounded-full blur-2xl opacity-30 bg-blue-400" />
+              <div className="flex items-center gap-4">
+                <div className={`w-11 h-11 rounded-xl ${s.iconBg} ${s.iconColor} flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform duration-200`}>
+                  <i className={`fas ${s.icon} text-base`} />
                 </div>
                 <div>
-                  <h4 className="text-xs text-gray-500 font-medium uppercase tracking-wider">{c.label}</h4>
-                  <div className="text-2xl font-bold text-gray-900 mt-0.5">{c.value}</div>
+                  <div className="text-3xl font-black text-gray-900 tracking-tight tabular-nums">{s.value}</div>
+                  <div className="text-sm font-medium text-gray-500 mt-0.5">{s.label}</div>
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* ── Table ── */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-50">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-5 border-b border-gray-50 gap-3">
-            <h3 className="text-lg font-bold text-gray-900">All Staff</h3>
-            <div className="relative w-full sm:w-64">
-              <i className="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
-              <input
-                type="text"
-                placeholder="Search by name, email or role…"
-                className="w-full pl-9 pr-3.5 py-2 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 transition-all"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+        {/* Table */}
+        <div className="bg-white rounded-2xl shadow-card border border-gray-100 overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-5 bg-primary rounded-full" />
+              <h3 className="text-base font-bold text-gray-900">Team Members</h3>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-50">
-                  <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-3">
-                    Name
-                  </th>
-                  <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-3">
-                    Email
-                  </th>
-                  <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-3">
-                    Role
-                  </th>
-                  <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-3">
-                    Joined
-                  </th>
-                  <th className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-3">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={5} className="text-center py-16">
-                      <div className="w-8 h-8 border-[3px] border-primary/20 border-t-primary rounded-full animate-spin mx-auto" />
-                      <p className="text-sm text-gray-400 mt-3">Loading staff…</p>
-                    </td>
+          {isLoading ? (
+            <div className="p-12 text-center text-gray-400 text-sm">Loading staff members...</div>
+          ) : isError ? (
+            <div className="p-6">
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                    <i className="fas fa-exclamation-triangle" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-bold">Failed to load staff members</p>
+                    <p className="text-sm mt-1 text-red-600/90 break-words">
+                      {(error as any)?.response?.data?.message ?? (error as any)?.message ?? 'Please try again.'}
+                    </p>
+                    <p className="text-xs mt-2 text-red-500/80">
+                      Tip: if your login session expired, reload and sign in again.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : !members?.length ? (
+            <EmptyState
+              icon="fa-users"
+              title="No team members yet"
+              description="Invite your first team member to collaborate."
+              actionLabel="Invite Member"
+              onAction={() => { setInviteModal(true); inviteReset(); }}
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-100 bg-gray-50/50">
+                    {['Member', 'Role', 'Email', 'Joined', ''].map((h) => (
+                      <th key={h} className="text-left text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-6 py-3 whitespace-nowrap">
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                ) : filteredStaff.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="text-center py-16">
-                      <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                        <i className="fas fa-users text-xl text-gray-300" />
-                      </div>
-                      <p className="text-sm text-gray-400 font-medium">
-                        {searchQuery ? 'No staff matching your search' : 'No staff members yet'}
-                      </p>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredStaff.map((staff) => {
-                    const color = getAvatarColor(staff.email);
-                    const isSelf = user?.id === staff.userId;
+                </thead>
+                <tbody>
+                  {members.map((member: StaffMember) => {
+                    const roleStyle = ROLE_COLORS[member.role] ?? { text: '#64748b', bg: '#f1f5f9', border: 'rgba(0,0,0,0.06)' };
                     return (
-                      <tr key={staff.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                        <td className="px-5 py-3.5">
+                      <tr
+                        key={member.id}
+                        className="border-b border-gray-50 last:border-0 hover:bg-gray-50/60 transition-colors duration-150"
+                      >
+                        <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div
-                              className={`w-9 h-9 rounded-full ${color.bg} ${color.text} flex items-center justify-center text-xs font-bold shrink-0`}
-                            >
-                              {getInitials(staff.fullName, staff.email)}
+                            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${avatarGradient(member.fullName)} flex items-center justify-center text-xs font-bold shadow-sm shrink-0`}>
+                              {member.fullName?.charAt(0).toUpperCase() ?? '?'}
                             </div>
-                            <div>
-                              <div className="text-sm font-semibold text-gray-900 leading-tight">
-                                {staff.fullName || '—'}
-                              </div>
-                              {isSelf && (
-                                <span className="text-[0.65rem] text-primary font-medium">You</span>
-                              )}
-                            </div>
+                            <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">{member.fullName}</span>
                           </div>
                         </td>
-                        <td className="px-5 py-3.5 text-sm text-gray-600">{staff.email}</td>
-                        <td className="px-5 py-3.5">
+                        <td className="px-6 py-4">
                           <span
-                            className={`inline-flex px-2.5 py-1 rounded-full text-[0.7rem] font-semibold ${ROLE_BADGE[staff.role] || 'bg-gray-100 text-gray-600'}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold"
+                            style={{ background: roleStyle.bg, color: roleStyle.text, border: `1px solid ${roleStyle.border}` }}
                           >
-                            {staff.role}
+                            <i className={`fas ${member.role === 'OWNER' ? 'fa-crown' : member.role === 'HR' ? 'fa-id-card' : 'fa-user-tie'} text-[9px]`} />
+                            {ROLE_LABELS[member.role] ?? member.role}
                           </span>
                         </td>
-                        <td className="px-5 py-3.5 text-sm text-gray-500">{formatDate(staff.joinedAt)}</td>
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center justify-end gap-1">
-                            {isSelf && (
-                              <button
-                                className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-primary hover:bg-primary/5 transition-colors"
-                                onClick={() => openEdit(staff)}
-                                title="Edit name"
-                              >
-                                <i className="fas fa-pen text-xs" />
-                              </button>
-                            )}
-                            {isOwner && !isSelf && (
-                              <button
-                                className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                                onClick={() => openDelete(staff)}
-                                title="Remove staff"
-                                disabled={deleteMutation.isPending}
-                              >
-                                <i className="fas fa-trash-alt text-xs" />
-                              </button>
-                            )}
-                            {!isSelf && !isOwner && (
-                              <span className="text-xs text-gray-300 px-2">—</span>
+                        <td className="px-6 py-4 hidden sm:table-cell">
+                          <span className="text-sm text-gray-600">{member.email}</span>
+                        </td>
+                        <td className="px-6 py-4 hidden md:table-cell">
+                          <span className="text-sm text-gray-400">
+                            {member.joinedAt ? new Date(member.joinedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5">
+                            {member.role !== 'OWNER' && (
+                              <>
+                                <button
+                                  onClick={() => { setEditModal({ open: true, member }); editReset({ fullName: member.fullName }); }}
+                                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-all duration-150 hover:scale-105"
+                                  title="Edit name"
+                                >
+                                  <i className="fas fa-pen text-xs" />
+                                </button>
+                                <button
+                                  onClick={() => setDeleteModal({ open: true, member })}
+                                  className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-red-50 hover:text-red-500 transition-all duration-150 hover:scale-105"
+                                  title="Remove member"
+                                >
+                                  <i className="fas fa-trash text-xs" />
+                                </button>
+                              </>
                             )}
                           </div>
                         </td>
                       </tr>
                     );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Footer */}
-          {filteredStaff.length > 0 && (
-            <div className="px-5 py-3 border-t border-gray-50 text-xs text-gray-400">
-              Showing {filteredStaff.length} of {staffList.length} members
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
       </div>
 
-      {/* ════════════════════════════════════════════════
-          Create Staff Modal
-         ════════════════════════════════════════════════ */}
-      {isCreateOpen && (
-        <div className={modalOverlayCls} onClick={(e) => e.target === e.currentTarget && setIsCreateOpen(false)}>
-          <div className={modalCls}>
-            {/* Header */}
-            <div className="flex items-center justify-between p-5 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <i className="fas fa-user-plus text-primary" />
+      {/* Invite Modal */}
+      {inviteModal && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          onClick={(e) => e.target === e.currentTarget && setInviteModal(false)}
+        >
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-scale-in">
+            {/* Header with gradient banner */}
+            <div className="relative bg-gradient-to-r from-primary to-primary-hover px-6 py-5">
+              {/* Decorative circles */}
+              <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-white/10" />
+              <div className="absolute -bottom-4 -left-4 w-20 h-20 rounded-full bg-white/5" />
+              <div className="absolute top-2 right-16 w-6 h-6 rounded-full bg-white/20" />
+
+              <div className="relative flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shadow-inner">
+                  <i className="fas fa-user-plus text-white text-lg" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-gray-900">Create Staff Member</h3>
-                  <p className="text-xs text-gray-400">Account will be active immediately</p>
+                  <h3 className="text-white font-bold text-lg leading-none">Add Team Member</h3>
+                  <p className="text-white/70 text-sm mt-1">Create a new HR staff account</p>
                 </div>
               </div>
-              <button
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
-                onClick={() => { setIsCreateOpen(false); resetCreateForm(); }}
-              >
-                <i className="fas fa-times" />
-              </button>
             </div>
 
-            {/* Body */}
-            <form onSubmit={handleCreate} className="p-5 space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1.5">
-                  Email Address <span className="text-red-500">*</span>
+            <form onSubmit={inviteSubmit(handleInvite)} className="p-8 space-y-6">
+              {/* Full Name */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-base font-semibold text-gray-700">
+                  <i className="fas fa-user text-primary/60 text-sm" />
+                  Full Name <span className="text-red-500 text-sm">*</span>
                 </label>
                 <div className="relative">
-                  <i className="fas fa-envelope absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 rounded border border-gray-300 bg-gray-50 flex items-center justify-center pointer-events-none opacity-60">
+                    <i className="fas fa-at text-xs text-gray-400" />
+                  </div>
+                  <input
+                    className="w-full pl-12 pr-5 py-3.5 border-2 border-gray-100 rounded-xl text-base text-gray-800 placeholder-gray-300 focus:outline-none focus:border-primary focus:bg-white focus:shadow-inner transition-all"
+                    placeholder="John Doe"
+                    {...inviteRegister('fullName', { required: 'Full name is required' })}
+                  />
+                </div>
+                {inviteErrors.fullName && (
+                  <p className="flex items-center gap-1.5 text-sm text-red-500 mt-1">
+                    <i className="fas fa-circle-exclamation text-xs" />
+                    {inviteErrors.fullName.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Email */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-base font-semibold text-gray-700">
+                  <i className="fas fa-envelope text-primary/60 text-sm" />
+                  Email Address <span className="text-red-500 text-sm">*</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 rounded border border-gray-300 bg-gray-50 flex items-center justify-center pointer-events-none opacity-60">
+                    <i className="fas fa-at text-xs text-gray-400" />
+                  </div>
                   <input
                     type="email"
-                    autoComplete="off"
-                    className={`${inputCls} pl-9`}
-                    placeholder="colleague@company.com"
-                    value={createEmail}
-                    onChange={(e) => setCreateEmail(e.target.value)}
-                    required
+                    className="w-full pl-12 pr-5 py-3.5 border-2 border-gray-100 rounded-xl text-base text-gray-800 placeholder-gray-300 focus:outline-none focus:border-primary focus:bg-white focus:shadow-inner transition-all"
+                    placeholder="john@company.com"
+                    {...inviteRegister('email', {
+                      required: 'Email is required',
+                      pattern: { value: /\S+@\S+\.\S+/, message: 'Invalid email address' },
+                    })}
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1.5">
-                  Full Name <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <i className="fas fa-user absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
-                  <input
-                    type="text"
-                    autoComplete="off"
-                    className={`${inputCls} pl-9`}
-                    placeholder="e.g. Nguyen Van A"
-                    value={createName}
-                    onChange={(e) => setCreateName(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1.5">
-                  Role <span className="text-red-500">*</span>
-                </label>
-                <div className="flex gap-2">
-                  {(['HR', 'RECRUITER'] as const).map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium border-[1.5px] transition-all duration-150 ${
-                        createRole === r
-                          ? 'border-primary bg-primary/5 text-primary ring-[3px] ring-primary/10'
-                          : 'border-gray-200 text-gray-600 hover:border-gray-300'
-                      }`}
-                      onClick={() => setCreateRole(r)}
-                    >
-                      <i className={`fas ${r === 'HR' ? 'fa-user-tie' : 'fa-headset'} mr-1.5 text-xs`} />
-                      {r === 'RECRUITER' ? 'Recruiter' : r}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1.5">
-                  Password <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <i className="fas fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
-                  <input
-                    type={showPwd ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    className={`${inputCls} pl-9 pr-10`}
-                    placeholder="Create a password"
-                    value={createPassword}
-                    onChange={(e) => setCreatePassword(e.target.value)}
-                    required
-                    minLength={8}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPwd(!showPwd)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <i className={`fas ${showPwd ? 'fa-eye-slash' : 'fa-eye'} text-xs`} />
-                  </button>
-                </div>
-                <p className="text-[0.7rem] text-gray-400 mt-1 ml-1">Minimum 8 characters</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1.5">
-                  Confirm Password <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <i className="fas fa-lock absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
-                  <input
-                    type={showConfirmPwd ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    className={`${inputCls} pl-9 pr-10`}
-                    placeholder="Re-enter the password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    minLength={8}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPwd(!showConfirmPwd)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <i className={`fas ${showConfirmPwd ? 'fa-eye-slash' : 'fa-eye'} text-xs`} />
-                  </button>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
-                <button
-                  type="button"
-                  className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
-                  onClick={() => { setIsCreateOpen(false); resetCreateForm(); }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover transition-colors shadow-sm shadow-primary/20 disabled:opacity-60"
-                  disabled={createMutation.isPending}
-                >
-                  {createMutation.isPending ? (
-                    <span className="flex items-center gap-2">
-                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Creating…
-                    </span>
-                  ) : (
-                    <><i className="fas fa-check mr-1.5" /> Create Account</>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ════════════════════════════════════════════════
-          Edit Profile Modal
-         ════════════════════════════════════════════════ */}
-      {isEditOpen && editingStaff && (
-        <div className={modalOverlayCls} onClick={(e) => e.target === e.currentTarget && setIsEditOpen(false)}>
-          <div className={modalCls}>
-            <div className="flex items-center justify-between p-5 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center">
-                  <i className="fas fa-pen text-sky-600" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900">Edit Profile</h3>
-              </div>
-              <button
-                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"
-                onClick={() => setIsEditOpen(false)}
-              >
-                <i className="fas fa-times" />
-              </button>
-            </div>
-
-            <form onSubmit={handleEdit} className="p-5 space-y-4">
-              {/* User context card */}
-              <div className="flex items-center gap-3 p-3.5 bg-gray-50 rounded-xl">
-                <div className={`w-10 h-10 rounded-full ${getAvatarColor(editingStaff.email).bg} ${getAvatarColor(editingStaff.email).text} flex items-center justify-center text-xs font-bold`}>
-                  {getInitials(editingStaff.fullName, editingStaff.email)}
-                </div>
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-gray-900 truncate">{editingStaff.fullName || '—'}</div>
-                  <div className="text-xs text-gray-400 truncate">{editingStaff.email}</div>
-                </div>
-                <span className={`ml-auto shrink-0 inline-flex px-2 py-0.5 rounded-full text-[0.65rem] font-semibold ${ROLE_BADGE[editingStaff.role]}`}>
-                  {editingStaff.role}
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1.5">
-                  Full Name <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <i className="fas fa-user absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
-                  <input
-                    type="text"
-                    className={`${inputCls} pl-9`}
-                    placeholder="Full name"
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    required
-                    autoFocus
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
-                <button
-                  type="button"
-                  className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
-                  onClick={() => setIsEditOpen(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover transition-colors shadow-sm shadow-primary/20 disabled:opacity-60"
-                  disabled={updateNameMutation.isPending}
-                >
-                  {updateNameMutation.isPending ? (
-                    <span className="flex items-center gap-2">
-                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Saving…
-                    </span>
-                  ) : (
-                    <><i className="fas fa-save mr-1.5" /> Save Changes</>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ════════════════════════════════════════════════
-          Delete Confirmation Modal
-         ════════════════════════════════════════════════ */}
-      {isDeleteOpen && deletingStaff && (
-        <div className={modalOverlayCls} onClick={(e) => e.target === e.currentTarget && setIsDeleteOpen(false)}>
-          <div className={`${modalCls} max-w-sm`}>
-            <div className="p-6 text-center">
-              <div className="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
-                <i className="fas fa-exclamation-triangle text-xl text-red-500" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">Remove Staff Member</h3>
-              <p className="text-sm text-gray-500 mb-1">
-                Are you sure you want to remove
-              </p>
-              <p className="text-sm font-semibold text-gray-900 mb-4">
-                {deletingStaff.fullName || deletingStaff.email}?
-              </p>
-              <p className="text-xs text-gray-400">
-                This action cannot be undone. The user will lose access to this company.
-              </p>
-            </div>
-            <div className="flex gap-2 p-5 border-t border-gray-100">
-              <button
-                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
-                onClick={() => { setIsDeleteOpen(false); setDeletingStaff(null); }}
-              >
-                Cancel
-              </button>
-              <button
-                className="flex-1 px-4 py-2.5 bg-red-500 text-white rounded-xl text-sm font-semibold hover:bg-red-600 transition-colors shadow-sm shadow-red-200 disabled:opacity-60"
-                onClick={handleDelete}
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Removing…
-                  </span>
-                ) : (
-                  <><i className="fas fa-trash-alt mr-1.5" /> Remove</>
+                {inviteErrors.email && (
+                  <p className="flex items-center gap-1.5 text-sm text-red-500 mt-1">
+                    <i className="fas fa-circle-exclamation text-xs" />
+                    {inviteErrors.email.message}
+                  </p>
                 )}
-              </button>
+              </div>
+
+              {/* Role — auto-assigned HR */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-base font-semibold text-gray-700">
+                  <i className="fas fa-briefcase text-primary/60 text-sm" />
+                  Assigned Role
+                </label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold text-primary bg-primary/10 border border-primary/20">
+                      <i className="fas fa-id-card text-xs" />
+                      HR
+                    </span>
+                  </div>
+                  <div className="w-full pl-[96px] pr-5 py-3.5 border-2 border-gray-100 rounded-xl text-base text-gray-400 bg-gray-50 cursor-not-allowed">
+                    HR Manager
+                  </div>
+                </div>
+                <p className="text-sm text-gray-400 flex items-center gap-1.5 mt-1">
+                  <i className="fas fa-info-circle text-xs" />
+                  New members are always added as HR
+                </p>
+              </div>
+
+              {/* Password */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-base font-semibold text-gray-700">
+                  <i className="fas fa-lock text-primary/60 text-sm" />
+                  Password
+                  <span className="text-sm text-gray-400 font-normal bg-gray-100 px-2 py-0.5 rounded">optional</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center opacity-60">
+                    <i className="fas fa-key text-sm text-gray-400" />
+                  </div>
+                  <input
+                    type="password"
+                    className="w-full pl-12 pr-5 py-3.5 border-2 border-gray-100 rounded-xl text-base text-gray-800 placeholder-gray-300 focus:outline-none focus:border-primary focus:bg-white focus:shadow-inner transition-all"
+                    placeholder="Leave blank for default: 12345678"
+                    {...inviteRegister('password')}
+                  />
+                </div>
+                <p className="text-sm text-gray-400 flex items-center gap-1.5 mt-1">
+                  <i className="fas fa-shield-halved text-xs" />
+                  If left blank, default password is <strong>12345678</strong>
+                </p>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-dashed border-gray-100" />
+
+              {/* Actions */}
+              <div className="flex items-center gap-4">
+                <button
+                  type="button"
+                  className="flex-1 px-5 py-3.5 border-2 border-gray-100 rounded-xl text-base font-medium text-gray-500 hover:border-gray-200 hover:bg-gray-50 hover:text-gray-600 transition-all"
+                  onClick={() => setInviteModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-[2] px-5 py-3.5 bg-gradient-to-r from-primary to-primary-hover text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-primary/25 hover:-translate-y-px active:translate-y-0 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                  disabled={createStaff.isPending}
+                >
+                  {createStaff.isPending ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin text-sm" />
+                      Adding...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-user-plus text-sm" />
+                      Add Member
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editModal.open && editModal.member && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          onClick={(e) => e.target === e.currentTarget && setEditModal({ open: false })}
+        >
+          <div className="bg-white rounded-2xl shadow-modal w-full max-w-sm animate-scale-in">
+            <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <i className="fas fa-pen text-base" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900">Edit Member</h3>
+                <p className="text-xs text-gray-400 mt-0.5">{editModal.member.email}</p>
+              </div>
+            </div>
+
+            <form onSubmit={editSubmit(handleUpdate)} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name</label>
+                <input
+                  className="w-full px-4 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                  {...editRegister('fullName', { required: 'Full name is required' })}
+                />
+                {editErrors.fullName && <p className="text-xs text-red-500 mt-1">{editErrors.fullName.message}</p>}
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button type="button" className="px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors" onClick={() => setEditModal({ open: false })}>
+                  Cancel
+                </button>
+                <button type="submit" className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors flex items-center gap-2" disabled={updateStaffName.isPending}>
+                  <i className="fas fa-check text-xs" />
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.open && deleteModal.member && (
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+          onClick={(e) => e.target === e.currentTarget && setDeleteModal({ open: false })}
+        >
+          <div className="bg-white rounded-2xl shadow-modal w-full max-w-sm animate-scale-in">
+            <div className="flex flex-col items-center p-8 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mb-4">
+                <i className="fas fa-user-minus text-2xl text-red-400" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Remove Team Member?</h3>
+              <p className="text-sm text-gray-500 mb-6">
+                Are you sure you want to remove <strong className="text-gray-700">{deleteModal.member.fullName}</strong>? This action cannot be undone.
+              </p>
+              <div className="flex items-center gap-3 w-full">
+                <button
+                  className="flex-1 px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                  onClick={() => setDeleteModal({ open: false })}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="flex-1 px-5 py-2.5 bg-red-500 text-white rounded-xl text-sm font-semibold hover:bg-red-600 transition-colors flex items-center justify-center gap-2"
+                  onClick={handleDelete}
+                  disabled={deleteStaff.isPending}
+                >
+                  <i className="fas fa-trash text-xs" />
+                  Remove
+                </button>
+              </div>
             </div>
           </div>
         </div>

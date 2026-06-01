@@ -15,6 +15,7 @@ from app.models.schemas import (
     RecommendData,
     MultiResumeInteractionData,
     BehavioralSignalData,
+    BehavioralSignalRequest,
 )
 from app.services import graph_store
 from app.services import recommendation_service as svc
@@ -220,6 +221,87 @@ def handle_interaction(req: InteractionRequest, request: Request):
         )
     except Exception as exc:
         logger.error("interact failed: %s", exc)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "success": False,
+                "data":    None,
+                "error":   {"code": "INFERENCE_ERROR", "message": str(exc)},
+                "meta":    None,
+            },
+        )
+
+
+@router.post("/interact/behavioral", response_model=dict)
+def handle_behavioral_signal(req: BehavioralSignalRequest, request: Request):
+    """Record click/save as user-level behavioral signals.
+
+    This endpoint does NOT create graph edges and does NOT update GraphSAGE embeddings.
+    Behavioral signals are stored separately and used only in preference vector logic
+    during recommendation queries.
+
+    Required header: X-User-ID (the job_seeker_id)
+
+    Body: {"job_id": "...", "action_type": "click" | "save"}
+    """
+    _guard_models_loaded()
+
+    job_id = req.job_id
+    action_type = req.action_type.lower()
+
+    # Validate job exists in job catalog
+    if job_id not in svc.job_catalog:
+        raise HTTPException(
+            status_code=404,
+            detail={
+                "success": False,
+                "data":    None,
+                "error":   {"code": "NODE_NOT_FOUND", "message": f"Job '{job_id}' not found in job catalog."},
+                "meta":    None,
+            },
+        )
+
+    job_seeker_id = request.headers.get("x-user-id")
+    if not job_seeker_id:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "success": False,
+                "data":    None,
+                "error":   {"code": "MISSING_USER_ID", "message": "X-User-ID header is required for behavioral signals."},
+                "meta":    None,
+            },
+        )
+
+    start = time.time()
+
+    try:
+        svc._record_behavioral_signal(job_seeker_id, job_id, action_type)
+
+        logger.debug("POST /interact/behavioral (%s) latency=%.3fs", action_type, time.time() - start)
+        return {
+            "success": True,
+            "data": BehavioralSignalData(
+                job_id=job_id,
+                action_type=action_type,
+                user_id=job_seeker_id,
+                message="Behavioral signal recorded.",
+            ),
+            "error": None,
+            "meta": None,
+        }
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "success": False,
+                "data":    None,
+                "error":   {"code": "INVALID_SIGNAL", "message": str(exc)},
+                "meta":    None,
+            },
+        )
+    except Exception as exc:
+        logger.error("interact/behavioral failed: %s", exc)
         raise HTTPException(
             status_code=500,
             detail={

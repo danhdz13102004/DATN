@@ -18,6 +18,8 @@ public class CompanySubscriptionDto {
     private int jobPostLimit;       // 0 = unlimited
     private int durationDays;
     private boolean allowUseAiMatching;
+    private int autoFillLimit;       // 0 = unlimited
+    private int autoFillUsageCount;  // current usage
     private Instant startDate;
     private Instant endDate;
     private String status;

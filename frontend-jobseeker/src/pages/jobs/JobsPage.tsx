@@ -1,128 +1,206 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import LoadingSpinner from '../../components/common/LoadingSpinner';
-import EmptyState from '../../components/common/EmptyState';
 import { jobService } from '../../services/jobService';
 import { resumeService } from '../../services/resumeService';
-import type { Job, JobFilter, SavedJobDto, Skill } from '../../types/job';
+import { useAuthStore } from '../../store/authStore';
+import type { Job, JobFilter, SavedJobDto } from '../../types/job';
 import type { Resume } from '../../types/resume';
 
-const JOB_TYPES = ['FULLTIME', 'PARTTIME', 'REMOTE', 'HYBRID'];
-const EXP_LEVELS = ['INTERN', 'FRESHER', 'JUNIOR', 'MIDDLE', 'SENIOR', 'LEADER'];
+import BrowseJobsHeader from '../../components/jobs/BrowseJobsHeader';
+import JobTabs from '../../components/jobs/JobTabs';
+import JobFilterPanel from '../../components/jobs/JobFilterPanel';
+import JobCard from '../../components/jobs/JobCard';
+import RecommendedJobCard from '../../components/jobs/RecommendedJobCard';
+import { JobsEmptyState, RecommendedEmptyState } from '../../components/jobs/JobsEmptyState';
+import { JobsGridSkeleton, RecommendedGridSkeleton } from '../../components/jobs/JobsLoadingSkeleton';
 
-function JobCard({ job, onClick, onToggleSave, savePendingId }: {
-  job: Job;
-  onClick: () => void;
-  onToggleSave: (jobId: string, e: React.MouseEvent) => void;
+type ViewMode = 'all' | 'recommended' | 'saved';
+
+function JobGridItem({
+  saved,
+  onNavigate,
+  onUnsave,
+  savePendingId,
+}: {
+  saved: SavedJobDto;
+  onNavigate: (id: string) => void;
+  onUnsave: (jobId: string) => void;
   savePendingId: string | null;
 }) {
-  const initial = job.companyName ? job.companyName.charAt(0).toUpperCase() : job.title.charAt(0).toUpperCase();
-  const formatSalary = (min: number | null, max: number | null) => {
-    if (!min && !max) return 'Negotiable';
-    if (min && max) return `$${min.toLocaleString()} – $${max.toLocaleString()}`;
-    if (min) return `From $${min.toLocaleString()}`;
-    return `Up to $${max!.toLocaleString()}`;
-  };
+  const initial = saved.companyName
+    ? saved.companyName.charAt(0).toUpperCase()
+    : saved.jobTitle.charAt(0).toUpperCase();
+
+  const isPending = savePendingId === saved.jobId;
 
   return (
     <article
-      onClick={onClick}
-      className="bg-white border border-[#eef0f4] rounded-[14px] p-6 flex flex-col cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:border-[#6ea3f7] group"
-      style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
-      onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)')}
-      onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)')}
+      onClick={() => onNavigate(saved.jobId)}
+      className="saved-card"
+      style={{
+        background: '#FFFFFF',
+        border: '1px solid #E8ECF2',
+        borderRadius: 20,
+        padding: 24,
+        display: 'flex',
+        flexDirection: 'column',
+        cursor: 'pointer',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        position: 'relative',
+        overflow: 'hidden',
+        transition: 'transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease',
+      }}
     >
-      {/* Top: logo + title */}
-      <div className="flex items-start gap-3.5 mb-4">
-        <div
-          className="w-12 h-12 rounded-[10px] flex items-center justify-center font-bold text-lg shrink-0"
-          style={{ background: 'rgba(66,135,245,0.08)', color: '#2b6de0' }}
-        >
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 3,
+        background: 'linear-gradient(90deg, #F59E0B, #FBBF24)',
+        opacity: 0,
+        transition: 'opacity 0.3s ease',
+      }} className="card-top-accent" />
+
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, marginBottom: 18 }}>
+        <div className="card-logo" style={{
+          width: 58, height: 58, borderRadius: 16,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontWeight: 800, fontSize: '1.35rem',
+          background: 'linear-gradient(145deg, #FFF7ED, #FEF3C7)',
+          color: '#D97706', flexShrink: 0,
+          boxShadow: '0 4px 12px rgba(251, 191, 36, 0.15)',
+          border: '1px solid rgba(251, 191, 36, 0.1)',
+          transition: 'transform 0.25s ease',
+        }}>
           {initial}
         </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-[1.02rem] font-semibold text-[#1a1d26] leading-snug group-hover:text-primary transition-colors">
-            {job.title}
+
+        <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+          <h3 style={{
+            fontSize: '1.05rem', fontWeight: 700, color: '#0F172A',
+            lineHeight: 1.4, margin: '0 0 5px', letterSpacing: '-0.01em',
+            overflow: 'hidden', textOverflow: 'ellipsis',
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+          }}>
+            {saved.jobTitle}
           </h3>
-          <div className="text-sm text-[#5f6780] mt-0.5">
-            {job.companyName || 'Company'}
+          <div style={{
+            fontSize: '0.88rem', color: '#64748B', fontWeight: 500,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {saved.companyName}
           </div>
         </div>
-        {/* Save button */}
+
         <button
-          onClick={(e) => onToggleSave(job.id, e)}
-          disabled={savePendingId === job.id}
-          title={job.isSaved ? 'Unsave' : 'Save'}
-          className={`p-1.5 rounded-md transition-colors disabled:opacity-40 ${
-            job.isSaved
-              ? 'text-amber-500 hover:text-amber-600'
-              : 'text-[#c8cdd9] hover:text-[#5f6780]'
-          }`}
+          onClick={async (e) => {
+            e.stopPropagation();
+            onUnsave(saved.jobId);
+          }}
+          disabled={isPending}
+          title="Remove from saved"
+          className="card-save-btn"
+          style={{
+            padding: 10, borderRadius: 12,
+            background: 'rgba(251, 191, 36, 0.12)',
+            border: '1px solid rgba(251, 191, 36, 0.25)',
+            cursor: 'pointer', color: '#F59E0B',
+            opacity: isPending ? 0.5 : 1, flexShrink: 0,
+            transition: 'all 0.2s ease',
+          }}
         >
-          <i className={`${job.isSaved ? 'fas' : 'far'} fa-bookmark text-base`} />
+          <i className="fas fa-bookmark" style={{ fontSize: '1rem' }} />
         </button>
       </div>
 
-      {/* Meta: location, type, level */}
-      <div className="flex flex-wrap gap-3 text-[0.82rem] text-[#8b92a8] mb-3.5">
-        {job.location && (
-          <span className="flex items-center gap-1.5">
-            <i className="fas fa-map-marker-alt" /> {job.location}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+        {saved.location && (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '5px 11px', background: '#F8FAFC',
+            border: '1px solid #E2E7F0', borderRadius: 8,
+            fontSize: '0.8rem', color: '#475569', fontWeight: 500,
+          }}>
+            <i className="fas fa-location-dot" style={{ color: '#2563EB', fontSize: '0.7rem' }} />
+            {saved.location}
           </span>
         )}
-        {job.jobType && (
-          <span className="flex items-center gap-1.5">
-            <i className="fas fa-clock" /> {job.jobType.replace('FULLTIME', 'Full-time').replace('PARTTIME', 'Part-time').replace('REMOTE', 'Remote').replace('HYBRID', 'Hybrid')}
+        {saved.jobType && (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '5px 11px', background: '#F0FDF4',
+            border: '1px solid #BBF7D0', borderRadius: 8,
+            fontSize: '0.8rem', color: '#15803D', fontWeight: 500,
+          }}>
+            <i className="fas fa-clock" style={{ fontSize: '0.7rem' }} />
+            {saved.jobType.replace('FULLTIME', 'Full-time').replace('PARTTIME', 'Part-time').replace('REMOTE', 'Remote').replace('HYBRID', 'Hybrid')}
           </span>
         )}
-        {job.experienceLevels?.[0] && (
-          <span className="flex items-center gap-1.5">
-            <i className="fas fa-layer-group" /> {job.experienceLevels[0]}
+        {saved.salaryMin && saved.salaryMax && (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '5px 11px', background: '#F0FDF4',
+            border: '1px solid #BBF7D0', borderRadius: 8,
+            fontSize: '0.8rem', color: '#15803D', fontWeight: 500,
+          }}>
+            <i className="fas fa-dollar-sign" style={{ fontSize: '0.7rem' }} />
+            ${saved.salaryMin.toLocaleString()} – ${saved.salaryMax.toLocaleString()}
           </span>
         )}
       </div>
 
-      {/* Tags/skills */}
-      {(job.skills && job.skills.length > 0) && (
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          {job.skills.slice(0, 4).map((skill: Skill) => (
-            <span
-              key={skill.id}
-              className="inline-flex items-center px-3 py-1 rounded-full text-[0.8rem] font-medium"
-              style={{ background: 'rgba(66,135,245,0.08)', color: '#1a56c4' }}
-            >
-              {skill.name}
-            </span>
-          ))}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginTop: 'auto', paddingTop: 18,
+        borderTop: '1px solid #F1F5F9', gap: 12,
+      }}>
+        <div>
+          <p style={{ margin: 0, fontSize: '0.75rem', color: '#94A3B8', fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Salary
+          </p>
+          <span style={{ fontSize: '1.05rem', fontWeight: 700, color: '#F59E0B' }}>
+            {saved.salaryMin && saved.salaryMax
+              ? `$${saved.salaryMin.toLocaleString()} – $${saved.salaryMax.toLocaleString()}`
+              : 'Negotiable'}
+          </span>
         </div>
-      )}
-
-      {/* Footer: salary + action */}
-      <div
-        className="flex items-center justify-between mt-auto pt-4"
-        style={{ borderTop: '1px solid #eef0f4' }}
-      >
-        <span className="text-[0.95rem] font-semibold text-[#2b6de0]">
-          {formatSalary(job.salaryMin, job.salaryMax)}
-        </span>
-        <span className="px-3.5 py-1.5 bg-primary text-white text-[0.82rem] font-semibold rounded-md hover:bg-[#2b6de0] transition-colors"
-          style={{ boxShadow: '0 2px 8px rgba(66,135,245,0.25)' }}
-        >
+        <span className="card-view-btn" style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          padding: '10px 20px',
+          background: 'linear-gradient(135deg, #D97706, #F59E0B)',
+          color: '#FFFFFF', fontSize: '0.875rem', fontWeight: 600,
+          borderRadius: 12, boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)',
+          border: 'none', cursor: 'pointer', transition: 'all 0.2s ease',
+          fontFamily: 'inherit', flexShrink: 0,
+        }}>
           View Details
+          <i className="fas fa-arrow-right" style={{ fontSize: '0.72rem' }} />
         </span>
       </div>
+
+      <style>{`
+        .saved-card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 16px 48px rgba(251, 191, 36, 0.1), 0 0 0 1px rgba(245,158,11,0.08);
+          border-color: #FDE68A;
+        }
+        .saved-card:hover .card-top-accent { opacity: 1 !important; }
+        .saved-card:hover .card-logo { transform: scale(1.06); }
+        .saved-card:hover .card-view-btn { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(245,158,11,0.4); }
+        .card-save-btn:hover {
+          background: #FEE2E2 !important; color: #DC2626 !important;
+          border-color: #FECACA !important; transform: scale(1.08);
+        }
+      `}</style>
     </article>
   );
 }
 
-type ViewMode = 'all' | 'recommended' | 'saved';
-
 export default function JobsPage() {
   const navigate = useNavigate();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalJobs, setTotalJobs] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
+  const [draftFilters, setDraftFilters] = useState<JobFilter>({ page: 1, size: 12 });
   const [filters, setFilters] = useState<JobFilter>({ page: 1, size: 12 });
   const [viewMode, setViewMode] = useState<ViewMode>('all');
   const [savedJobs, setSavedJobs] = useState<SavedJobDto[]>([]);
@@ -165,7 +243,6 @@ export default function JobsPage() {
       .finally(() => setRecommendLoading(false));
   };
 
-  // Load resumes + auto-select primary when switching to Recommended tab
   useEffect(() => {
     if (viewMode === 'recommended') {
       resumeService.listResumes()
@@ -178,7 +255,6 @@ export default function JobsPage() {
     }
   }, [viewMode]);
 
-  // Auto-fetch recommendations when resume is selected (covers tab switch and resume change)
   useEffect(() => {
     if (viewMode === 'recommended' && selectedResumeId) {
       fetchRecommendations(selectedResumeId);
@@ -193,13 +269,16 @@ export default function JobsPage() {
 
   const handleToggleSave = async (jobId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: '/jobs' } });
+      return;
+    }
     if (savePendingId === jobId) return;
     setSavePendingId(jobId);
 
     const job = jobs.find(j => j.id === jobId);
     const wasSaved = job?.isSaved ?? false;
 
-    // Optimistic update in the jobs list
     setJobs(prev => prev.map(j => j.id === jobId ? { ...j, isSaved: !wasSaved } : j));
 
     try {
@@ -213,381 +292,348 @@ export default function JobsPage() {
         jobService.logInteraction(jobId, 'save');
       }
     } catch {
-      // Revert on failure
       setJobs(prev => prev.map(j => j.id === jobId ? { ...j, isSaved: wasSaved } : j));
     } finally {
       setSavePendingId(null);
     }
   };
 
+  const handleUnsaveSavedJob = async (jobId: string) => {
+    if (savePendingId === jobId) return;
+    setSavePendingId(jobId);
+    try {
+      await jobService.unsaveJob(jobId);
+      setSavedJobs(prev => prev.filter(s => s.jobId !== jobId));
+      setSavedTotal(t => Math.max(0, t - 1));
+    } finally {
+      setSavePendingId(null);
+    }
+  };
+
+  const handleApplyFilters = () => {
+    setFilters({ ...draftFilters, page: 1, size: filters.size ?? 12 });
+  };
+
+  const handleResetFilters = () => {
+    setDraftFilters({ page: 1, size: 12 });
+    setFilters({ page: 1, size: 12 });
+  };
+
+  const gridStyle: React.CSSProperties = {
+    display: 'grid',
+    gap: 20,
+    gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
+  };
+
   return (
-    <div className="space-y-5">
-      {/* Page Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4 mb-2">
-        <div>
-          <h2 className="text-[1.55rem] font-bold tracking-tight text-[#1a1d26]">Find Jobs</h2>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 28, paddingBottom: 40 }}>
+      {/* Hero Header */}
+      <BrowseJobsHeader totalJobs={totalJobs} />
 
-        </div>
+      {/* Tab switcher */}
+      <JobTabs
+        activeTab={viewMode}
+        onTabChange={setViewMode}
+        savedCount={savedTotal}
+        isAuthenticated={isAuthenticated}
+        jobsCount={jobs.length}
+        totalJobs={totalJobs}
+      />
 
-        {/* View Toggle */}
-        <div className="flex gap-1 bg-[#f4f6fa] p-1 rounded-md">
-          <button
-            onClick={() => setViewMode('all')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-[0.85rem] font-medium transition-all ${
-              viewMode === 'all'
-                ? 'bg-white text-[#2b6de0] font-semibold shadow-sm'
-                : 'text-[#8b92a8] hover:text-[#1a1d26]'
-            }`}
-          >
-            <i className="fas fa-th-large" /> All Jobs
-          </button>
-          <button
-            onClick={() => setViewMode('recommended')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-[0.85rem] font-medium transition-all ${
-              viewMode === 'recommended'
-                ? 'bg-white text-[#2b6de0] font-semibold shadow-sm'
-                : 'text-[#8b92a8] hover:text-[#1a1d26]'
-            }`}
-          >
-            <i className="fas fa-wand-magic-sparkles" /> Recommended
-          </button>
-          <button
-            onClick={() => setViewMode('saved')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-md text-[0.85rem] font-medium transition-all ${
-              viewMode === 'saved'
-                ? 'bg-white text-[#2b6de0] font-semibold shadow-sm'
-                : 'text-[#8b92a8] hover:text-[#1a1d26]'
-            }`}
-          >
-            <i className="fas fa-bookmark" /> Saved
-            {savedTotal > 0 && (
-              <span className="ml-1 px-1.5 py-0.5 rounded-full text-[0.72rem] font-bold bg-amber-100 text-amber-700">
-                {savedTotal}
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
+      {/* Filter panel — shown only on All Jobs tab */}
+      {viewMode === 'all' && (
+        <JobFilterPanel
+          draftFilters={draftFilters}
+          onDraftChange={setDraftFilters}
+          onApply={handleApplyFilters}
+        />
+      )}
 
-      {/* Filter Card */}
-      <div
-        className="bg-white border border-[#eef0f4] rounded-[14px] px-6 py-5"
-        style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
-      >
-        {/* Main Filters Row */}
-        <div className="flex flex-wrap gap-3 mb-0">
-          {/* Search */}
-          <div className="flex-1 min-w-[200px] relative">
-            <i className="fas fa-search absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8b92a8] text-sm" />
-            <input
-              type="text"
-              placeholder="Search by title, skill, or company..."
-              className="w-full pl-10 pr-4 py-[9px] border border-[#e2e6ed] rounded-md text-sm text-[#1a1d26] outline-none focus:border-primary bg-white transition-colors placeholder:text-[#8b92a8]"
-              style={{ fontFamily: 'inherit' }}
-              value={filters.keyword ?? ''}
-              onChange={(e) => setFilters(f => ({ ...f, keyword: e.target.value || undefined, page: 1 }))}
-            />
-          </div>
+      {/* ─── All Jobs ─── */}
+      {viewMode === 'all' && (
+        loading
+          ? <JobsGridSkeleton count={6} />
+          : jobs.length === 0
+            ? <JobsEmptyState
+                icon="fa-briefcase"
+                title="No jobs found"
+                description="Try adjusting your filters or search keyword."
+                action={{ label: 'Reset filters', onClick: handleResetFilters }}
+              />
+            : <>
+                <div style={gridStyle}>
+                  {jobs.map((job) => (
+                    <JobCard
+                      key={job.id}
+                      job={job}
+                      onClick={() => navigate(`/jobs/${job.id}`)}
+                      onToggleSave={handleToggleSave}
+                      savePendingId={savePendingId}
+                    />
+                  ))}
+                </div>
 
-          {/* Job Type */}
-          <select
-            className="px-3 py-[9px] border border-[#e2e6ed] rounded-md text-sm text-[#1a1d26] outline-none focus:border-primary bg-white cursor-pointer"
-            style={{ fontFamily: 'inherit', appearance: 'none', paddingRight: '34px',
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%235f6780' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E")`,
-              backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
-            value={filters.jobType ?? ''}
-            onChange={(e) => setFilters(f => ({ ...f, jobType: e.target.value || undefined, page: 1 }))}
-          >
-            <option value="">All Types</option>
-            {JOB_TYPES.map(t => (
-              <option key={t} value={t}>{t.replace('FULLTIME','Full-time').replace('PARTTIME','Part-time').replace('REMOTE','Remote').replace('HYBRID','Hybrid')}</option>
-            ))}
-          </select>
+                {totalPages > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8 }}>
+                    {Array.from({ length: totalPages }, (_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setFilters(f => ({ ...f, page: i + 1 }))}
+                        className="page-btn"
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 12,
+                          fontSize: '0.95rem',
+                          fontWeight: 600,
+                          border: filters.page === i + 1 ? 'none' : '2px solid #E2E7F0',
+                          background: filters.page === i + 1
+                            ? 'linear-gradient(135deg, #1E40AF, #2563EB)'
+                            : '#FFFFFF',
+                          color: filters.page === i + 1 ? '#FFFFFF' : '#64748B',
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                          transition: 'all 0.2s ease',
+                          boxShadow: filters.page === i + 1
+                            ? '0 4px 12px rgba(37,99,235,0.3)'
+                            : '0 1px 3px rgba(0,0,0,0.04)',
+                        }}
+                        onMouseEnter={e => {
+                          if (filters.page !== i + 1) {
+                            (e.currentTarget as HTMLElement).style.borderColor = '#2563EB';
+                            (e.currentTarget as HTMLElement).style.color = '#2563EB';
+                            (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (filters.page !== i + 1) {
+                            (e.currentTarget as HTMLElement).style.borderColor = '#E2E7F0';
+                            (e.currentTarget as HTMLElement).style.color = '#64748B';
+                            (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                          }
+                        }}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+      )}
 
-          {/* Experience Level */}
-          <select
-            className="px-3 py-[9px] border border-[#e2e6ed] rounded-md text-sm text-[#1a1d26] outline-none focus:border-primary bg-white cursor-pointer"
-            style={{ fontFamily: 'inherit', appearance: 'none', paddingRight: '34px',
-              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%235f6780' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E")`,
-              backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
-            value={filters.experienceLevels?.[0] ?? ''}
-            onChange={(e) => setFilters(f => ({ ...f, experienceLevels: e.target.value ? [e.target.value] : undefined, page: 1 }))}
-          >
-            <option value="">All Levels</option>
-            {EXP_LEVELS.map(l => <option key={l} value={l}>{l.charAt(0) + l.slice(1).toLowerCase()}</option>)}
-          </select>
-
-          {/* Location */}
-          <input
-            type="text"
-            placeholder="Location..."
-            className="px-3 py-[9px] border border-[#e2e6ed] rounded-md text-sm text-[#1a1d26] outline-none focus:border-primary bg-white w-44 placeholder:text-[#8b92a8]"
-            style={{ fontFamily: 'inherit' }}
-            value={filters.location ?? ''}
-            onChange={(e) => setFilters(f => ({ ...f, location: e.target.value || undefined, page: 1 }))}
-          />
-        </div>
-      </div>
-
-      {/* Recommended Section */}
+      {/* ─── Recommended ─── */}
       {viewMode === 'recommended' && (
-        <div
-          className="rounded-[14px] p-6 border"
-          style={{
-            background: 'linear-gradient(135deg,rgba(139,92,246,0.03),rgba(66,135,245,0.03))',
-            borderColor: 'rgba(139,92,246,0.18)',
-          }}
-        >
-          <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-            <div className="flex items-center gap-3.5">
-              <div
-                className="w-11 h-11 rounded-[10px] flex items-center justify-center text-white text-lg"
-                style={{
-                  background: 'linear-gradient(135deg,#8b5cf6,#4287f5)',
-                  boxShadow: '0 4px 14px rgba(139,92,246,0.25)',
-                }}
-              >
+        <div style={{
+          borderRadius: 24,
+          padding: 32,
+          background: 'linear-gradient(135deg, rgba(99,102,241,0.04), rgba(37,99,235,0.04))',
+          border: '1px solid rgba(99,102,241,0.15)',
+          boxShadow: '0 4px 20px rgba(99,102,241,0.06)',
+        }}>
+          {/* Section header */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginBottom: 28, flexWrap: 'wrap', gap: 16,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+              <div style={{
+                width: 60, height: 60, borderRadius: 18,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'linear-gradient(135deg, #6366F1, #4F46E5)',
+                boxShadow: '0 8px 24px rgba(99, 102, 241, 0.35)',
+                fontSize: '1.5rem', color: '#FFFFFF',
+              }}>
                 <i className="fas fa-wand-magic-sparkles" />
               </div>
               <div>
-                <h3 className="text-[1.15rem] font-bold text-[#1a1d26]">Recommended For You</h3>
-                <p className="text-sm text-[#8b92a8] mt-0.5">AI-matched jobs based on your resume and profile</p>
+                <h3 style={{
+                  fontSize: '1.3rem', fontWeight: 700, color: '#0F172A',
+                  margin: 0, letterSpacing: '-0.02em',
+                }}>
+                  Recommended For You
+                </h3>
+                <p style={{
+                  fontSize: '0.9rem', color: '#64748B', margin: '4px 0 0',
+                }}>
+                  AI-matched jobs based on your selected resume and profile.
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 flex-wrap">
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               {resumes.length > 0 ? (
-                <select
-                  className="px-3 py-[9px] border border-[#e2e6ed] rounded-md text-sm text-[#1a1d26] outline-none focus:border-primary bg-white cursor-pointer"
-                  style={{ fontFamily: 'inherit', appearance: 'none', paddingRight: '34px',
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%235f6780' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E")`,
-                    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
-                  value={selectedResumeId ?? ''}
-                  onChange={(e) => setSelectedResumeId(e.target.value || null)}
-                >
-                  {resumes.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.label ?? 'Resume'} {r.isPrimary ? '(Primary)' : ''}
-                    </option>
-                  ))}
-                </select>
+                <div style={{ position: 'relative' }}>
+                  <select
+                    style={{
+                      padding: '12px 44px 12px 18px',
+                      border: '2px solid #E2E7F0',
+                      borderRadius: 14,
+                      fontSize: '0.9rem',
+                      color: '#0F172A',
+                      outline: 'none',
+                      background: '#FFFFFF',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2364748B' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 14px center',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onFocus={e => {
+                      (e.target as HTMLElement).style.borderColor = '#6366F1';
+                      (e.target as HTMLElement).style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)';
+                    }}
+                    onBlur={e => {
+                      (e.target as HTMLElement).style.borderColor = '#E2E7F0';
+                      (e.target as HTMLElement).style.boxShadow = 'none';
+                    }}
+                    value={selectedResumeId ?? ''}
+                    onChange={e => setSelectedResumeId(e.target.value || null)}
+                  >
+                    {resumes.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.label ?? 'Resume'} {r.isPrimary ? '(Primary)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               ) : (
                 <button
                   onClick={() => navigate('/resumes')}
-                  className="flex items-center gap-1.5 px-3 py-[9px] text-sm text-[#5f6780] hover:bg-[#f4f6fa] hover:text-[#1a1d26] rounded-md transition-colors whitespace-nowrap border border-[#e2e6ed]"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '12px 22px', fontSize: '0.9rem',
+                    color: '#64748B', background: '#FFFFFF',
+                    border: '2px solid #E2E7F0', borderRadius: 14,
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.borderColor = '#6366F1';
+                    (e.currentTarget as HTMLElement).style.color = '#6366F1';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.borderColor = '#E2E7F0';
+                    (e.currentTarget as HTMLElement).style.color = '#64748B';
+                  }}
                 >
-                  <i className="fas fa-plus text-xs" /> Add Resume
+                  <i className="fas fa-plus" /> Add Resume
                 </button>
               )}
-              <span
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold"
-                style={{ background: 'rgba(139,92,246,0.08)', color: '#6d28d9' }}
-              >
+
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', gap: 8,
+                padding: '10px 18px', borderRadius: 50,
+                fontSize: '0.8rem', fontWeight: 600,
+                background: 'rgba(99,102,241,0.08)',
+                color: '#6D28D9',
+                border: '1px solid rgba(99,102,241,0.2)',
+                letterSpacing: '0.03em',
+              }}>
                 <i className="fas fa-robot" /> AI Powered
               </span>
             </div>
           </div>
 
           {recommendLoading ? (
-            <LoadingSpinner />
+            <RecommendedGridSkeleton count={4} />
           ) : recommendError ? (
-            <div className="text-center py-10 text-red-500">
-              <i className="fas fa-circle-exclamation text-3xl mb-3 block" />
-              <p className="text-sm">{recommendError}</p>
+            <div style={{
+              textAlign: 'center', padding: 48,
+              color: '#EF4444', background: '#FEF2F2',
+              borderRadius: 16, border: '1px solid #FECACA',
+            }}>
+              <i className="fas fa-circle-exclamation" style={{ fontSize: '2.5rem', marginBottom: 16, display: 'block' }} />
+              <p style={{ fontSize: '1rem', margin: 0 }}>{recommendError}</p>
             </div>
           ) : resumes.length === 0 ? (
-            <div className="text-center py-10 text-[#8b92a8]">
-              <i className="fas fa-file-pdf text-5xl mb-4 block opacity-20" />
-              <p className="text-sm">Upload a resume to get AI-powered job recommendations</p>
+            <div style={{
+              textAlign: 'center', padding: '48px 24px',
+            }}>
+              <div style={{
+                width: 100, height: 100, borderRadius: 28,
+                background: 'linear-gradient(135deg, #DBEAFE, #E0E7FF)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 20px',
+                boxShadow: '0 8px 24px rgba(37,99,235,0.12)',
+              }}>
+                <i className="fas fa-file-pdf" style={{ fontSize: '2.2rem', color: '#2563EB' }} />
+              </div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A', margin: '0 0 10px' }}>
+                No resume yet
+              </h3>
+              <p style={{ fontSize: '0.9rem', color: '#64748B', margin: '0 0 24px', maxWidth: 380, marginLeft: 'auto', marginRight: 'auto' }}>
+                Upload a resume to get AI-powered job recommendations tailored to your skills and experience.
+              </p>
               <button
                 onClick={() => navigate('/resumes')}
-                className="mt-4 px-5 py-2.5 bg-primary text-white text-sm font-semibold rounded-md hover:bg-[#2b6de0] transition-colors"
+                style={{
+                  padding: '14px 28px',
+                  background: 'linear-gradient(135deg, #4F46E5, #6366F1)',
+                  color: '#FFFFFF', fontSize: '0.95rem', fontWeight: 600,
+                  border: 'none', borderRadius: 14,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  boxShadow: '0 4px 14px rgba(99,102,241,0.35)',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
+                  (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 20px rgba(99,102,241,0.4)';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                  (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 14px rgba(99,102,241,0.35)';
+                }}
               >
+                <i className="fas fa-upload" style={{ marginRight: 8 }} />
                 Upload Resume
               </button>
             </div>
           ) : recommendedJobs.length === 0 ? (
-            <EmptyState
-              icon="fa-wand-magic-sparkles"
-              title="No recommendations yet"
-              description="Try selecting a different resume or check back when more jobs are available."
-            />
+            <RecommendedEmptyState description="Try selecting a different resume or check back when more jobs are available." />
           ) : (
-            <>
-              {/* <div className="flex items-center gap-2 mb-4 text-sm text-[#8b92a8]">
-                <i className="fas fa-check-circle text-emerald-500" />
-                Showing {recommendedJobs.length} personalized recommendations
-              </div> */}
-              <div
-                className="grid gap-5"
-                style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}
-              >
-                {recommendedJobs.map(({ job, score }) => (
-                  <div key={job.id} className="relative">
-                    <JobCard
-                      job={job}
-                      onClick={() => navigate(`/jobs/${job.id}`)}
-                      onToggleSave={handleToggleSave}
-                      savePendingId={savePendingId}
-                    />
-                    <div
-                      className="absolute top-3 right-3 px-2 py-1 rounded-md text-[0.7rem] font-semibold"
-                      style={{ background: 'rgba(139,92,246,0.1)', color: '#6d28d9' }}
-                    >
-                      {(score * 100).toFixed(0)}% match
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
+            <div style={gridStyle}>
+              {recommendedJobs.map(({ job, score }) => (
+                <RecommendedJobCard
+                  key={job.id}
+                  job={job}
+                  score={score}
+                  onClick={() => navigate(`/jobs/${job.id}`)}
+                  onToggleSave={handleToggleSave}
+                  savePendingId={savePendingId}
+                />
+              ))}
+            </div>
           )}
         </div>
       )}
 
-      {/* All Jobs Section */}
-      {(viewMode === 'all') && (
-        <>
-          {/* Section divider */}
-          <div
-            className="flex items-center justify-between pb-3.5"
-            style={{ borderBottom: '2px solid #eef0f4' }}
-          >
-            <h3 className="text-[1.05rem] font-semibold text-[#1a1d26] flex items-center gap-2.5">
-              <i className="fas fa-briefcase text-primary" />
-              All Job Listings
-            </h3>
-            {totalJobs > 0 && (
-              <span
-                className="px-3 py-1 rounded-full text-xs font-semibold"
-                style={{ background: '#f1f3f7', color: '#5f6780' }}
-              >
-                {totalJobs} jobs
-              </span>
-            )}
-          </div>
-
-          {/* Grid */}
-          {loading ? (
-            <LoadingSpinner />
-          ) : jobs.length === 0 ? (
-            <EmptyState icon="fa-briefcase" title="No jobs found" description="Try adjusting your filters or search terms." />
-          ) : (
-            <>
-              <div
-                className="grid gap-5"
-                style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}
-              >
-                {jobs.map((job) => (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    onClick={() => navigate(`/jobs/${job.id}`)}
-                    onToggleSave={handleToggleSave}
-                    savePendingId={savePendingId}
-                  />
-                ))}
-              </div>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <div className="flex justify-center gap-2 mt-2">
-                  {Array.from({ length: totalPages }, (_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setFilters(f => ({ ...f, page: i + 1 }))}
-                      className={`w-9 h-9 rounded-md text-sm font-semibold transition-colors ${
-                        filters.page === i + 1
-                          ? 'bg-primary text-white'
-                          : 'bg-white border border-[#e2e6ed] text-[#8b92a8] hover:bg-[#f4f6fa]'
-                      }`}
-                    >
-                      {i + 1}
-                    </button>
+      {/* ─── Saved Jobs ─── */}
+      {viewMode === 'saved' && (
+        savedLoading
+          ? <JobsGridSkeleton count={3} />
+          : savedJobs.length === 0
+            ? <JobsEmptyState
+                icon="fa-bookmark"
+                title="No saved jobs"
+                description="Save jobs you're interested in to review them later."
+                action={{ label: 'Browse jobs', onClick: () => setViewMode('all') }}
+              />
+            : <>
+                <div style={gridStyle}>
+                  {savedJobs.map((saved) => (
+                    <JobGridItem
+                      key={saved.savedJobId}
+                      saved={saved}
+                      onNavigate={id => navigate(`/jobs/${id}`)}
+                      onUnsave={handleUnsaveSavedJob}
+                      savePendingId={savePendingId}
+                    />
                   ))}
                 </div>
-              )}
-            </>
-          )}
-        </>
-      )}
-      {/* Saved Jobs Section */}
-      {viewMode === 'saved' && (
-        <>
-          <div
-            className="flex items-center justify-between pb-3.5"
-            style={{ borderBottom: '2px solid #eef0f4' }}
-          >
-            <h3 className="text-[1.05rem] font-semibold text-[#1a1d26] flex items-center gap-2.5">
-              <i className="fas fa-bookmark text-amber-500" />
-              Saved Jobs
-            </h3>
-            {savedTotal > 0 && (
-              <span className="px-3 py-1 rounded-full text-xs font-semibold" style={{ background: '#f1f3f7', color: '#5f6780' }}>
-                {savedTotal} saved
-              </span>
-            )}
-          </div>
-
-          {savedLoading ? (
-            <LoadingSpinner />
-          ) : savedJobs.length === 0 ? (
-            <EmptyState icon="fa-bookmark" title="No saved jobs" description="Save jobs you're interested in to review them later." />
-          ) : (
-            <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
-              {savedJobs.map((saved) => (
-                <article
-                  key={saved.savedJobId}
-                  onClick={() => navigate(`/jobs/${saved.jobId}`)}
-                  className="bg-white border border-[#eef0f4] rounded-[14px] p-6 flex flex-col cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:border-[#6ea3f7] group"
-                  style={{ boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
-                  onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)')}
-                  onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)')}
-                >
-                  <div className="flex items-start gap-3.5 mb-4">
-                    <div className="w-12 h-12 rounded-[10px] flex items-center justify-center font-bold text-lg shrink-0" style={{ background: 'rgba(66,135,245,0.08)', color: '#2b6de0' }}>
-                      {saved.companyName?.charAt(0).toUpperCase() || saved.jobTitle.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-[1.02rem] font-semibold text-[#1a1d26] leading-snug group-hover:text-primary transition-colors">{saved.jobTitle}</h3>
-                      <div className="text-sm text-[#5f6780] mt-0.5">{saved.companyName}</div>
-                    </div>
-                    <button
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        setSavePendingId(saved.jobId);
-                        try {
-                          await jobService.unsaveJob(saved.jobId);
-                          setSavedJobs(prev => prev.filter(s => s.jobId !== saved.jobId));
-                          setSavedTotal(t => Math.max(0, t - 1));
-                        } finally {
-                          setSavePendingId(null);
-                        }
-                      }}
-                      disabled={savePendingId === saved.jobId}
-                      title="Unsave"
-                      className="p-1.5 rounded-md text-amber-500 hover:text-amber-600 transition-colors disabled:opacity-40"
-                    >
-                      <i className="fas fa-bookmark text-base" />
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-3 text-[0.82rem] text-[#8b92a8] mb-3.5">
-                    {saved.location && <span className="flex items-center gap-1.5"><i className="fas fa-map-marker-alt" /> {saved.location}</span>}
-                    {saved.jobType && <span className="flex items-center gap-1.5"><i className="fas fa-clock" /> {saved.jobType.replace('FULLTIME', 'Full-time').replace('PARTTIME', 'Part-time')}</span>}
-                  </div>
-                  <div className="flex items-center justify-between mt-auto pt-4" style={{ borderTop: '1px solid #eef0f4' }}>
-                    <span className="text-[0.95rem] font-semibold text-[#2b6de0]">
-                      {saved.salaryMin && saved.salaryMax
-                        ? `$${saved.salaryMin.toLocaleString()} – $${saved.salaryMax.toLocaleString()}`
-                        : 'Negotiable'}
-                    </span>
-                    <span className="text-[0.75rem] text-[#8b92a8]">
-                      Saved {new Date(saved.savedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </span>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-        </>
+              </>
       )}
     </div>
   );

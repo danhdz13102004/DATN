@@ -3,17 +3,6 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { ROUTES } from '../../constants';
 import { useAuthStore } from '../../store/authStore';
 
-// Match design CSS exactly
-const S = {
-  sidebarBg: '#0f1117',
-  sidebarHover: '#1a1d27',
-  sidebarActive: '#232735',
-  sidebarText: '#9ca3b0',
-  sidebarTextActive: '#ffffff',
-  primary: '#4287f5',
-  borderAlpha: 'rgba(255,255,255,0.06)',
-};
-
 const MAIN_ITEMS = [
   { label: 'Dashboard',       icon: 'fa-th-large',       path: ROUTES.DASHBOARD },
   { label: 'Browse Jobs',     icon: 'fa-briefcase',      path: ROUTES.JOBS },
@@ -39,12 +28,10 @@ interface SidebarProps {
 
 function NavLabel({ text }: { text: string }) {
   return (
-    <div style={{
-      fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase',
-      letterSpacing: '0.08em', color: S.sidebarText, opacity: 0.5,
-      padding: '18px 12px 8px',
-    }}>
-      {text}
+    <div className="px-3 pt-5 pb-2">
+      <span className="text-[0.68rem] font-bold uppercase tracking-widest text-gray-400">
+        {text}
+      </span>
     </div>
   );
 }
@@ -54,36 +41,15 @@ function NavItem({ item, active, onClose }: { item: NavItem; active: boolean; on
     <NavLink
       to={item.path}
       onClick={onClose}
-      style={({ isActive: _ }) => ({
-        display: 'flex', alignItems: 'center', gap: '12px',
-        padding: '10px 14px', borderRadius: '6px',
-        color: active ? S.primary : S.sidebarText,
-        background: active ? S.sidebarActive : 'transparent',
-        fontSize: '0.92rem', fontWeight: active ? 500 : 400,
-        textDecoration: 'none', marginBottom: '2px',
-        transition: 'all 0.2s ease',
-      })}
-      onMouseEnter={e => {
-        if (!active) {
-          (e.currentTarget as HTMLElement).style.background = S.sidebarHover;
-          (e.currentTarget as HTMLElement).style.color = S.sidebarTextActive;
-        }
-      }}
-      onMouseLeave={e => {
-        if (!active) {
-          (e.currentTarget as HTMLElement).style.background = 'transparent';
-          (e.currentTarget as HTMLElement).style.color = S.sidebarText;
-        }
-      }}
+      className={`sidebar-nav-item mx-2 mb-0.5 flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 group ${active ? 'active' : ''}`}
     >
-      <i
-        className={`fas ${item.icon}`}
-        style={{
-          width: '20px', textAlign: 'center', fontSize: '1rem',
-          opacity: active ? 1 : 0.7, color: active ? S.primary : 'inherit',
-        }}
-      />
-      {item.label}
+      <span className="nav-icon-wrap">
+        <i className={`fas ${item.icon}`} />
+      </span>
+      <span className="font-medium text-sm flex-1">{item.label}</span>
+      {active && (
+        <span className="nav-active-dot w-1.5 h-1.5 rounded-full flex-shrink-0" />
+      )}
     </NavLink>
   );
 }
@@ -94,7 +60,6 @@ export default function Sidebar({ isOpen, onClose, onChangePassword, onLogout }:
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Close user menu on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -125,41 +90,30 @@ export default function Sidebar({ isOpen, onClose, onChangePassword, onLogout }:
       {/* Mobile overlay */}
       {isOpen && (
         <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 40 }}
-          className="lg:hidden"
+          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40 lg:hidden transition-opacity duration-300"
           onClick={onClose}
         />
       )}
 
       <aside
-        style={{
-          position: 'fixed', top: 0, left: 0, bottom: 0,
-          width: '260px', background: S.sidebarBg,
-          display: 'flex', flexDirection: 'column',
-          zIndex: 100,
-          transform: isOpen ? 'translateX(0)' : undefined,
-          transition: 'transform 0.3s ease',
-        }}
-        className={`${isOpen ? '' : '-translate-x-full'} lg:translate-x-0`}
+        className={`fixed top-0 left-0 bottom-0 w-[272px] bg-white flex flex-col z-50 transition-transform duration-300 ease-out shadow-xl lg:shadow-none ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+        style={{ borderRight: '1px solid #E8EDF5' }}
       >
-        {/* Brand */}
-        <div style={{
-          height: '64px', display: 'flex', alignItems: 'center', gap: '12px',
-          padding: '0 24px', borderBottom: `1px solid ${S.borderAlpha}`,
-        }}>
-          <div style={{
-            width: '36px', height: '36px', background: S.primary,
-            borderRadius: '6px', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: '1.1rem',
-            flexShrink: 0,
-          }}>J</div>
-          <span style={{ color: '#fff', fontWeight: 600, fontSize: '1.15rem', letterSpacing: '-0.02em' }}>
-            JobSeeker
+        {/* Brand Header */}
+        <div className="h-[68px] flex items-center gap-3 px-5 border-b border-gray-100/80 flex-shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-blue-500 flex items-center justify-center flex-shrink-0 shadow-md"
+            style={{ boxShadow: '0 4px 12px rgba(37,99,235,0.35)' }}>
+            <svg width="18" height="18" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" fill="none">
+              <path d="M39.6 18.2c1.1.5 2 1.1 2.7 2c.6.7 1.1 1.5 1.5 2.4c.4.9.5 1.9.5 3.1c0 1.4-.3 2.7-1 4.1s-1.8 2.3-3.4 2.8c1.3.5 2.3 1.3 2.8 2.3c.6 1 .8 2.5.8 4.5v1.9c0 1.3.1 2.2.2 2.7c.2.7.5 1.3 1.1 1.7v.7h-6.7c-.2-.6-.3-1.2-.4-1.6c-.2-.8-.2-1.6-.3-2.5v-2.7c0-1.8-.3-3.1-1-3.7c-.6-.6-1.8-.9-3.5-.9H27v11.4h-5.9v-29H35c2 .1 3.6.4 4.6.8m-12.5 4.3v7.8h6.5c1.3 0 2.3-.2 2.9-.5c1.1-.6 1.7-1.6 1.7-3.3c0-1.8-.6-2.9-1.7-3.5c-.6-.3-1.6-.5-2.8-.5h-6.6" fill="#ffffff"/>
+            </svg>
+          </div>
+          <span className="text-[1.1rem] font-bold text-gray-900 tracking-tight">
+            RecruitPro
           </span>
         </div>
 
         {/* Navigation */}
-        <nav style={{ flex: 1, padding: '16px 12px', overflowY: 'auto' }}>
+        <nav className="flex-1 overflow-y-auto py-3 px-2 scrollbar-thin">
           {allGroups.map(({ label, items }) => (
             <div key={label}>
               <NavLabel text={label} />
@@ -170,99 +124,104 @@ export default function Sidebar({ isOpen, onClose, onChangePassword, onLogout }:
           ))}
         </nav>
 
-        {/* User profile with popup menu */}
-        <div style={{ padding: '12px', borderTop: `1px solid ${S.borderAlpha}`, position: 'relative' }} ref={menuRef}>
-          {/* Popup menu — appears above the user card */}
+        {/* User Profile Area */}
+        <div className="flex-shrink-0 border-t border-gray-100 p-2 relative" ref={menuRef}>
+          {/* Popup Menu */}
           {showUserMenu && (
-            <div style={{
-              position: 'absolute', bottom: 'calc(100% - 12px)', left: '12px', right: '12px',
-              background: '#2a2e39', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)',
-              boxShadow: '0 -8px 24px rgba(0,0,0,0.4)', overflow: 'hidden', zIndex: 200,
-              animation: 'fadeInUp 0.15s ease',
-            }}>
+            <div
+              className="absolute bottom-full left-2 right-2 mb-1 bg-white rounded-2xl border border-gray-100 shadow-xl overflow-hidden z-50 animate-scaleIn"
+            >
               <button
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '12px 16px', fontSize: '0.875rem', color: '#d1d5db',
-                  background: 'transparent', border: 'none', cursor: 'pointer',
-                  transition: 'background 0.15s, color 0.15s', textAlign: 'left',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)';
-                  (e.currentTarget as HTMLButtonElement).style.color = '#fff';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-                  (e.currentTarget as HTMLButtonElement).style.color = '#d1d5db';
-                }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-primary transition-colors duration-150 text-left"
                 onClick={() => { setShowUserMenu(false); onChangePassword(); }}
               >
-                <i className="fas fa-key" style={{ width: '16px', textAlign: 'center' }} />
-                Change Password
+                <i className="fas fa-key w-4 text-center text-gray-400" />
+                <span className="font-medium">Change Password</span>
               </button>
-              <div style={{ height: '1px', background: 'rgba(255,255,255,0.08)' }} />
+              <div className="h-px bg-gray-100 mx-3" />
               <button
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '12px 16px', fontSize: '0.875rem', color: '#f87171',
-                  background: 'transparent', border: 'none', cursor: 'pointer',
-                  transition: 'background 0.15s, color 0.15s', textAlign: 'left',
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)';
-                  (e.currentTarget as HTMLButtonElement).style.color = '#fca5a5';
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
-                  (e.currentTarget as HTMLButtonElement).style.color = '#f87171';
-                }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-red-500 hover:bg-red-50 transition-colors duration-150 text-left"
                 onClick={() => { setShowUserMenu(false); onLogout(); }}
               >
-                <i className="fas fa-sign-out-alt" style={{ width: '16px', textAlign: 'center' }} />
-                Logout
+                <i className="fas fa-sign-out-alt w-4 text-center" />
+                <span className="font-medium">Sign Out</span>
               </button>
             </div>
           )}
 
-          {/* User card trigger */}
-          <div
-            style={{
-              padding: '10px 12px', borderRadius: '8px',
-              display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer',
-              background: showUserMenu ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)',
-              transition: 'background 0.2s',
-            }}
+          {/* User Card */}
+          <button
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-150 text-left ${
+              showUserMenu
+                ? 'bg-blue-50 ring-2 ring-primary/20'
+                : 'hover:bg-gray-50'
+            }`}
             onClick={() => setShowUserMenu(!showUserMenu)}
-            onMouseEnter={e => {
-              if (!showUserMenu) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)';
-            }}
-            onMouseLeave={e => {
-              if (!showUserMenu) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)';
-            }}
-            title="User Menu"
           >
-            <div style={{
-              width: '36px', height: '36px', borderRadius: '50%',
-              background: S.primary, display: 'flex', alignItems: 'center',
-              justifyContent: 'center', color: '#fff', fontWeight: 600,
-              fontSize: '0.85rem', flexShrink: 0,
-            }}>
-              {initials || <i className="fas fa-user" style={{ fontSize: '0.85rem' }} />}
+            <div
+              className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-blue-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0 shadow-sm"
+              style={{ boxShadow: '0 3px 8px rgba(37,99,235,0.3)' }}
+            >
+              {initials || <i className="fas fa-user text-sm" />}
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 500, fontSize: '0.9rem', color: '#fff',
-                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-semibold text-gray-900 truncate leading-tight">
                 {namePart || 'User'}
               </div>
-              <div style={{ fontSize: '0.78rem', color: S.sidebarText }}>Job Seeker</div>
+              <div className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                Job Seeker
+              </div>
             </div>
             <i
-              className={`fas fa-chevron-${showUserMenu ? 'down' : 'up'}`}
-              style={{ fontSize: '0.7rem', color: S.sidebarText, transition: 'transform 0.2s' }}
+              className={`fas fa-chevron-up text-[10px] text-gray-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`}
             />
-          </div>
+          </button>
         </div>
       </aside>
+
+      <style>{`
+        .sidebar-nav-item {
+          text-decoration: none;
+          color: #475569;
+        }
+        .sidebar-nav-item:hover:not(.active) {
+          background: #F8FAFC;
+          color: #1E293B;
+        }
+        .sidebar-nav-item.active {
+          background: #EFF6FF;
+          color: #2563EB;
+        }
+        .sidebar-nav-item.active .nav-icon-wrap {
+          color: #2563EB;
+        }
+        .nav-icon-wrap {
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 10px;
+          font-size: 0.95rem;
+          color: #94A3B8;
+          flex-shrink: 0;
+          background: transparent;
+          transition: all 0.15s ease;
+        }
+        .sidebar-nav-item:hover:not(.active) .nav-icon-wrap {
+          background: #EFF6FF;
+          color: #3B82F6;
+        }
+        .sidebar-nav-item.active .nav-icon-wrap {
+          background: rgba(37, 99, 235, 0.1);
+          color: #2563EB;
+        }
+        .nav-active-dot {
+          background: #2563EB;
+          box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+      `}</style>
     </>
   );
 }

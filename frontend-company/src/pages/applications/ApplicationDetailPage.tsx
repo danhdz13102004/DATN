@@ -306,7 +306,22 @@ export default function ApplicationDetailPage() {
                   {app.jsonMatching && <AiMatchingBreakdown matching={app.jsonMatching} />}
                 </>
               ) : (
-                <div className="text-center text-gray-400 text-sm py-2">AI score not yet calculated</div>
+                <div className="text-center py-4 space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto">
+                    <i className="fas fa-lock text-gray-400 text-lg" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-600">AI Match Score Hidden</p>
+                  <p className="text-xs text-gray-400">
+                    Upgrade to a plan with AI matching to unlock candidate compatibility scores.
+                  </p>
+                  <a
+                    href="/subscriptions"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-hover transition-colors"
+                  >
+                    <i className="fas fa-arrow-up text-[10px]" />
+                    Upgrade Plan
+                  </a>
+                </div>
               )}
             </div>
 

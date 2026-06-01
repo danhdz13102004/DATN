@@ -5,6 +5,7 @@ import { notificationService } from '../../services/chatService';
 import { useRecruitProWebSocket } from '../../hooks/useWebSocket';
 import type { NotificationEvent } from '../../types/chat';
 import { useToast } from '../../contexts/ToastContext';
+import { useAuthStore } from '../../store/authStore';
 
 const PAGE_TITLES: Record<string, string> = {
   [ROUTES.DASHBOARD]: 'Dashboard',
@@ -22,25 +23,20 @@ interface TopbarProps {
   onMenuClick: () => void;
 }
 
-const BTN_STYLE: React.CSSProperties = {
-  width: '40px', height: '40px', border: 'none',
-  background: 'transparent', borderRadius: '6px',
-  cursor: 'pointer', color: '#5f6780', fontSize: '1.1rem',
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  transition: 'all 0.2s ease', position: 'relative',
-};
-
 export default function Topbar({ onMenuClick }: TopbarProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [hoveredBtn, setHoveredBtn] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const toast = useToast();
   const latestToastNotifIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    notificationService.unreadCount().then(setUnreadCount).catch(() => {});
-  }, []);
+    if (isAuthenticated) {
+      notificationService.unreadCount().then(setUnreadCount).catch(() => {});
+    }
+  }, [isAuthenticated]);
 
   useRecruitProWebSocket({
     onNotification: (e: NotificationEvent) => {
@@ -65,18 +61,19 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
     return 'Dashboard';
   };
 
-
   const btnStyle = (id: string): React.CSSProperties => ({
-    ...BTN_STYLE,
-    background: hoveredBtn === id ? '#f4f6fa' : 'transparent',
-    color: hoveredBtn === id ? '#1a1d26' : '#5f6780',
+    width: '40px', height: '40px', border: 'none',
+    background: hoveredBtn === id ? '#F3F4F6' : 'transparent', borderRadius: '10px',
+    cursor: 'pointer', color: hoveredBtn === id ? '#111827' : '#6B7280', fontSize: '1rem',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    transition: 'all 0.15s ease',
   });
 
   return (
     <header style={{
-      height: '64px',
-      background: '#ffffff',
-      borderBottom: '1px solid #e2e6ed',
+      height: '72px',
+      background: '#FFFFFF',
+      borderBottom: '1px solid #E5E7EB',
       display: 'flex', alignItems: 'center',
       justifyContent: 'space-between',
       padding: '0 32px',
@@ -86,7 +83,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <button
           onClick={onMenuClick}
-          style={{ ...BTN_STYLE, display: 'flex' }}
+          style={{ ...btnStyle('menu'), display: 'flex' }}
           className="lg:hidden"
           onMouseEnter={() => setHoveredBtn('menu')}
           onMouseLeave={() => setHoveredBtn(null)}
@@ -95,23 +92,22 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
         </button>
 
         {isJobDetail ? (
-          /* Breadcrumb for job detail */
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#8b92a8', fontSize: '0.85rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#9CA3AF', fontSize: '0.875rem' }}>
             <button
               onClick={() => navigate('/jobs')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8b92a8', fontSize: '0.85rem', fontFamily: 'inherit', padding: 0 }}
-              onMouseEnter={e => (e.currentTarget.style.color = '#4287f5')}
-              onMouseLeave={e => (e.currentTarget.style.color = '#8b92a8')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280', fontSize: '0.875rem', fontFamily: 'inherit', padding: 0 }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#2563EB')}
+              onMouseLeave={e => (e.currentTarget.style.color = '#6B7280')}
             >
               Browse Jobs
             </button>
-            <i className="fas fa-chevron-right" style={{ fontSize: '0.6rem', opacity: 0.6 }} />
-            <span style={{ color: '#1a1d26', fontWeight: 500 }}>Job Details</span>
+            <i className="fas fa-chevron-right" style={{ fontSize: '0.6rem', opacity: 0.5 }} />
+            <span style={{ color: '#111827', fontWeight: 600 }}>Job Details</span>
           </div>
         ) : (
           <h1 style={{
-            fontSize: '1.25rem', fontWeight: 600,
-            letterSpacing: '-0.02em', color: '#1a1d26',
+            fontSize: '1.35rem', fontWeight: 700,
+            letterSpacing: '-0.02em', color: '#111827',
             margin: 0,
           }}>
             {getTitle()}
@@ -121,8 +117,52 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
 
       {/* Right */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Guest auth buttons on job pages */}
+        {!isAuthenticated && (location.pathname === ROUTES.JOBS || location.pathname.startsWith('/jobs/')) && (
+          <>
+            <button
+              onClick={() => navigate(ROUTES.LOGIN, { state: { from: location.pathname } })}
+              style={{
+                padding: '9px 18px',
+                borderRadius: '10px',
+                border: '1.5px solid #E5E7EB',
+                background: 'white',
+                color: '#374151',
+                fontSize: '0.875rem',
+                fontFamily: 'inherit',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#2563EB'; (e.currentTarget as HTMLButtonElement).style.color = '#2563EB'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#E5E7EB'; (e.currentTarget as HTMLButtonElement).style.color = '#374151'; }}
+            >
+              Login
+            </button>
+            <button
+              onClick={() => navigate(ROUTES.SIGNUP, { state: { from: location.pathname } })}
+              style={{
+                padding: '9px 18px',
+                borderRadius: '10px',
+                border: 'none',
+                background: '#2563EB',
+                color: 'white',
+                fontSize: '0.875rem',
+                fontFamily: 'inherit',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+              }}
+              onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = '#1D4ED8'}
+              onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = '#2563EB'}
+            >
+              Register
+            </button>
+          </>
+        )}
+
         {isJobDetail ? (
-          /* Job detail: show bookmark + share instead of search */
           <>
             <button
               style={btnStyle('bookmark')}
@@ -130,7 +170,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
               onMouseEnter={() => setHoveredBtn('bookmark')}
               onMouseLeave={() => setHoveredBtn(null)}
             >
-              <i className="fas fa-bookmark" />
+              <i className="far fa-bookmark" />
             </button>
             <button
               style={btnStyle('share')}
@@ -160,16 +200,16 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
                 position: 'absolute',
                 top: '6px',
                 right: '4px',
-                minWidth: '16px',
-                height: '16px',
+                minWidth: '18px',
+                height: '18px',
                 borderRadius: '999px',
-                background: '#ef4444',
+                background: '#EF4444',
                 border: '2px solid #fff',
                 color: '#fff',
-                fontSize: '9px',
+                fontSize: '10px',
                 fontWeight: 700,
                 lineHeight: '1',
-                padding: '0 4px',
+                padding: '0 5px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

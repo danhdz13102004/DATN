@@ -47,6 +47,7 @@ public class AdminSubscriptionService {
                 .jobPostLimit(req.getJobPostLimit())
                 .durationDays(req.getDurationDays())
                 .allowUseAiMatching(req.isAllowUseAiMatching())
+                .autoFillLimit(req.getAutoFillLimit() != null ? req.getAutoFillLimit() : 0)
                 .build();
         return toPlanDto(planRepository.save(plan));
     }
@@ -60,6 +61,9 @@ public class AdminSubscriptionService {
         plan.setJobPostLimit(req.getJobPostLimit());
         plan.setDurationDays(req.getDurationDays());
         plan.setAllowUseAiMatching(req.isAllowUseAiMatching());
+        if (req.getAutoFillLimit() != null) {
+            plan.setAutoFillLimit(req.getAutoFillLimit());
+        }
         return toPlanDto(planRepository.save(plan));
     }
 
@@ -91,6 +95,7 @@ public class AdminSubscriptionService {
                 .jobPostLimit(plan.getJobPostLimit())
                 .durationDays(plan.getDurationDays())
                 .allowUseAiMatching(plan.isAllowUseAiMatching())
+                .autoFillLimit(plan.getAutoFillLimit())
                 .createdAt(plan.getCreatedAt())
                 .activeSubscriptions(activeCount)
                 .build();

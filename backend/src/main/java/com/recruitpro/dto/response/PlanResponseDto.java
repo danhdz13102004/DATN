@@ -16,6 +16,7 @@ public class PlanResponseDto {
     private int jobPostLimit;
     private int durationDays;
     private boolean allowUseAiMatching;
+    private int autoFillLimit;
     private Instant createdAt;
     private long activeSubscriptions;
 }

@@ -6,8 +6,6 @@ import { useRecruitProWebSocket } from '../../hooks/useWebSocket';
 import { useAuthStore } from '../../store/authStore';
 import type { Conversation, Message, ChatEvent, NotificationEvent } from '../../types/chat';
 
-// ── helpers ──────────────────────────────────────────────────────────────────
-
 function getInitials(name?: string) {
   if (!name) return '?';
   return name.split(/[\s@]/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? '').join('');
@@ -23,18 +21,16 @@ function formatTime(iso?: string) {
 }
 
 const COLORS = [
-  'bg-emerald-100 text-emerald-700',
-  'bg-blue-100 text-blue-700',
-  'bg-purple-100 text-purple-700',
-  'bg-amber-100 text-amber-700',
-  'bg-red-100 text-red-600',
+  { bg: 'bg-blue-50', text: 'text-blue-600' },
+  { bg: 'bg-violet-50', text: 'text-violet-600' },
+  { bg: 'bg-emerald-50', text: 'text-emerald-600' },
+  { bg: 'bg-amber-50', text: 'text-amber-600' },
+  { bg: 'bg-rose-50', text: 'text-rose-600' },
 ];
 function avatarColor(id?: string) {
   if (!id) return COLORS[0];
   return COLORS[id.charCodeAt(0) % COLORS.length];
 }
-
-// ── main component ────────────────────────────────────────────────────────────
 
 export default function MessagesPage() {
   const { id: urlConvId } = useParams<{ id?: string }>();
@@ -50,7 +46,6 @@ export default function MessagesPage() {
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // ── Load conversation list ─────────────────────────────────────────────────
   useEffect(() => {
     chatService.listConversations()
       .then((list) => {
@@ -60,7 +55,6 @@ export default function MessagesPage() {
       .finally(() => setLoadingConvs(false));
   }, []);
 
-  // ── Load messages ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!activeId) return;
     setLoadingMsgs(true);
@@ -74,7 +68,6 @@ export default function MessagesPage() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // ── WebSocket ─────────────────────────────────────────────────────────────
   const handleChatEvent = useCallback((event: ChatEvent) => {
     if (event.eventType === 'CHAT_MESSAGE' && event.conversationId === activeId) {
       setMessages((prev) => {
@@ -83,19 +76,11 @@ export default function MessagesPage() {
         const optimisticIndex = prev.findIndex((m) => {
           if (m.id === event.message.id) return true;
           if (incomingIdem && (m.id === incomingIdem || m.idempotencyKey === incomingIdem)) return true;
-
-          // Fallback for servers that do not echo idempotencyKey in websocket payloads.
           if (!incomingIdem && m.idempotencyKey && event.message.senderId === currentUserId) {
             const localTime = new Date(m.createdAt).getTime();
-            const isCloseInTime = Number.isFinite(incomingTime)
-              && Number.isFinite(localTime)
-              && Math.abs(incomingTime - localTime) <= 15000;
-            return isCloseInTime
-              && m.type === event.message.type
-              && (m.content ?? '') === (event.message.content ?? '')
-              && (m.fileName ?? '') === (event.message.fileName ?? '');
+            const isCloseInTime = Number.isFinite(incomingTime) && Number.isFinite(localTime) && Math.abs(incomingTime - localTime) <= 15000;
+            return isCloseInTime && m.type === event.message.type && (m.content ?? '') === (event.message.content ?? '') && (m.fileName ?? '') === (event.message.fileName ?? '');
           }
-
           return false;
         });
 
@@ -105,7 +90,6 @@ export default function MessagesPage() {
 
         return [...prev, event.message];
       });
-      // Mark as read
       sendReadReceipt({ conversationId: activeId!, lastReadMessageId: event.message.id });
     }
     if (event.eventType === 'CHAT_MESSAGE') {
@@ -138,7 +122,6 @@ export default function MessagesPage() {
     onNotification: handleNotification,
   });
 
-  // ── Send message (only if recruiter initiated) ────────────────────────────
   const activeConv = conversations.find((c) => c.id === activeId);
   const canReply = (activeConv?.isInitiated ?? false) || messages.length > 0;
 
@@ -180,129 +163,140 @@ export default function MessagesPage() {
     return (c.staffName ?? '').toLowerCase().includes(q) || (c.lastMessage ?? '').toLowerCase().includes(q);
   });
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="flex h-[calc(100vh-57px)] overflow-hidden">
+    <div className="flex rounded-2xl overflow-hidden bg-white border border-gray-100 shadow-sm" style={{ height: 'calc(100vh - 160px)', minHeight: 500 }}>
+      {/* Conversation Sidebar */}
+      <aside className="w-[300px] flex-shrink-0 border-r border-gray-100 flex flex-col bg-gray-50/40">
+        {/* Sidebar header */}
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="text-base font-bold text-gray-900">Messages</h2>
+          <span className="text-xs text-gray-400">{filtered.length}</span>
+        </div>
 
-      {/* ── Conversation Sidebar ─────────────────────────────────────────── */}
-      <aside className="w-72 flex-shrink-0 border-r border-gray-100 bg-white flex flex-col">
-        <div className="p-4 border-b border-gray-100">
+        {/* Search */}
+        <div className="px-4 py-3 border-b border-gray-100">
           <div className="relative">
-            <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
+            <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs" />
             <input
-              id="chat-search"
               type="text"
               placeholder="Search conversations..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-primary transition-colors"
+              className="w-full pl-8 pr-3 py-2 bg-white border border-gray-100 rounded-xl text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
             />
           </div>
         </div>
 
+        {/* Conversation list */}
         <div className="flex-1 overflow-y-auto">
           {loadingConvs ? (
-            <div className="flex justify-center py-8">
-              <div className="w-6 h-6 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+            <div className="py-12 flex items-center justify-center">
+              <div className="w-7 h-7 border-[2.5px] border-gray-100 border-t-primary rounded-full animate-spin" />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-10 text-gray-400 text-sm px-4">
-              <i className="fas fa-comments text-2xl text-gray-200 mb-2 block" />
-              {search ? 'No results found' : 'No messages yet. A recruiter will reach out here.'}
+            <div className="py-12 px-4 text-center">
+              <i className="fas fa-comments text-3xl text-gray-200 mb-3 block" />
+              <p className="text-sm text-gray-400">
+                {search ? 'No results found' : 'No messages yet.'}
+              </p>
             </div>
           ) : (
-            filtered.map((conv) => (
-              <button
-                key={conv.id}
-                id={`conv-item-${conv.id}`}
-                onClick={() => handleSelectConv(conv.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-gray-50 border-l-2 ${
-                  conv.id === activeId ? 'border-primary bg-primary/5' : 'border-transparent'
-                }`}
-              >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${avatarColor(conv.id)}`}>
-                  {getInitials(conv.staffName)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className={`text-sm truncate ${conv.unreadCount > 0 ? 'font-bold text-gray-900' : 'font-medium text-gray-800'}`}>
-                      {conv.staffName ?? 'Recruiter'}
-                    </span>
-                    <span className="text-[10px] text-gray-400 ml-2 flex-shrink-0">{formatTime(conv.lastMessageAt)}</span>
+            filtered.map((conv) => {
+              const colors = avatarColor(conv.id);
+              const isActive = conv.id === activeId;
+              return (
+                <button
+                  key={conv.id}
+                  onClick={() => handleSelectConv(conv.id)}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all duration-150 border-b border-gray-50/60 ${
+                    isActive
+                      ? 'bg-white border-l-2 border-l-primary'
+                      : 'hover:bg-white border-l-2 border-l-transparent'
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 ${colors.bg} ${colors.text}`}>
+                    {getInitials(conv.staffName)}
                   </div>
-                  <div className="flex items-center justify-between mt-0.5">
-                    {/* <span className={`text-xs truncate ${conv.unreadCount > 0 ? 'text-gray-700' : 'text-gray-400'}`}>
-                      {conv.lastMessage ?? '—'}
-                    </span> */}
-                    {conv.unreadCount > 0 && (
-                      <span className="ml-2 flex-shrink-0 w-5 h-5 bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                        {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`text-sm truncate ${conv.unreadCount > 0 ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
+                        {conv.staffName ?? 'Recruiter'}
                       </span>
-                    )}
+                      <span className="text-[11px] text-gray-400 flex-shrink-0 ml-2">{formatTime(conv.lastMessageAt)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-400 truncate">{conv.lastMessage || 'Start a conversation'}</span>
+                      {conv.unreadCount > 0 && (
+                        <span className="ml-2 flex-shrink-0 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
+                          {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))
+                </button>
+              );
+            })
           )}
         </div>
       </aside>
 
-      {/* ── Chat Main ────────────────────────────────────────────────────── */}
+      {/* Chat Main */}
       {activeConv ? (
         <div className="flex-1 flex flex-col min-w-0 bg-white">
-          {/* Header */}
-          <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 flex-shrink-0">
-            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold ${avatarColor(activeConv.id)}`}>
+          {/* Chat Header */}
+          <div className="px-6 py-4 border-b border-gray-100 flex items-center gap-3 flex-shrink-0">
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 ${avatarColor(activeConv.id).bg} ${avatarColor(activeConv.id).text}`}>
               {getInitials(activeConv.staffName)}
             </div>
             <div>
-              <div className="text-sm font-semibold text-gray-900">
-                {activeConv.staffName ?? 'Recruiter'}
-              </div>
-              <div className="text-xs text-gray-400">
-                {canReply ? 'Active conversation' : 'Waiting for recruiter to start'}
+              <div className="text-sm font-bold text-gray-900">{activeConv.staffName ?? 'Recruiter'}</div>
+              <div className="text-xs text-gray-400 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                {canReply ? 'Active conversation' : 'Waiting for recruiter'}
               </div>
             </div>
           </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 bg-gray-50/40">
+          {/* Messages area */}
+          <div className="flex-1 overflow-y-auto px-6 py-5 bg-gray-50/40">
             {loadingMsgs ? (
-              <div className="flex justify-center py-12">
-                <div className="w-7 h-7 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+              <div className="py-12 flex items-center justify-center">
+                <div className="w-7 h-7 border-[2.5px] border-gray-100 border-t-primary rounded-full animate-spin" />
               </div>
             ) : messages.length === 0 ? (
-              <div className="text-center text-gray-400 text-sm mt-16">
-                <i className="fas fa-lock text-3xl text-gray-200 mb-3 block" />
-                <p>Waiting for the recruiter to send the first message.</p>
-                <p className="text-xs text-gray-300 mt-1">You'll be able to reply once they start the conversation.</p>
+              <div className="py-16 text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <i className="fas fa-comments text-2xl text-gray-300" />
+                </div>
+                <p className="text-sm font-medium text-gray-500 mb-1">No messages yet</p>
+                <p className="text-xs text-gray-400">The recruiter will send a message here to start the conversation.</p>
               </div>
             ) : (
               messages.map((msg) => {
                 const isOwn = msg.senderId === currentUserId;
                 return (
-                  <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                  <div key={msg.id} className={`flex items-end gap-2 mb-3 ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
                     {!isOwn && (
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold mr-2 flex-shrink-0 self-end mb-1 ${avatarColor(activeConv.id)}`}>
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0 mb-1 ${avatarColor(activeConv.id).bg} ${avatarColor(activeConv.id).text}`}>
                         {getInitials(activeConv.staffName)}
                       </div>
                     )}
-                    <div className={`max-w-[68%] px-4 py-2.5 rounded-2xl text-sm shadow-sm ${
+                    <div className={`max-w-[70%] rounded-2xl px-4 py-3 shadow-sm ${
                       isOwn
-                        ? 'bg-emerald-500 text-white rounded-br-sm'
-                        : 'bg-white text-gray-800 rounded-bl-sm border border-gray-100'
+                        ? 'bg-primary text-white rounded-br-md'
+                        : 'bg-white border border-gray-100 text-gray-700 rounded-bl-md'
                     }`}>
                       {msg.type === 'FILE' ? (
                         <a href={msg.fileUrl} target="_blank" rel="noreferrer"
-                          className={`flex items-center gap-2 ${isOwn ? 'text-white/90' : 'text-emerald-600'}`}>
-                          <i className="fas fa-paperclip text-xs" />
-                          <span className="truncate text-xs underline">{msg.fileName ?? 'File'}</span>
+                          className={`flex items-center gap-2 text-sm ${isOwn ? 'text-white/90' : 'text-primary'} no-underline hover:underline`}>
+                          <i className="fas fa-paperclip" />
+                          <span>{msg.fileName ?? 'File'}</span>
                         </a>
                       ) : (
-                        <p className="whitespace-pre-wrap break-words leading-relaxed">{msg.content}</p>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words" style={{ margin: 0 }}>{msg.content}</p>
                       )}
-                      <p className={`text-[10px] mt-1.5 ${isOwn ? 'text-white/60 text-right' : 'text-gray-400'}`}>
-                        {isOwn ? 'You' : activeConv.staffName?.split(' ')[0]} · {formatTime(msg.createdAt)}
+                      <p className={`text-[10px] mt-1.5 opacity-60 ${isOwn ? 'text-right' : ''}`}>
+                        {formatTime(msg.createdAt)}
                       </p>
                     </div>
                   </div>
@@ -312,31 +306,34 @@ export default function MessagesPage() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Input */}
-          <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0 bg-white">
+          {/* Input area */}
+          <div className="px-6 py-4 border-t border-gray-100 flex-shrink-0 bg-white">
             {!canReply ? (
-              <div className="text-center py-2 text-xs text-gray-400">
-                <i className="fas fa-lock mr-1.5" />
+              <div className="flex items-center justify-center gap-2 py-3 text-xs text-gray-400 bg-gray-50 rounded-xl border border-gray-100">
+                <i className="fas fa-lock text-[10px]" />
                 You can reply once the recruiter sends the first message.
               </div>
             ) : (
-              <div className="flex items-end gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 focus-within:border-emerald-500 transition-colors">
+              <div className="flex items-end gap-3 bg-gray-50/80 border border-gray-100 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
                 <textarea
-                  id="chat-input"
                   rows={1}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Type a reply… (Enter to send)"
-                  className="flex-1 bg-transparent text-sm text-gray-800 resize-none outline-none max-h-32 placeholder:text-gray-400 leading-relaxed"
+                  placeholder="Write a reply… (Enter to send)"
+                  className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 resize-none outline-none leading-relaxed max-h-28"
+                  style={{ fontFamily: 'inherit' }}
                 />
                 <button
-                  id="send-btn"
                   onClick={handleSend}
                   disabled={!input.trim()}
-                  className="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-colors disabled:opacity-40 flex-shrink-0 self-end"
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-150 ${
+                    input.trim()
+                      ? 'bg-primary text-white hover:bg-primary-hover shadow-sm cursor-pointer'
+                      : 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                  }`}
                 >
-                  <i className="fas fa-paper-plane text-sm" />
+                  <i className="fas fa-paper-plane text-xs" />
                 </button>
               </div>
             )}
@@ -344,10 +341,12 @@ export default function MessagesPage() {
         </div>
       ) : (
         <div className="flex-1 flex items-center justify-center bg-gray-50/40">
-          <div className="text-center text-gray-400">
-            <i className="fas fa-comments text-5xl text-gray-200 mb-4 block" />
-            <p className="text-sm font-medium">Select a conversation</p>
-            <p className="text-xs text-gray-300 mt-1">Your messages with recruiters will appear here</p>
+          <div className="text-center">
+            <div className="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <i className="fas fa-comments text-3xl text-gray-300" />
+            </div>
+            <p className="text-sm font-semibold text-gray-500">Select a conversation</p>
+            <p className="text-xs text-gray-400 mt-1">Your recruiter messages will appear here</p>
           </div>
         </div>
       )}

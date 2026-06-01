@@ -37,6 +37,20 @@ class InteractionRequest(BaseModel):
             raise ValueError("Must specify either 'resume_id' (for apply) or 'resume_ids' (for click/save).")
 
 
+class BehavioralSignalRequest(BaseModel):
+    """Request schema for user-level behavioral signals (click/save).
+    
+    These events are recorded as user-level signals and do NOT create graph edges.
+    The X-User-ID header must be provided to identify the job seeker.
+    """
+    job_id: str = Field(..., min_length=1, description="Job node ID")
+    action_type: str = Field(
+        ...,
+        pattern="^(click|save)$",
+        description="Interaction type: click or save",
+    )
+
+
 class MultiResumeInteractionRequest(BaseModel):
     """Request schema for click/save events with multiple resumes."""
     resume_ids: List[str] = Field(..., min_length=1, description="List of resume node IDs")

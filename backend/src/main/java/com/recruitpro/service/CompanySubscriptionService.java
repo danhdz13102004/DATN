@@ -64,6 +64,7 @@ public class CompanySubscriptionService {
                         .jobPostLimit(plan.getJobPostLimit())
                         .durationDays(plan.getDurationDays())
                         .allowUseAiMatching(plan.isAllowUseAiMatching())
+                        .autoFillLimit(plan.getAutoFillLimit())
                         .createdAt(plan.getCreatedAt())
                         .activeSubscriptions(0)
                         .build())
@@ -239,6 +240,7 @@ public class CompanySubscriptionService {
                 .status(SubscriptionStatus.ACTIVE)
                 .jobsPostedCount(0)
                 .allowUseAiMatching(plan.isAllowUseAiMatching())
+                .autoFillUsageCount(0)
                 .build();
         subscription = subscriptionRepository.save(subscription);
 
@@ -252,6 +254,47 @@ public class CompanySubscriptionService {
                 subscription.getId(), payment.getCompany().getId(), stripeSessionId);
     }
 
+    // ── Auto-fill usage tracking ────────────────────────────────────────────────
+
+    /**
+     * Checks whether the given company can use AI auto-fill.
+     * Returns true if the plan has auto-fill enabled (autoFillLimit > 0) and
+     * the company has not exceeded the limit. autoFillLimit = 0 means disabled.
+     */
+    public boolean canUseAutoFill(UUID companyId) {
+        return subscriptionRepository
+                .findFirstByCompanyIdAndStatusOrderByCreatedAtDesc(companyId, SubscriptionStatus.ACTIVE)
+                .map(sub -> {
+                    int limit = sub.getPlan().getAutoFillLimit();
+                    if (limit == 0) return false;
+                    return sub.getAutoFillUsageCount() < limit;
+                })
+                .orElse(false);
+    }
+
+    /**
+     * Checks whether the given company can view AI matching scores on applications.
+     */
+    public boolean canUseAiMatching(UUID companyId) {
+        return subscriptionRepository
+                .findFirstByCompanyIdAndStatusOrderByCreatedAtDesc(companyId, SubscriptionStatus.ACTIVE)
+                .map(Subscription::isAllowUseAiMatching)
+                .orElse(false);
+    }
+
+    /**
+     * Increments the auto-fill usage counter for the company's active subscription.
+     */
+    @Transactional
+    public void incrementAutoFillUsage(UUID companyId) {
+        subscriptionRepository
+                .findFirstByCompanyIdAndStatusOrderByCreatedAtDesc(companyId, SubscriptionStatus.ACTIVE)
+                .ifPresent(sub -> {
+                    sub.setAutoFillUsageCount(sub.getAutoFillUsageCount() + 1);
+                    subscriptionRepository.save(sub);
+                });
+    }
+
     // ── Mapping ────────────────────────────────────────────────────────────────
 
     private CompanySubscriptionDto toSubscriptionDto(Subscription sub) {
@@ -263,6 +306,8 @@ public class CompanySubscriptionService {
                 .jobPostLimit(sub.getPlan().getJobPostLimit())
                 .durationDays(sub.getPlan().getDurationDays())
                 .allowUseAiMatching(sub.isAllowUseAiMatching())
+                .autoFillLimit(sub.getPlan().getAutoFillLimit())
+                .autoFillUsageCount(sub.getAutoFillUsageCount())
                 .startDate(sub.getStartDate())
                 .endDate(sub.getEndDate())
                 .status(sub.getStatus().name())

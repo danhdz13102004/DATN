@@ -98,3 +98,9 @@ export function useIndustries() {
     staleTime: 30 * 60 * 1000,
   });
 }
+
+export function useAutoFillJobFromFile() {
+  return useMutation({
+    mutationFn: (file: File) => jobService.autoFillFromFile(file),
+  });
+}

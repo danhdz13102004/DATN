@@ -2,6 +2,7 @@ export interface Resume {
   id: string;
   jobSeekerId: string;
   fileUrl: string;
+  publicUrl: string;
   label: string | null;
   fileSize: number | null;
   isPrimary: boolean;

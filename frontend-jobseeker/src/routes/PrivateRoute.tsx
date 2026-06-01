@@ -10,7 +10,7 @@ export default function PrivateRoute({ children }: PrivateRouteProps) {
   const location = useLocation();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/jobs" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;

@@ -3,12 +3,21 @@ export interface Skill {
   name: string;
 }
 
+export interface Industry {
+  id: string;
+  name: string;
+}
+
 export interface Job {
   id: string;
   companyId: string;
-  companyName?: string;
+  companyAddressId: string;
   title: string;
   description: string;
+  industry: Industry | null;
+  responsibilities: string[] | null;
+  requirements: string[] | null;
+  niceToHaveSkills: string[] | null;
   experienceLevels: string[];
   location: string;
   salaryMin: number | null;
@@ -19,6 +28,25 @@ export interface Job {
   createdAt: string;
   updatedAt: string;
   isSaved?: boolean;
+  // For list endpoint: company name from job listing (if available)
+  companyName?: string;
+  // For detail endpoint: full company details
+  company?: CompanyDetail;
+}
+
+export interface CompanyDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  website: string | null;
+  logoUrl: string | null;
+  verified: boolean;
+  location: string | null;
+  industry: string | null;
+  staffCount: number;
+  foundedAt: string | null;
+  benefits: string | null;
+  activeJobsCount: number;
 }
 
 export interface SavedJobDto {
@@ -41,6 +69,8 @@ export interface JobFilter {
   jobType?: string;
   experienceLevels?: string[];
   location?: string;
+  salaryMin?: number;
+  salaryMax?: number;
   page?: number;
   size?: number;
 }

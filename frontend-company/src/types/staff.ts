@@ -10,8 +10,8 @@ export interface StaffMember {
 export interface CreateStaffRequest {
   email: string;
   fullName: string;
-  role: 'HR' | 'RECRUITER';
-  password?: string; // used on creation
+  role?: 'HR' | 'RECRUITER'; // defaults to HR
+  password?: string; // optional; defaults to '12345678'
 }
 
 export interface UpdateStaffRequest {

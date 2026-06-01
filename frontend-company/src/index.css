@@ -1,4 +1,4 @@
-@import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,600,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css');
 
 @tailwind base;
@@ -6,8 +6,424 @@
 @tailwind utilities;
 
 body {
-  font-family: 'Satoshi', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   margin: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Animated Background Gradient ── */
+.bg-gradient-animated {
+  background: linear-gradient(-45deg, #f0fdf4, #ecfdf5, #f0f9ff, #fffbeb);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── Skeleton Loading Animation ── */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #f1f5f9 25%,
+    #e2e8f0 50%,
+    #f1f5f9 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.8s ease-in-out infinite;
+  border-radius: 6px;
+}
+
+@keyframes skeleton-loading {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Stagger Animation Delays ── */
+.delay-100  { animation-delay: 0.10s; }
+.delay-200  { animation-delay: 0.20s; }
+.delay-300  { animation-delay: 0.30s; }
+.delay-400  { animation-delay: 0.40s; }
+.delay-500  { animation-delay: 0.50s; }
+.delay-600  { animation-delay: 0.60s; }
+
+/* ── Card Hover Lift Effect ── */
+.card-lift {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+}
+.card-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1), 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* ── Table Row Hover Effect ── */
+.table-row-hover {
+  transition: background-color 0.15s ease;
+}
+.table-row-hover:hover {
+  background-color: rgba(241, 245, 249, 0.7);
+}
+
+/* ── Status Dot Pulse ── */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.status-dot-pulse {
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+/* ── Focus Ring Styles ── */
+.focus-ring:focus-visible {
+  outline: 2px solid #11d134;
+  outline-offset: 2px;
+}
+
+/* ── Custom Scrollbar ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #e2e8f0;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1;
+}
+
+/* Sidebar scrollbar (dark) */
+aside::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+}
+aside::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Smooth Transitions for Interactive Elements ── */
+button, a, input, select, textarea {
+  transition: all 0.15s ease;
+}
+
+/* ── Progress Bar Animation ── */
+@keyframes progressFill {
+  from { width: 0; }
+  to   { width: var(--progress-width, 50%); }
+}
+.progress-animated {
+  animation: progressFill 1.2s cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation-delay: var(--progress-delay, 0s);
+}
+
+/* ── Glow Border Animation ── */
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(17, 209, 52, 0.4); }
+  50%       { box-shadow: 0 0 0 8px rgba(17, 209, 52, 0); }
+}
+.glow-border {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* ── Badge Dot Indicator (matches Design reference) ── */
+.badge-dot::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+/* ── Badge Component Base ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* ── Card Component Base ── */
+.card {
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  padding: 20px;
+}
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* ── Form Focus States ── */
+input:focus, select:focus, textarea:focus {
+  border-color: #11d134 !important;
+  box-shadow: 0 0 0 3px rgba(17, 209, 52, 0.1) !important;
+  outline: none !important;
+}
+
+/* ── Selection Styles ── */
+::selection {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+/* ── Badge Status Ring ── */
+.badge-ring {
+  ring: 1px;
+  ring-color: currentColor;
+  ring-opacity: 0.15;
+}
+
+/* ── Table Header Sticky ── */
+.table-header-sticky th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #f8fafc;
+}
+
+/* ── Job Card Hover Styles (injected per-instance) ── */
+.job-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.1), 0 0 0 1px rgba(17,209,52,0.12);
+  border-color: #bbf7d0;
+}
+.job-card:hover .card-logo {
+  transform: scale(1.06);
+  box-shadow: 0 8px 20px rgba(17, 209, 52, 0.3);
+}
+.job-card:hover .card-view-btn {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(17, 209, 52, 0.4);
+}
+
+/* ── Empty State Bounce Arrow ── */
+@keyframes bounceRight {
+  0%, 100% { transform: translateX(0); }
+  50%       { transform: translateX(4px); }
+}
+.empty-state-cta:hover .empty-state-arrow {
+  animation: bounceRight 0.6s ease-in-out infinite;
+}
+
+/* ── Avatar Gradient Circle ── */
+.avatar-gradient-green {
+  background: linear-gradient(145deg, #f0fdf4, #dcfce7);
+  color: #15803d;
+}
+.avatar-gradient-blue {
+  background: linear-gradient(145deg, #eff6ff, #dbeafe);
+  color: #2563eb;
+}
+.avatar-gradient-purple {
+  background: linear-gradient(145deg, #f5f3ff, #ede9fe);
+  color: #7c3aed;
+}
+.avatar-gradient-amber {
+  background: linear-gradient(145deg, #fffbeb, #fef3c7);
+  color: #d97706;
+}
+.avatar-gradient-sky {
+  background: linear-gradient(145deg, #f0f9ff, #e0f2fe);
+  color: #0284c7;
+}
+
+/* ── Tab Segmented Control ── */
+.tab-segmented {
+  display: inline-flex;
+  background: #f1f5f9;
+  border-radius: 10px;
+  padding: 4px;
+  gap: 2px;
+}
+.tab-segmented button {
+  padding: 7px 16px;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: transparent;
+  color: #6b7280;
+}
+.tab-segmented button.active {
+  background: #ffffff;
+  color: #11d134;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.tab-segmented button:hover:not(.active) {
+  color: #374151;
+  background: rgba(0,0,0,0.03);
+}
+
+/* ── Section Heading Accent ── */
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1a1d26;
+  margin-bottom: 16px;
+}
+.section-heading::before {
+  content: '';
+  display: inline-block;
+  width: 4px;
+  height: 20px;
+  background: linear-gradient(180deg, #11d134, #0eb02b);
+  border-radius: 2px;
+}
+
+/* ── Notification Item Left Border ── */
+.notification-unread {
+  border-left: 3px solid #11d134;
+  background: rgba(17, 209, 52, 0.03);
+}
+
+/* ── Chat Bubble Animation ── */
+@keyframes bubbleIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.chat-bubble-in {
+  animation: bubbleIn 0.2s ease-out;
+}
+
+/* ── Pricing Card Hover ── */
+.pricing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+}
+.pricing-card.featured {
+  border-color: #11d134;
+  box-shadow: 0 4px 20px rgba(17, 209, 52, 0.15);
+}
+
+/* ── Responsive Utilities ── */
+@media (max-width: 768px) {
+  .card {
+    padding: 16px;
+  }
+}
+
+/* ── Glass Morphism Utility ── */
+.glass {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* ── Animated Gradient Text ── */
+.text-gradient {
+  background: linear-gradient(135deg, #11d134, #0eb02b, #4ae564, #11d134);
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientShift 4s ease infinite;
+}
+
+/* ── Floating Animation ── */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ── Fade-in Slide Up ── */
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fadeSlideUp {
+  animation: fadeSlideUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── Stagger Delays ── */
+.stagger-1  { animation-delay: 0.05s; }
+.stagger-2  { animation-delay: 0.10s; }
+.stagger-3  { animation-delay: 0.15s; }
+.stagger-4  { animation-delay: 0.20s; }
+.stagger-5  { animation-delay: 0.25s; }
+.stagger-6  { animation-delay: 0.30s; }
+
+/* ── Better Focus Ring ── */
+.focus-primary:focus-visible {
+  outline: 2px solid #11d134;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ── Text Selection ── */
+::selection {
+  background: #bbf7d0;
+  color: #14532d;
+}
+::-moz-selection {
+  background: #bbf7d0;
+  color: #14532d;
+}
+
+/* ── Sidebar Active Link Glow ── */
+.sidebar-nav-item.active {
+  position: relative;
+}
+.sidebar-nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: #11d134;
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 10px rgba(17, 209, 52, 0.5);
+}
+
+/* ── Modal Overlay Backdrop ── */
+.modal-overlay {
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+/* ── Pulse Ring ── */
+@keyframes pulseRing {
+  0%   { transform: scale(1); opacity: 1; }
+  80%  { transform: scale(1.5); opacity: 0; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+.pulse-ring::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  animation: pulseRing 1.5s ease-out infinite;
 }

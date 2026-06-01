@@ -53,3 +53,34 @@ export interface Skill {
   id: string;
   name: string;
 }
+
+export interface JobAutoFillDto {
+  jobTitle?: string;
+  description?: string;
+  jobType?: JobType;
+  experienceLevels?: ExperienceLevel[];
+  location?: string;
+  salaryMin?: number;
+  salaryMax?: number;
+  industry?: string;
+  responsibilities?: string[];
+  requirements?: string[];
+  mustHaveSkills?: string[];
+  niceToHaveSkills?: string[];
+}
+
+/** Snake_case shape matching the actual BE API response keys */
+export interface JobAutoFillApiResponse {
+  job_title?: string;
+  description?: string;
+  job_type?: string;
+  experience_levels?: string[];
+  location?: string;
+  salary_min?: number;
+  salary_max?: number;
+  industry?: string;
+  responsibilities?: string[];
+  requirements?: string[];
+  must_have_skills?: string[];
+  nice_to_have_skills?: string[];
+}

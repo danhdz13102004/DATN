@@ -1,6 +1,6 @@
 import api from './api';
 import type { ApiResponse } from '../types/common';
-import type { Industry, Job, JobFormData, JobSelectOption, Skill } from '../types/job';
+import type { Industry, Job, JobAutoFillApiResponse, JobFormData, JobSelectOption, Skill } from '../types/job';
 
 export const jobService = {
   getCompanyJobs: (params?: Record<string, string>) =>
@@ -23,6 +23,15 @@ export const jobService = {
 
   getSelectOptions: () =>
     api.get<ApiResponse<JobSelectOption[]>>('/company/jobs/select-options'),
+
+  autoFillFromFile: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post<ApiResponse<JobAutoFillApiResponse | null>>('/company/jobs/auto-fill', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 120_000,
+    });
+  },
 };
 
 export const skillService = {

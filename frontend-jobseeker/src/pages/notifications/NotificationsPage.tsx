@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import PageHeader from '../../components/common/PageHeader';
+import EmptyState from '../../components/common/EmptyState';
 import { ROUTES } from '../../constants';
 import { useRecruitProWebSocket } from '../../hooks/useWebSocket';
 import { notificationService } from '../../services/chatService';
@@ -31,15 +33,15 @@ function timeAgo(iso: string) {
 function itemIcon(type: Notification['type']) {
   switch (type) {
     case 'JOB_APPLIED':
-      return { icon: 'fa-paper-plane', cls: 'bg-primary/10 text-primary' };
+      return { icon: 'fa-paper-plane', bg: '#EFF6FF', color: '#2563EB' };
     case 'INTERVIEW_INVITE':
-      return { icon: 'fa-calendar-check', cls: 'bg-amber-100 text-amber-600' };
+      return { icon: 'fa-calendar-check', bg: '#FFFBEB', color: '#D97706' };
     case 'MESSAGE':
-      return { icon: 'fa-comments', cls: 'bg-sky-100 text-sky-600' };
+      return { icon: 'fa-comments', bg: '#F0F9FF', color: '#0284C7' };
     case 'APPLICATION_UPDATE':
-      return { icon: 'fa-file-alt', cls: 'bg-violet-100 text-violet-600' };
+      return { icon: 'fa-file-alt', bg: '#F5F3FF', color: '#7C3AED' };
     default:
-      return { icon: 'fa-bell', cls: 'bg-gray-100 text-gray-500' };
+      return { icon: 'fa-bell', bg: '#F9FAFB', color: '#6B7280' };
   }
 }
 
@@ -112,7 +114,7 @@ export default function NotificationsPage() {
     try {
       await notificationService.markAllRead();
     } catch {
-      // Keep optimistic state for smoother UX if endpoint is eventually consistent.
+      // Keep optimistic state
     }
   };
 
@@ -126,36 +128,48 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="bg-white rounded-2xl border border-[#eef0f4] shadow-sm p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 className="text-[1.2rem] font-semibold text-[#1a1d26]">Notifications</h2>
-          <p className="text-sm text-[#6b7280] mt-1">Stay updated on your applications and interviews.</p>
-        </div>
-        <button
-          onClick={markAllRead}
-          disabled={unreadCount === 0}
-          className="px-4 py-2.5 rounded-lg border border-[#e2e6ed] text-sm font-medium text-[#5f6780] hover:bg-[#f4f6fa] transition-colors disabled:opacity-50"
-        >
-          <i className="fas fa-check-double mr-2" />
-          Mark All as Read
-        </button>
-      </div>
+      {/* Page Header */}
+      <PageHeader
+        title="Notifications"
+        subtitle="Stay updated on your applications and interviews."
+        action={
+          unreadCount > 0 && (
+            <button
+              onClick={markAllRead}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
+            >
+              <i className="fas fa-check-double text-xs" />
+              Mark All Read
+            </button>
+          )
+        }
+      />
 
-      <div className="bg-white rounded-2xl border border-[#eef0f4] shadow-sm p-2 flex flex-wrap gap-2">
+      {/* Tab Bar */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-1.5 shadow-sm flex flex-wrap gap-1">
         {TABS.map((tab) => {
           const isActive = activeTab === tab.key;
+          const count = tab.key === 'UNREAD' ? unreadCount : 0;
           return (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive ? 'bg-primary text-white' : 'text-[#5f6780] hover:bg-[#f4f6fa]'
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150 ${
+                isActive
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
               }`}
             >
               {tab.label}
-              {tab.key === 'UNREAD' && unreadCount > 0 && (
-                <span className={`ml-2 inline-flex min-w-5 h-5 px-1.5 items-center justify-center rounded-full text-[11px] ${isActive ? 'bg-white/20 text-white' : 'bg-red-500 text-white'}`}>
-                  {unreadCount > 99 ? '99+' : unreadCount}
+              {count > 0 && (
+                <span
+                  className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold ${
+                    isActive
+                      ? 'bg-white/20 text-white'
+                      : 'bg-red-100 text-red-600'
+                  }`}
+                >
+                  {count > 99 ? '99+' : count}
                 </span>
               )}
             </button>
@@ -163,51 +177,68 @@ export default function NotificationsPage() {
         })}
       </div>
 
-      <div className="bg-white rounded-2xl border border-[#eef0f4] shadow-sm overflow-hidden divide-y divide-[#eef0f4]">
+      {/* Notification List */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden divide-y divide-gray-50">
         {loading ? (
-          <div className="py-12 flex justify-center">
-            <div className="w-7 h-7 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+          <div className="py-16 flex items-center justify-center">
+            <div className="w-8 h-8 border-[3px] border-blue-100 border-t-primary rounded-full animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="py-16 text-center text-[#8b92a8]">
-            <i className="fas fa-bell-slash text-3xl opacity-30 mb-3 block" />
-            <p className="text-sm font-medium text-[#1a1d26]">No notifications</p>
-          </div>
+          <EmptyState
+            icon="fa-bell-slash"
+            title="No notifications"
+            description={
+              activeTab === 'UNREAD'
+                ? "You're all caught up! Check back later for updates."
+                : "When you get updates on your applications or interviews, they'll appear here."
+            }
+          />
         ) : (
           filtered.map((n) => {
             const icon = itemIcon(n.type);
             return (
               <article
                 key={n.id}
-                className={`px-5 py-4 flex gap-3 items-start transition-colors cursor-pointer ${!n.isRead ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-[#f8f9fb]'}`}
+                className={`group flex items-start gap-4 px-5 py-4 cursor-pointer transition-colors duration-150 ${
+                  !n.isRead ? 'bg-blue-50/40' : 'bg-white hover:bg-gray-50/60'
+                }`}
                 onClick={() => openNotification(n)}
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${icon.cls}`}>
+                {/* Icon */}
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
+                  style={{ background: icon.bg, color: icon.color }}
+                >
                   <i className={`fas ${icon.icon}`} />
                 </div>
 
+                {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm leading-relaxed text-[#374151]">
-                    <strong className="text-[#1a1d26]">{n.title}</strong>
-                    {n.content ? ` - ${n.content}` : ''}
+                  <p className="text-sm text-gray-700 leading-relaxed">
+                    <span className="font-semibold text-gray-900">{n.title}</span>
+                    {n.content ? ` — ${n.content}` : ''}
                   </p>
-                  <p className="text-xs text-[#8b92a8] mt-1.5">
-                    <i className="fas fa-clock mr-1" />
+                  <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1.5">
+                    <i className="fas fa-clock text-[10px]" />
                     {timeAgo(n.createdAt)}
                   </p>
                 </div>
 
+                {/* Unread dot */}
                 {!n.isRead && (
                   <button
-                    className="w-7 h-7 rounded-full hover:bg-[#f4f6fa] text-primary transition-colors"
-                    title="Mark as read"
                     onClick={(e) => {
                       e.stopPropagation();
                       void markRead(n.id);
                     }}
+                    className="w-6 h-6 rounded-full bg-blue-100 text-primary flex items-center justify-center flex-shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-200"
+                    title="Mark as read"
                   >
-                    <i className="fas fa-circle text-[10px]" />
+                    <i className="fas fa-check text-[10px]" />
                   </button>
+                )}
+                {n.isRead && (
+                  <div className="w-6 h-6 flex-shrink-0 mt-1" />
                 )}
               </article>
             );

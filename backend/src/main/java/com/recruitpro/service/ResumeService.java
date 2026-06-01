@@ -1,5 +1,6 @@
 package com.recruitpro.service;
 
+import com.recruitpro.dto.response.ResumeResponse;
 import com.recruitpro.exception.ForbiddenException;
 import com.recruitpro.exception.ResourceNotFoundException;
 import com.recruitpro.model.Resume;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -25,13 +27,34 @@ public class ResumeService {
     private final StorageService storageService;
     private final ResumePdfParser resumePdfParser;
 
-    public List<Resume> findByJobSeekerId(UUID jobSeekerId) {
-        return resumeRepository.findAllByJobSeekerId(jobSeekerId);
+    public List<ResumeResponse> findByJobSeekerId(UUID jobSeekerId) {
+        return resumeRepository.findAllByJobSeekerId(jobSeekerId)
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     public Resume findById(UUID id) {
         return resumeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Resume not found"));
+    }
+
+    public ResumeResponse findResponseById(UUID id) {
+        return toResponse(findById(id));
+    }
+
+    private ResumeResponse toResponse(Resume resume) {
+        return ResumeResponse.builder()
+                .id(resume.getId())
+                .jobSeekerId(resume.getJobSeekerId())
+                .fileUrl(resume.getFileUrl())
+                .publicUrl(storageService.getPublicUrl(resume.getFileUrl()))
+                .label(resume.getLabel())
+                .fileSize(resume.getFileSize())
+                .isPrimary(resume.getIsPrimary())
+                .createdAt(resume.getCreatedAt())
+                .updatedAt(resume.getUpdatedAt())
+                .build();
     }
 
     @Transactional

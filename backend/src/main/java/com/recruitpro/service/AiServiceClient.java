@@ -297,6 +297,59 @@ public class AiServiceClient {
     // ── PDF / OCR fallback ──────────────────────────────────────────────────────
 
     /**
+     * Calls the AI service's OCR endpoint to extract text from a job posting file
+     * (PDF or image). The {@code jobId} parameter is used only for logging/tracing.
+     *
+     * @param jobId     UUID of the job (used for logging/tracing only)
+     * @param fileBase64 Base64-encoded file bytes
+     * @return Extracted text, or empty string if the OCR call fails
+     */
+    @SuppressWarnings("unchecked")
+    public String parseJobPosting(UUID jobId, String fileBase64) {
+        String url = aiServiceConfig.getAiServiceUrl() + "/api/v1/parse-pdf";
+        Map<String, Object> body = Map.of(
+                "resume_id",   jobId.toString(),
+                "pdf_base64",  fileBase64
+        );
+
+        try {
+            ResponseEntity<Map<String, Object>> response =
+                    ocrRestTemplate.postForEntity(url, body, generify(Map.class));
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+                Map<String, Object> body_ = response.getBody();
+                Boolean success = (Boolean) body_.get("success");
+                if (Boolean.TRUE.equals(success)) {
+                    Map<String, Object> data = (Map<String, Object>) body_.get("data");
+                    if (data != null) {
+                        String text = (String) data.get("text");
+                        String method = (String) data.getOrDefault("method", "unknown");
+                        Integer chars = (Integer) data.getOrDefault("chars_extracted", 0);
+                        log.info(
+                                "[AI] Job posting OCR result: jobId={} method={} chars={}",
+                                jobId, method, chars
+                        );
+                        return text != null ? text : "";
+                    }
+                } else {
+                    Map<String, Object> error = (Map<String, Object>) body_.get("error");
+                    log.warn(
+                            "[AI] OCR endpoint returned success=false: jobId={} error={}",
+                            jobId, error
+                    );
+                }
+            } else {
+                log.warn(
+                        "[AI] Unexpected status {} from /parse-pdf: jobId={}",
+                        response.getStatusCode(), jobId
+                );
+            }
+        } catch (RestClientException ex) {
+            log.error("[AI] Job posting OCR failed: jobId={}: {}", jobId, ex.getMessage());
+        }
+        return "";
+    }
+
+    /**
      * Calls the AI service's OCR endpoint to extract text from a scanned PDF
      * (one whose native text layer is too short for PDFBox).
      *

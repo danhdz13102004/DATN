@@ -47,6 +47,12 @@ public class Subscription {
     @Column(name = "allow_use_ai_matching", nullable = false)
     private boolean allowUseAiMatching;
 
+    /**
+     * Tracks how many times this company has used AI auto-fill in the current subscription period.
+     */
+    @Column(name = "auto_fill_usage_count", nullable = false)
+    private int autoFillUsageCount;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

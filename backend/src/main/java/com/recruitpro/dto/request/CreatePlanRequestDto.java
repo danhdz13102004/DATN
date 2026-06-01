@@ -26,4 +26,7 @@ public class CreatePlanRequestDto {
     private Integer jobPostLimit;
 
     private boolean allowUseAiMatching = false;
+
+    /** 0 means unlimited */
+    private Integer autoFillLimit = 0;
 }

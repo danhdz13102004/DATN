@@ -2,7 +2,9 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import PrivateRoute from './routes/PrivateRoute';
 import MainLayout from './components/layout/MainLayout';
+import PublicLayout from './components/layout/PublicLayout';
 import { ROUTES } from './constants';
+import { useAuthStore } from './store/authStore';
 
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const SignupPage = lazy(() => import('./pages/auth/SignupPage'));
@@ -26,21 +28,33 @@ const LoadingFallback = () => (
 );
 
 function App() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
   return (
     <Suspense fallback={<LoadingFallback />}>
       <Routes>
+        {/* Jobs route: sidebar for authenticated users, no sidebar for guests */}
+        <Route
+          element={
+            isAuthenticated
+              ? <PrivateRoute><MainLayout /></PrivateRoute>
+              : <PublicLayout />
+          }
+        >
+          <Route path={ROUTES.JOBS} element={<JobsPage />} />
+          <Route path={ROUTES.JOB_DETAIL} element={<JobDetailPage />} />
+        </Route>
+
         {/* Auth routes (no layout) */}
         <Route path={ROUTES.LOGIN} element={<LoginPage />} />
         <Route path={ROUTES.SIGNUP} element={<SignupPage />} />
         <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
         <Route path={ROUTES.VERIFY_OTP} element={<VerifyOtpPage />} />
 
-        {/* App routes (with sidebar layout) */}
+        {/* Protected app routes (with sidebar layout) */}
         <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
           <Route path={ROUTES.HOME} element={<DashboardPage />} />
           <Route path={ROUTES.DASHBOARD} element={<DashboardPage />} />
-          <Route path={ROUTES.JOBS} element={<JobsPage />} />
-          <Route path={ROUTES.JOB_DETAIL} element={<JobDetailPage />} />
           <Route path={ROUTES.APPLICATIONS} element={<ApplicationsPage />} />
           <Route path={ROUTES.APPLICATION_DETAIL} element={<ApplicationDetailPage />} />
           <Route path={ROUTES.INTERVIEWS} element={<InterviewsPage />} />

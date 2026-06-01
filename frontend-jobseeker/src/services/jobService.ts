@@ -10,6 +10,8 @@ export const jobService = {
       filters.experienceLevels.forEach(l => params.append('experienceLevels', l));
     }
     if (filters.location) params.set('location', filters.location);
+    if (filters.salaryMin != null) params.set('salaryMin', String(filters.salaryMin));
+    if (filters.salaryMax != null) params.set('salaryMax', String(filters.salaryMax));
     params.set('page', String((filters.page ?? 1) - 1));
     params.set('size', String(filters.size ?? 20));
     return api.get(`/jobs?${params.toString()}`).then(r => r.data);

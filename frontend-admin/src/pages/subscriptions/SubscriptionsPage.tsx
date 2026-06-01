@@ -29,6 +29,7 @@ const EMPTY_FORM: CreatePlanRequest = {
   durationDays: 30,
   jobPostLimit: 0,
   allowUseAiMatching: false,
+  autoFillLimit: 0,
 };
 
 function isExpiringSoon(endDate: string): boolean {
@@ -76,6 +77,7 @@ function PlanFormModal({ plan, onClose }: PlanFormModalProps) {
           durationDays: plan.durationDays,
           jobPostLimit: plan.jobPostLimit,
           allowUseAiMatching: plan.allowUseAiMatching,
+          autoFillLimit: plan.autoFillLimit,
         }
       : { ...EMPTY_FORM }
   );
@@ -198,6 +200,21 @@ function PlanFormModal({ plan, onClose }: PlanFormModalProps) {
               />
             </button>
           </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              AI Auto-fill Limit <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              min={0}
+              className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary"
+              placeholder="e.g. 5"
+              value={form.autoFillLimit}
+              onChange={(e) => set('autoFillLimit', parseInt(e.target.value) || 0)}
+            />
+            <p className="text-xs text-gray-400 mt-1">Set to 0 for unlimited auto-fill uses. Only applies if AI Matching is enabled.</p>
+          </div>
         </div>
 
         <div className="flex gap-3 p-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
@@ -276,6 +293,16 @@ function PlanCard({ plan, onEdit }: { plan: AdminPlan; onEdit: (p: AdminPlan) =>
               Enabled
             </span>
           )}
+        </li>
+        <li className="flex items-center gap-2">
+          {plan.autoFillLimit > 0 ? (
+            <i className="fas fa-check text-emerald-500 text-xs w-3" />
+          ) : (
+            <i className="fas fa-times text-gray-300 text-xs w-3" />
+          )}
+          <span className={plan.autoFillLimit > 0 ? '' : 'text-gray-400'}>
+            {plan.autoFillLimit === 0 ? 'Auto-fill (unlimited)' : `Auto-fill (${plan.autoFillLimit} uses)`}
+          </span>
         </li>
       </ul>
 

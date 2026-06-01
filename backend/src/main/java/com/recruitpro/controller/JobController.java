@@ -1,6 +1,7 @@
 package com.recruitpro.controller;
 
 import com.recruitpro.dto.response.ApiResponse;
+import com.recruitpro.dto.response.JobDetailDto;
 import com.recruitpro.dto.response.JobDto;
 import com.recruitpro.dto.response.PaginationMeta;
 import com.recruitpro.model.enums.ExperienceLevel;
@@ -38,11 +39,13 @@ public class JobController {
             @RequestParam(required = false) JobType jobType,
             @RequestParam(required = false) java.util.Set<ExperienceLevel> experienceLevels,
             @RequestParam(required = false) String location,
+            @RequestParam(required = false) Double salaryMin,
+            @RequestParam(required = false) Double salaryMax,
             @PageableDefault(size = 20) Pageable pageable,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         UUID seekerId = resolveSeekerId(principal);
-        Page<JobDto> page = jobService.findPublishedJobDtos(keyword, jobType, experienceLevels, location, seekerId, pageable);
+        Page<JobDto> page = jobService.findPublishedJobDtos(keyword, jobType, experienceLevels, location, salaryMin, salaryMax, seekerId, pageable);
         PaginationMeta meta = PaginationMeta.builder()
                 .page(page.getNumber() + 1)
                 .pageSize(page.getSize())
@@ -51,13 +54,17 @@ public class JobController {
         return ResponseEntity.ok(ApiResponse.ok(page.getContent(), meta));
     }
 
+    /**
+     * Get job detail by ID with full company information for the job detail page.
+     * Returns JobDetailDto which includes company details, responsibilities, requirements, benefits, etc.
+     */
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<JobDto>> getById(
+    public ResponseEntity<ApiResponse<JobDetailDto>> getById(
             @PathVariable UUID id,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         UUID seekerId = resolveSeekerId(principal);
-        return ResponseEntity.ok(ApiResponse.ok(jobService.findByIdAsDto(id, seekerId)));
+        return ResponseEntity.ok(ApiResponse.ok(jobService.findByIdAsJobDetailDto(id, seekerId)));
     }
 
     /** Resolves the job seeker entity ID from the JWT principal, or null for guests / non-jobseekers. */
