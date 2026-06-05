@@ -35,6 +35,9 @@ public class Company {
     @Column(name = "is_verified", nullable = false)
     private boolean verified;
 
+    @Column(name = "is_blocked", nullable = false)
+    private boolean blocked;
+
     @Column(name = "employee_count_min")
     private Integer employeeCountMin;
 

@@ -1,7 +1,7 @@
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import Topbar from '../../components/layout/Topbar';
 import StatusBadge from '../../components/ui/StatusBadge';
-import { useAdminCompanyDetail, useVerifyCompany } from '../../hooks/useAdminCompanies';
+import { useAdminCompanyDetail, useBlockCompany, useVerifyCompany } from '../../hooks/useAdminCompanies';
 import { useToast } from '../../contexts/ToastContext';
 import { ROUTES } from '../../constants';
 import type { AdminCompanyStaffItem, AdminCompanyJobItem } from '../../types/admin';
@@ -42,6 +42,7 @@ export default function CompanyDetailPage() {
 
   const { data: company, isLoading } = useAdminCompanyDetail(id!);
   const { mutate: verifyCompany, isPending } = useVerifyCompany();
+  const { mutate: blockCompany, isPending: isBlockPending } = useBlockCompany();
 
   const handleVerify = () => {
     if (!company) return;
@@ -54,6 +55,18 @@ export default function CompanyDetailPage() {
   const handleUnverify = () => {
     // unverify is not yet an API action — placeholder
     toast.error('Unverify is not supported yet');
+  };
+
+  const handleBlockToggle = () => {
+    if (!company) return;
+    const nextBlocked = !company.blocked;
+    blockCompany(
+      { id: company.id, blocked: nextBlocked },
+      {
+        onSuccess: () => toast.success(`${company.name} has been ${nextBlocked ? 'blocked' : 'unblocked'}`),
+        onError: () => toast.error(`Failed to ${nextBlocked ? 'block' : 'unblock'} company`),
+      },
+    );
   };
 
   return (
@@ -103,6 +116,11 @@ export default function CompanyDetailPage() {
                   )}
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <StatusBadge value={company.verified} />
+                    {company.blocked && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border bg-red-50 text-red-600 border-red-100">
+                        Blocked
+                      </span>
+                    )}
                     {company.website && (
                       <a
                         href={company.website.startsWith('http') ? company.website : `https://${company.website}`}
@@ -117,12 +135,13 @@ export default function CompanyDetailPage() {
                 </div>
                 <div className="flex gap-2 flex-wrap">
                   {company.verified ? (
-                    <button
-                      className="px-3 py-1.5 text-sm border border-red-200 text-red-600 rounded-xl hover:bg-red-50 transition-colors"
-                      onClick={handleUnverify}
-                    >
-                      <i className="fas fa-times-circle mr-1.5" />Unverify
-                    </button>
+                    <></>
+                    // <button
+                    //   className="px-3 py-1.5 text-sm border border-red-200 text-red-600 rounded-xl hover:bg-red-50 transition-colors"
+                    //   onClick={handleUnverify}
+                    // >
+                    //   <i className="fas fa-times-circle mr-1.5" />Unverify
+                    // </button>
                   ) : (
                     <button
                       className="px-3 py-1.5 text-sm bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 disabled:opacity-60 transition-colors"
@@ -132,6 +151,18 @@ export default function CompanyDetailPage() {
                       <i className="fas fa-check-circle mr-1.5" />Verify
                     </button>
                   )}
+                  <button
+                    className={`px-3 py-1.5 text-sm rounded-xl transition-colors disabled:opacity-60 ${
+                      company.blocked
+                        ? 'border border-emerald-200 text-emerald-700 hover:bg-emerald-50'
+                        : 'border border-red-200 text-red-600 hover:bg-red-50'
+                    }`}
+                    onClick={handleBlockToggle}
+                    disabled={isBlockPending}
+                  >
+                    <i className={`fas ${company.blocked ? 'fa-unlock' : 'fa-ban'} mr-1.5`} />
+                    {company.blocked ? 'Unblock' : 'Block'}
+                  </button>
                   <button
                     className="px-3 py-1.5 text-sm border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
                     onClick={() => navigate(ROUTES.COMPANIES)}
@@ -153,6 +184,18 @@ export default function CompanyDetailPage() {
                   ? <a href={company.website.startsWith('http') ? company.website : `https://${company.website}`} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline">{company.website}</a>
                   : '—'} />
                 <InfoRow label="Verified" value={<StatusBadge value={company.verified} />} />
+                <InfoRow
+                  label="Access"
+                  value={company.blocked ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border bg-red-50 text-red-600 border-red-100">
+                      Blocked
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border bg-emerald-50 text-emerald-700 border-emerald-100">
+                      Allowed
+                    </span>
+                  )}
+                />
                 <InfoRow label="Created At" value={new Date(company.createdAt).toLocaleDateString()} />
                 {company.updatedAt && (
                   <InfoRow label="Updated At" value={new Date(company.updatedAt).toLocaleDateString()} />

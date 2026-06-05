@@ -51,6 +51,7 @@ export interface AdminCompany {
   website: string | null;
   logoUrl: string | null;
   verified: boolean;
+  blocked: boolean;
   createdAt: string;
   staffCount: number;
   activeJobsCount: number;
@@ -82,6 +83,7 @@ export interface AdminCompanyDetail {
   website: string | null;
   logoUrl: string | null;
   verified: boolean;
+  blocked: boolean;
   createdAt: string;
   updatedAt: string | null;
   staff: AdminCompanyStaffItem[];

@@ -78,7 +78,7 @@ export default function CompaniesPage() {
                 <tr>
                   <th className="text-left px-6 py-3 font-semibold">Company</th>
                   <th className="text-left px-6 py-3 font-semibold">Website</th>
-                  <th className="text-left px-6 py-3 font-semibold">Verified</th>
+                  <th className="text-left px-6 py-3 font-semibold">Status</th>
                   <th className="text-left px-6 py-3 font-semibold">Staff</th>
                   <th className="text-left px-6 py-3 font-semibold">Active Jobs</th>
                   <th className="text-left px-6 py-3 font-semibold">Created</th>
@@ -131,7 +131,13 @@ export default function CompaniesPage() {
                       </td>
                       {/* Status */}
                       <td className="px-6 py-4">
-                        <StatusBadge value={company.verified} />
+                        {company.blocked ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border bg-red-50 text-red-600 border-red-100">
+                            Blocked
+                          </span>
+                        ) : (
+                          <StatusBadge value={company.verified} />
+                        )}
                       </td>
                       {/* Staff */}
                       <td className="px-6 py-4 text-gray-700">{company.staffCount}</td>
@@ -142,7 +148,7 @@ export default function CompaniesPage() {
                       {/* Actions */}
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
-                          {!company.verified && (
+                          {!company.blocked && !company.verified && (
                             <button
                               className="inline-flex items-center gap-1 text-sm text-white bg-emerald-500 hover:bg-emerald-600 px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-50"
                               onClick={() => handleVerify(company.id, company.name)}

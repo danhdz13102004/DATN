@@ -13,6 +13,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
@@ -21,6 +22,7 @@ public interface JobRepository extends JpaRepository<Job, UUID>, JpaSpecificatio
     Page<Job> findAllByCompanyId(UUID companyId, Pageable pageable);
 
     @Query("SELECT DISTINCT j FROM Job j WHERE j.status = 'PUBLISHED' AND " +
+           "EXISTS (SELECT 1 FROM Company c WHERE c.id = j.companyId AND c.blocked = false) AND " +
            "(cast(:keyword as string) IS NULL OR LOWER(j.title) LIKE LOWER(CONCAT('%', cast(:keyword as string), '%'))) AND " +
            "(cast(:jobType as string) IS NULL OR j.jobType = :jobType) AND " +
            "(cast(:location as string) IS NULL OR LOWER(j.location) LIKE LOWER(CONCAT('%', cast(:location as string), '%'))) AND " +
@@ -36,6 +38,7 @@ public interface JobRepository extends JpaRepository<Job, UUID>, JpaSpecificatio
     );
 
     @Query("SELECT DISTINCT j FROM Job j JOIN j.experienceLevels el WHERE j.status = 'PUBLISHED' AND " +
+           "EXISTS (SELECT 1 FROM Company c WHERE c.id = j.companyId AND c.blocked = false) AND " +
            "(cast(:keyword as string) IS NULL OR LOWER(j.title) LIKE LOWER(CONCAT('%', cast(:keyword as string), '%'))) AND " +
            "(cast(:jobType as string) IS NULL OR j.jobType = :jobType) AND " +
            "el IN :experienceLevels AND " +
@@ -69,4 +72,12 @@ public interface JobRepository extends JpaRepository<Job, UUID>, JpaSpecificatio
     long countByCompanyIdAndStatus(UUID companyId, JobStatus status);
 
     List<Job> findTop10ByCompanyIdAndStatusOrderByCreatedAtDesc(UUID companyId, JobStatus status);
+
+    @Query("SELECT j FROM Job j WHERE j.status = 'PUBLISHED' AND j.id IN :ids AND " +
+           "EXISTS (SELECT 1 FROM Company c WHERE c.id = j.companyId AND c.blocked = false)")
+    List<Job> findAllPublicByIdIn(@Param("ids") List<UUID> ids);
+
+    @Query("SELECT j FROM Job j WHERE j.status = 'PUBLISHED' AND j.id = :id AND " +
+           "EXISTS (SELECT 1 FROM Company c WHERE c.id = j.companyId AND c.blocked = false)")
+    Optional<Job> findPublicById(@Param("id") UUID id);
 }

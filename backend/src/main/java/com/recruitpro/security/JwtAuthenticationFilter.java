@@ -1,5 +1,6 @@
 package com.recruitpro.security;
 
+import com.recruitpro.repository.CompanyRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,6 +19,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -25,6 +27,7 @@ import java.util.Optional;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final CompanyRepository companyRepository;
 
     private static final String BEARER_PREFIX = "Bearer ";
 
@@ -44,6 +47,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             claimsOpt.ifPresent(claims -> {
                 String userId = jwtUtil.getSubject(claims);
                 String role = jwtUtil.getRole(claims);
+                String companyId = jwtUtil.getCompanyId(claims);
+
+                if (isBlockedCompanyPrincipal(role, companyId)) {
+                    log.debug("Rejected JWT for blocked company {}", companyId);
+                    return;
+                }
 
                 List<SimpleGrantedAuthority> authorities = Collections.singletonList(
                         new SimpleGrantedAuthority("ROLE_" + role)
@@ -53,7 +62,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         .id(userId)
                         .email(jwtUtil.getEmail(claims))
                         .role(role)
-                        .companyId(jwtUtil.getCompanyId(claims))
+                        .companyId(companyId)
                         .companyRole(jwtUtil.getCompanyRole(claims))
                         .build();
 
@@ -65,5 +74,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isBlockedCompanyPrincipal(String role, String companyId) {
+        if (!"COMPANY".equals(role) || companyId == null) {
+            return false;
+        }
+
+        try {
+            return companyRepository.findById(UUID.fromString(companyId))
+                    .map(company -> company.isBlocked())
+                    .orElse(false);
+        } catch (IllegalArgumentException ex) {
+            return true;
+        }
     }
 }

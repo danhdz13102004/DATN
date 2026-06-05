@@ -17,6 +17,7 @@ public class AdminCompanyDetailDto {
     private String website;
     private String logoUrl;
     private boolean verified;
+    private boolean blocked;
     private Instant createdAt;
     private Instant updatedAt;
 

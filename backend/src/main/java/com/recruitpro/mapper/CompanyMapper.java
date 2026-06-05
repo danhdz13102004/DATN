@@ -37,6 +37,7 @@ public class CompanyMapper {
                 .website(company.getWebsite())
                 .logoUrl(storageService.getPublicUrl(company.getLogoUrl()))
                 .verified(company.isVerified())
+                .blocked(company.isBlocked())
                 .createdAt(company.getCreatedAt())
                 .staffCount(staffRepository.countByCompanyId(company.getId()))
                 .activeJobsCount(jobRepository.countByCompanyIdAndStatus(company.getId(), JobStatus.PUBLISHED))

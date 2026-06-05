@@ -15,6 +15,7 @@ public class CompanyResponseDto {
     private String website;
     private String logoUrl;
     private boolean verified;
+    private boolean blocked;
     private Instant createdAt;
     private long staffCount;
     private long activeJobsCount;

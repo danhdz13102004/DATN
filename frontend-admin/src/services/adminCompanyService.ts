@@ -26,6 +26,16 @@ export const adminCompanyService = {
     return res.data.data;
   },
 
+  blockCompany: async (id: string): Promise<AdminCompany> => {
+    const res = await api.patch<{ data: AdminCompany }>(`/admin/companies/${id}/block`, {});
+    return res.data.data;
+  },
+
+  unblockCompany: async (id: string): Promise<AdminCompany> => {
+    const res = await api.patch<{ data: AdminCompany }>(`/admin/companies/${id}/unblock`, {});
+    return res.data.data;
+  },
+
   getCompanyDetail: async (id: string): Promise<AdminCompanyDetail> => {
     const res = await api.get<{ data: AdminCompanyDetail }>(`/admin/companies/${id}`);
     return res.data.data;

@@ -83,7 +83,7 @@ public class JobService {
      * Pass null seekerId for unauthenticated / non-jobseeker callers.
      */
     public JobDto findByIdAsDto(UUID id, UUID seekerId) {
-        Job job = findById(id);
+        Job job = findPublicById(id);
         boolean saved = seekerId != null && savedJobRepository.existsByJobSeekerIdAndJobId(seekerId, id);
         return toJobDto(job, saved);
     }
@@ -93,7 +93,7 @@ public class JobService {
      * Pass null seekerId for unauthenticated / non-jobseeker callers.
      */
     public JobDetailDto findByIdAsJobDetailDto(UUID id, UUID seekerId) {
-        Job job = findById(id);
+        Job job = findPublicById(id);
         boolean saved = seekerId != null && savedJobRepository.existsByJobSeekerIdAndJobId(seekerId, id);
         return toJobDetailDto(job, saved);
     }
@@ -199,6 +199,11 @@ public class JobService {
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found"));
     }
 
+    private Job findPublicById(UUID id) {
+        return jobRepository.findPublicById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Job not found"));
+    }
+
     /**
      * Batch-fetch jobs by IDs with isSaved populated for the given job seeker.
      * Returns jobs in the same order as jobIds. Skips jobs that don't exist.
@@ -208,7 +213,7 @@ public class JobService {
         if (jobIds == null || jobIds.isEmpty()) {
             return List.of();
         }
-        List<Job> jobs = jobRepository.findAllById(jobIds);
+        List<Job> jobs = jobRepository.findAllPublicByIdIn(jobIds);
         Set<UUID> savedIds = seekerId != null
                 ? savedJobRepository.findJobIdsByJobSeekerId(seekerId)
                 : Collections.emptySet();

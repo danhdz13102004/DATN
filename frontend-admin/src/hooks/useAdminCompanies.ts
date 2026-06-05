@@ -35,3 +35,16 @@ export const useVerifyCompany = () => {
     },
   });
 };
+
+export const useBlockCompany = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, blocked }: { id: string; blocked: boolean }) =>
+      blocked ? adminCompanyService.blockCompany(id) : adminCompanyService.unblockCompany(id),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'companies'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'companies', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
+    },
+  });
+};

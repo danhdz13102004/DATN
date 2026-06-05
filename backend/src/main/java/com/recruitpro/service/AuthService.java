@@ -127,6 +127,8 @@ public class AuthService {
             throw new UnauthorizedException("Account not verified. Please check your email for the OTP.");
         }
 
+        ensureCompanyNotBlocked(user);
+
         // Backfill: ensure JOBSEEKER profile exists for legacy accounts
         if (user.getRole() == UserRole.JOBSEEKER) {
             if (jobSeekerRepository.findByUserId(user.getId()).isEmpty()) {
@@ -163,6 +165,8 @@ public class AuthService {
 
         User user = userRepository.findById(UUID.fromString(userId))
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
+
+        ensureCompanyNotBlocked(user);
 
         // Rotate: issue new tokens
         return generateTokenResponse(user);
@@ -355,6 +359,20 @@ public class AuthService {
         }
 
         return builder.build();
+    }
+
+    private void ensureCompanyNotBlocked(User user) {
+        if (user.getRole() != UserRole.COMPANY) {
+            return;
+        }
+
+        staffRepository.findByUserId(user.getId()).ifPresent(staff -> {
+            companyRepository.findById(staff.getCompanyId())
+                    .filter(Company::isBlocked)
+                    .ifPresent(company -> {
+                        throw new UnauthorizedException("Company account is blocked");
+                    });
+        });
     }
 
     private void sendOtpInternal(String email, OtpType type) {

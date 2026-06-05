@@ -72,6 +72,14 @@ public class CompanyService {
         return companyRepository.save(company);
     }
 
+    @Transactional
+    public Company setBlocked(UUID id, boolean blocked) {
+        Company company = findById(id);
+        company.setBlocked(blocked);
+        log.info("Company {}: {} (id={})", blocked ? "blocked" : "unblocked", company.getName(), id);
+        return companyRepository.save(company);
+    }
+
     // ── Addresses ────────────────────────────────
 
     public List<CompanyAddress> findAddresses(UUID companyId) {

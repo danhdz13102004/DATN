@@ -64,6 +64,16 @@ public class AdminCompanyController {
         return ResponseEntity.ok(ApiResponse.ok(companyService.verify(id)));
     }
 
+    @PatchMapping("/{id}/block")
+    public ResponseEntity<ApiResponse<Company>> block(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.ok(companyService.setBlocked(id, true)));
+    }
+
+    @PatchMapping("/{id}/unblock")
+    public ResponseEntity<ApiResponse<Company>> unblock(@PathVariable UUID id) {
+        return ResponseEntity.ok(ApiResponse.ok(companyService.setBlocked(id, false)));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<AdminCompanyDetailDto>> getDetail(@PathVariable UUID id) {
         Company company = companyService.findById(id);
@@ -101,6 +111,7 @@ public class AdminCompanyController {
                 .website(company.getWebsite())
                 .logoUrl(storageService.getPublicUrl(company.getLogoUrl()))
                 .verified(company.isVerified())
+                .blocked(company.isBlocked())
                 .createdAt(company.getCreatedAt())
                 .updatedAt(company.getUpdatedAt())
                 .staff(staffItems)
