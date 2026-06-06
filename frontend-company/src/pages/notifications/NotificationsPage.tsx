@@ -196,7 +196,7 @@ export default function NotificationsPage() {
                     `}
                     style={{
                       animationDelay: `${idx * 40}ms`,
-                      borderLeft: isUnread ? '3px solid #11d134' : '3px solid transparent',
+                      borderLeft: isUnread ? '3px solid #19a633' : '3px solid transparent',
                     }}
                     onClick={() => handleOpen(n)}
                   >

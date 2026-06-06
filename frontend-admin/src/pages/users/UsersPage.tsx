@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useOutletContext } from 'react-router-dom';
 import Topbar from '../../components/layout/Topbar';
 import StatusBadge from '../../components/ui/StatusBadge';
@@ -43,13 +44,22 @@ export default function UsersPage() {
 
   const totalPages = data ? Math.ceil(data.meta.total / data.meta.pageSize) : 1;
 
+  useEffect(() => {
+    if (!selectedUser) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, [selectedUser]);
+
+  const handleClose = useCallback(() => setSelectedUser(null), []);
+
   const handleStatusChange = (user: AdminUser, newStatus: UserStatus) => {
     updateStatus(
       { id: user.id, status: newStatus },
       {
         onSuccess: () => {
           toast.success(`User status updated to ${newStatus}`);
-          setSelectedUser(null);
+          handleClose();
         },
         onError: () => toast.error('Failed to update user status'),
       }
@@ -146,13 +156,13 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {/* User action modal */}
-      {selectedUser && (
+      {/* User action modal — portal to body so it's outside all stacking contexts */}
+      {selectedUser && createPortal(
         <div
-          className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
-          onClick={(e) => e.target === e.currentTarget && setSelectedUser(null)}
+          className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 animate-overlay"
+          onClick={(e) => e.target === e.currentTarget && handleClose()}
         >
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-modal">
             <div className="p-6 border-b border-gray-100">
               <h3 className="text-lg font-bold text-gray-900">Manage User</h3>
               <p className="text-sm text-gray-500 mt-1">{selectedUser.email}</p>
@@ -192,13 +202,14 @@ export default function UsersPage() {
               )}
               <button
                 className="ml-auto px-4 py-2 border border-gray-200 text-sm rounded-xl font-medium hover:bg-gray-100 transition-colors"
-                onClick={() => setSelectedUser(null)}
+                onClick={handleClose}
               >
                 Close
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

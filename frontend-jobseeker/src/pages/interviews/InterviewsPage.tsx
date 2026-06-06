@@ -78,11 +78,11 @@ export default function InterviewsPage() {
 
   return (
     <div className="space-y-5">
-      {/* Page Header */}
+      {/* Page Header
       <PageHeader
         title="Interviews"
         subtitle="Manage your interview schedule and preparation."
-      />
+      /> */}
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">

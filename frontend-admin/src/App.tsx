@@ -12,6 +12,7 @@ const CompanyDetailPage = lazy(() => import('./pages/companies/CompanyDetailPage
 const JobsPage = lazy(() => import('./pages/jobs/JobsPage'));
 const ApplicationsPage = lazy(() => import('./pages/applications/ApplicationsPage'));
 const SubscriptionsPage = lazy(() => import('./pages/subscriptions/SubscriptionsPage'));
+const SkillsIndustriesPage = lazy(() => import('./pages/skills/SkillsIndustriesPage'));
 
 const Loader = () => (
   <div className="flex items-center justify-center h-screen bg-[#f4f6fa]">
@@ -40,6 +41,7 @@ function App() {
           <Route path={ROUTES.JOBS} element={<JobsPage />} />
           <Route path={ROUTES.APPLICATIONS} element={<ApplicationsPage />} />
           <Route path={ROUTES.SUBSCRIPTIONS} element={<SubscriptionsPage />} />
+          <Route path={ROUTES.SKILLS} element={<SkillsIndustriesPage />} />
         </Route>
         <Route path="*" element={<Navigate to={ROUTES.DASHBOARD} replace />} />
       </Routes>

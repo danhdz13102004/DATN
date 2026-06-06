@@ -11,6 +11,11 @@ class AddNodeRequest(BaseModel):
     node_id: str = Field(..., min_length=1, description="Unique identifier for the node")
     text: str = Field(..., min_length=1, description="Raw text to embed (resume or job description)")
     node_type: str = Field(..., pattern="^(resume|job)$", description="Must be 'resume' or 'job'")
+    user_id: Optional[str] = Field(
+        None,
+        min_length=1,
+        description="Job seeker UUID for resume nodes — used to build resume_to_user mapping for behavioral recommendations",
+    )
 
 
 class ApplyRequest(BaseModel):

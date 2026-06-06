@@ -40,7 +40,7 @@ def _guard_models_loaded():
 
 
 @router.post("/add_node", response_model=dict)
-def add_node(req: AddNodeRequest, user_id: Optional[str] = None):
+def add_node(req: AddNodeRequest):
     import time as _time
     start = _time.time()
 
@@ -51,8 +51,8 @@ def add_node(req: AddNodeRequest, user_id: Optional[str] = None):
         "text_snippet": text_snippet,
         "encoded":      False,
     }
-    if user_id is not None:
-        node_meta["user_id"] = user_id
+    if req.user_id is not None:
+        node_meta["user_id"] = req.user_id
     svc.raw_node_store[req.node_id] = node_meta
     if req.node_type == "job" and req.node_id not in svc.job_catalog:
         svc.job_catalog.append(req.node_id)
@@ -70,7 +70,7 @@ def add_node(req: AddNodeRequest, user_id: Optional[str] = None):
                 node_type=req.node_type,
                 nlp_model=model_registry.get("nlp"),
                 device=model_registry.device,
-                user_id=user_id,
+                user_id=req.user_id,
             )
             logger.debug("POST /add_node latency=%.3fs", _time.time() - start)
             return {"success": True, "data": AddNodeData(**data), "error": None, "meta": None}
@@ -88,8 +88,8 @@ def add_node(req: AddNodeRequest, user_id: Optional[str] = None):
     else:
         # For resume nodes with user_id, also populate resume_to_user in-memory map
         # so behavioral signals can be resolved even before encoding
-        if req.node_type == "resume" and user_id is not None:
-            svc.resume_to_user[req.node_id] = user_id
+        if req.node_type == "resume" and req.user_id is not None:
+            svc.resume_to_user[req.node_id] = req.user_id
         logger.warning(
             "add_node(%s): models not loaded, node registered without embedding (DEGRADED mode).",
             req.node_id,
@@ -138,6 +138,7 @@ def handle_interaction(req: InteractionRequest, request: Request):
         )
 
     start = time.time()
+    logger.info("POST /interact (action_type=%s, resume_id=%s, job_id=%s)", action_type, req.resume_id, job_id)
 
     try:
         # ── APPLY EVENTS: single resume, creates graph edge, updates GraphSAGE ──
@@ -318,9 +319,27 @@ def recommend(
     resume_id: str,
     top_k: int = Query(default=5, ge=1, le=50),
     excluded_job_ids: str = Query(default="", description="Comma-separated job IDs to exclude"),
+    mode: str = Query(default="resume", pattern="^(resume|activities)$"),
+    user_id: Optional[str] = Query(default=None, description="Job seeker UUID — required when mode=activities"),
 ):
-    """Return ranked job recommendations for a given resume, optionally excluding specified jobs."""
+    """Return ranked job recommendations for a given resume, optionally excluding specified jobs.
+
+    When mode=activities, user_id is required to look up the behavioral preference vector.
+    """
     _guard_models_loaded()
+    
+    logger.info("recommend: resume_id=%s user_id=%s", resume_id, user_id)
+
+    if mode == "activities" and not user_id:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "success": False,
+                "data":    None,
+                "error":   {"code": "MISSING_USER_ID", "message": "user_id query param is required when mode=activities."},
+                "meta":    None,
+            },
+        )
 
     if resume_id not in svc.graphsage_store:
         raise HTTPException(
@@ -344,8 +363,8 @@ def recommend(
     excluded = [jid.strip() for jid in excluded_job_ids.split(",") if jid.strip()] if excluded_job_ids else None
 
     logger.info(
-        "[recommend] resume_id=%s top_k=%d excluded_job_ids=%s excluded_count=%d",
-        resume_id, top_k, excluded_job_ids, len(excluded) if excluded else 0,
+        "recommend request: resume_id=%s top_k=%d mode=%s user_id=%s excluded_count=%d",
+        resume_id, top_k, mode, user_id, len(excluded) if excluded else 0,
     )
 
     start = time.time()
@@ -355,6 +374,8 @@ def recommend(
             top_k=top_k,
             device=model_registry.device,
             excluded_job_ids=excluded,
+            mode=mode,
+            user_id=user_id,
         )
         elapsed = time.time() - start
         num_recs = len(data.get("recommendations", []))
@@ -368,7 +389,12 @@ def recommend(
                 "[recommend] resume_id=%s top_match job_id=%s score=%.4f",
                 resume_id, top["job_id"], top["score"],
             )
-        return {"success": True, "data": RecommendData(**data), "error": None, "meta": None}
+        return {
+            "success": True,
+            "data": {"resume_id": data["resume_id"], "recommendations": data["recommendations"]},
+            "error": None,
+            "meta": {"mode_used": mode, **data.get("meta", {})},
+        }
     except Exception as exc:
         logger.error("recommend failed: %s", exc)
         raise HTTPException(

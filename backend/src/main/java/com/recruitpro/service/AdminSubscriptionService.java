@@ -11,9 +11,13 @@ import com.recruitpro.model.Subscription;
 import com.recruitpro.model.enums.SubscriptionStatus;
 import com.recruitpro.repository.PlanRepository;
 import com.recruitpro.repository.SubscriptionRepository;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -80,8 +84,25 @@ public class AdminSubscriptionService {
     // ── Subscriptions ──────────────────────────────────────────────────────────
 
     public Page<SubscriptionListItemDto> listSubscriptions(UUID planId, SubscriptionStatus status, Pageable pageable) {
-        return subscriptionRepository.findAllWithFilters(planId, status, pageable)
+        Specification<Subscription> spec = Specification.where(planId != null ? hasPlanId(planId) : Specification.where(null))
+                .and(status != null ? hasStatus(status) : Specification.where(null));
+        return subscriptionRepository.findAll(spec, pageable)
                 .map(this::toSubscriptionDto);
+    }
+
+    private static Specification<Subscription> hasPlanId(UUID planId) {
+        return (root, query, cb) -> {
+            if (query.getResultType() != Long.class && query.getResultType() != long.class) {
+                root.fetch("company", JoinType.LEFT);
+                root.fetch("plan", JoinType.LEFT);
+                query.distinct(true);
+            }
+            return cb.equal(root.get("plan").get("id"), planId);
+        };
+    }
+
+    private static Specification<Subscription> hasStatus(SubscriptionStatus status) {
+        return (root, query, cb) -> cb.equal(root.get("status"), status);
     }
 
     // ── Mapping helpers ────────────────────────────────────────────────────────

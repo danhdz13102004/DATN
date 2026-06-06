@@ -405,23 +405,36 @@ public class AiServiceClient {
     // ── Recommendations ─────────────────────────────────────────────────────────
 
     /**
-     * Calls the AI service's /recommend endpoint to get ranked job recommendations
-     * for a given resume, excluding already-applied jobs.
+     * @deprecated Use {@link #getRecommendationsWithMeta(String, int, String, String, String)} instead.
+     */
+    @Deprecated
+    public Map<String, Object> getRecommendationsWithMeta(String resumeId, int topK, String excludedJobIds, String mode) {
+        return getRecommendationsWithMeta(resumeId, topK, excludedJobIds, mode, null);
+    }
+
+    /**
+     * Calls the AI service's /recommend endpoint and returns the full response including meta.
      *
      * @param resumeId        Resume node ID (UUID string)
      * @param topK            Maximum number of recommendations
      * @param excludedJobIds  Comma-separated job IDs to exclude, or empty string
-     * @return List of recommendation maps with "job_id" and "score" keys; empty list on failure
+     * @param mode            Recommendation mode: "resume" or "activities"
+     * @param userId          Job seeker UUID — required when mode is "activities"
+     * @return Full response map with "resume_id", "recommendations", and "meta" keys; null on failure
      */
     @SuppressWarnings("unchecked")
-    public List<Map<String, Object>> getRecommendations(String resumeId, int topK, String excludedJobIds) {
+    public Map<String, Object> getRecommendationsWithMeta(String resumeId, int topK, String excludedJobIds, String mode, String userId) {
         StringBuilder urlBuilder = new StringBuilder();
         urlBuilder.append(aiServiceConfig.getAiServiceUrl())
                   .append("/api/v1/recommend/")
                   .append(resumeId)
-                  .append("?top_k=").append(topK);
+                  .append("?top_k=").append(topK)
+                  .append("&mode=").append(mode);
         if (!excludedJobIds.isEmpty()) {
             urlBuilder.append("&excluded_job_ids=").append(excludedJobIds);
+        }
+        if (userId != null && !userId.isBlank()) {
+            urlBuilder.append("&user_id=").append(userId);
         }
 
         try {
@@ -432,17 +445,22 @@ public class AiServiceClient {
                 Object success = body.get("success");
                 if (Boolean.TRUE.equals(success)) {
                     Map<String, Object> data = (Map<String, Object>) body.get("data");
+                    Map<String, Object> meta = (Map<String, Object>) body.get("meta");
                     if (data != null) {
                         List<Map<String, Object>> recs = (List<Map<String, Object>>) data.get("recommendations");
-                        return recs != null ? recs : List.of();
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("resume_id", data.get("resume_id"));
+                        result.put("recommendations", recs != null ? recs : List.of());
+                        result.put("meta", meta != null ? meta : Map.of());
+                        return result;
                     }
                 }
             }
             log.warn("[AI] Unexpected response from /recommend: status={}", response.getStatusCode());
-            return List.of();
+            return null;
         } catch (RestClientException ex) {
             log.error("[AI] Failed to get recommendations: {}", ex.getMessage());
-            return List.of();
+            return null;
         }
     }
 }

@@ -1,13 +1,13 @@
 /* ========================================
    Company FE — Design System
-   Primary: #11d134
+   Primary: #19a633
    ======================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 /* ---------- CSS Variables ---------- */
 :root {
-  --primary: #11d134;
+  --primary: #19a633;
   --primary-dark: #0eb02b;
   --primary-darker: #0a8a22;
   --primary-light: #4ae564;

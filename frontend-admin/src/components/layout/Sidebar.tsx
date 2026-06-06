@@ -19,6 +19,7 @@ const NAV_ITEMS = {
     { to: ROUTES.COMPANIES, icon: 'fa-building', label: 'Companies' },
     { to: ROUTES.JOBS, icon: 'fa-briefcase', label: 'Jobs' },
     { to: ROUTES.APPLICATIONS, icon: 'fa-file-alt', label: 'Applications' },
+    { to: ROUTES.SKILLS, icon: 'fa-layer-group', label: 'Skills & Industries' },
   ],
   finance: [
     { to: ROUTES.SUBSCRIPTIONS, icon: 'fa-crown', label: 'Subscriptions' },

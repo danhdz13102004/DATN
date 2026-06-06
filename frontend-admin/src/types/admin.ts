@@ -153,3 +153,17 @@ export interface AdminApplication {
     companyId: string;
   };
 }
+
+// ── Skill ─────────────────────────────────────────────────
+export interface AdminSkill {
+  id: string;
+  name: string;
+  jobUsageCount: number;
+}
+
+// ── Industry ───────────────────────────────────────────────
+export interface AdminIndustry {
+  id: string;
+  name: string;
+  jobUsageCount: number;
+}

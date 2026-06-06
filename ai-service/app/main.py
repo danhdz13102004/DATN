@@ -75,9 +75,14 @@ async def lifespan(app: FastAPI):
     else:
         logger.warning("Redis not reachable at startup — starting with empty in-memory graph.")
 
-    # ── 3. Start 24-hour background GNN refresh loop ──────────────────────────
-    refresh_task = asyncio.create_task(_auto_refresh_loop())
-    logger.info("Scheduled 24-hour auto-refresh task started.")
+    # Behavioral history is stored separately so it survives container restarts.
+    # The in-memory copy is restored from Redis here.
+    behavioral_count = 0
+    if graph_store.ping():
+        behavioral_count = graph_store.load_behavioral_into_memory(svc.behavioral_store, svc.user_jobs)
+        logger.info("Behavioral history restore complete: %d interaction(s) loaded.", behavioral_count)
+    else:
+        logger.warning("Redis not reachable at startup — behavioral history will be empty.")
 
     yield
 

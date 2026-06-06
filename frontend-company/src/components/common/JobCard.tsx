@@ -60,7 +60,7 @@ export default function JobCard({
       <div
         className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl"
         style={{
-          background: 'linear-gradient(90deg, #0eb02b 0%, #11d134 40%, #4ae564 100%)',
+          background: 'linear-gradient(90deg, #0eb02b 0%, #19a633 40%, #4ae564 100%)',
           boxShadow: '0 0 16px rgba(17, 209, 52, 0.3)',
         }}
       />
@@ -80,7 +80,7 @@ export default function JobCard({
             fontWeight: 800,
             fontSize: '1.25rem',
             background: 'linear-gradient(145deg, #f0fdf4, #dcfce7)',
-            color: '#15803d',
+            color: '#0a8a22',
             flexShrink: 0,
             boxShadow: '0 4px 12px rgba(17, 209, 52, 0.15)',
             border: '1px solid rgba(17, 209, 52, 0.1)',
@@ -188,7 +188,7 @@ export default function JobCard({
               onMouseEnter={(e) => {
                 const el = e.currentTarget as HTMLButtonElement;
                 el.style.background = '#dcfce7';
-                el.style.color = '#15803d';
+                el.style.color = '#0a8a22';
               }}
               onMouseLeave={(e) => {
                 const el = e.currentTarget as HTMLButtonElement;
@@ -267,7 +267,7 @@ export default function JobCard({
             color: '#475569',
             fontWeight: 500,
           }}>
-            <i className="fas fa-location-dot" style={{ color: '#11d134', fontSize: '0.7rem' }} />
+            <i className="fas fa-location-dot" style={{ color: '#19a633', fontSize: '0.7rem' }} />
             {job.location}
           </span>
         )}
@@ -279,7 +279,7 @@ export default function JobCard({
             border: '1px solid #bbf7d0',
             borderRadius: 8,
             fontSize: '0.8rem',
-            color: '#15803d',
+            color: '#0a8a22',
             fontWeight: 500,
           }}>
             <i className="fas fa-clock" style={{ fontSize: '0.7rem' }} />
@@ -317,7 +317,7 @@ export default function JobCard({
                 fontSize: '0.78rem',
                 fontWeight: 500,
                 background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)',
-                color: '#15803d',
+                color: '#0a8a22',
                 border: '1px solid #bbf7d0',
                 letterSpacing: '0.01em',
               }}
@@ -356,7 +356,7 @@ export default function JobCard({
           <p style={{ margin: 0, fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             Salary
           </p>
-          <span style={{ fontSize: '1rem', fontWeight: 700, color: '#11d134' }}>
+          <span style={{ fontSize: '1rem', fontWeight: 700, color: '#19a633' }}>
             {formatSalary(job.salaryMin, job.salaryMax)}
           </span>
         </div>
@@ -364,7 +364,7 @@ export default function JobCard({
           className="card-view-btn"
           style={{
             padding: '9px 18px',
-            background: '#11d134',
+            background: '#19a633',
             color: '#ffffff',
             fontSize: '0.82rem',
             fontWeight: 600,

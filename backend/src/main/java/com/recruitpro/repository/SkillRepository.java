@@ -2,6 +2,8 @@ package com.recruitpro.repository;
 
 import com.recruitpro.model.Skill;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -15,4 +17,7 @@ public interface SkillRepository extends JpaRepository<Skill, UUID> {
     Optional<Skill> findByNameIgnoreCase(String name);
 
     boolean existsByName(String name);
+
+    @Query(value = "SELECT COUNT(*) FROM job_skills WHERE skill_id = :skillId", nativeQuery = true)
+    long countJobsUsingSkill(@Param("skillId") UUID skillId);
 }

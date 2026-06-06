@@ -220,16 +220,6 @@ export default function DashboardPage() {
       iconColor: '#9333EA',
     },
     {
-      label: 'Upcoming',
-      value: stats?.upcomingInterviews ?? 0,
-      icon: 'fa-clock',
-      color: 'amber' as const,
-      change: "",
-      gradient: 'linear-gradient(135deg, #FFFBEB, #FEF3C7)',
-      iconBg: '#FEF3C7',
-      iconColor: '#D97706',
-    },
-    {
       label: 'Offers',
       value: 0,
       icon: 'fa-hand-holding-heart',

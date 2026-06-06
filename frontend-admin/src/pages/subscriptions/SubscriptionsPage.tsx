@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useOutletContext } from 'react-router-dom';
 import Topbar from '../../components/layout/Topbar';
 import Pagination from '../../components/ui/Pagination';
@@ -82,6 +83,12 @@ function PlanFormModal({ plan, onClose }: PlanFormModalProps) {
       : { ...EMPTY_FORM }
   );
 
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
   const set = (key: keyof CreatePlanRequest, value: string | number | boolean) =>
     setForm((f) => ({ ...f, [key]: value }));
 
@@ -109,12 +116,12 @@ function PlanFormModal({ plan, onClose }: PlanFormModalProps) {
     }
   };
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 animate-overlay"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-modal">
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-lg font-bold text-gray-900">{plan ? 'Edit Plan' : 'Add New Plan'}</h3>
           <button className="text-gray-400 hover:text-gray-600 transition-colors" onClick={onClose}>
@@ -238,7 +245,8 @@ function PlanFormModal({ plan, onClose }: PlanFormModalProps) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -327,7 +335,6 @@ function PlanCard({ plan, onEdit }: { plan: AdminPlan; onEdit: (p: AdminPlan) =>
 
 export default function SubscriptionsPage() {
   const { onMenuToggle } = useOutletContext<OutletCtx>();
-  const toast = useToast();
 
   // Plans state
   const { data: plans, isLoading: plansLoading } = useAdminPlans();

@@ -1,5 +1,6 @@
 package com.recruitpro.service;
 
+import com.recruitpro.exception.BadRequestException;
 import com.recruitpro.exception.DuplicateResourceException;
 import com.recruitpro.exception.ResourceNotFoundException;
 import com.recruitpro.model.Skill;
@@ -50,7 +51,19 @@ public class SkillService {
     @Transactional
     public void delete(UUID id) {
         Skill skill = findById(id);
+        long usageCount = skillRepository.countJobsUsingSkill(id);
+        if (usageCount > 0) {
+            throw new BadRequestException(
+                    "Cannot delete skill \"" + skill.getName() +
+                    "\" because it is currently used by " + usageCount + " job(s). " +
+                    "Please remove those skills from the jobs first.");
+        }
         skillRepository.delete(skill);
         log.info("Skill deleted: {}", skill.getName());
+    }
+
+    public long getJobUsageCount(UUID id) {
+        findById(id);
+        return skillRepository.countJobsUsingSkill(id);
     }
 }

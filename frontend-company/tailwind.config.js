@@ -6,8 +6,9 @@ export default {
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
       },
-      colors: {
-        primary: { DEFAULT: '#11d134', hover: '#0eb02b', light: '#4ae564', dark: '#0a8a22' },
+  colors: {
+    primary: { DEFAULT: '#19a633', hover: '#0eb02b', light: '#4ae564', dark: '#0a8a22' },
+    'primary-dark': '#0a8a22',
         surface: '#f4f6fa',
         background: '#f8fafc',
         card: '#ffffff',

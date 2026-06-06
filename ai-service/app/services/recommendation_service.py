@@ -29,6 +29,25 @@ behavioral_store: Dict[str, List[dict]] = {}
 # Reverse index: user_id → [job_ids] for fast lookup when building preference vectors
 user_jobs: Dict[str, List[str]] = {}
 
+
+def _debug_behavioral_snapshot(user_id: Optional[str] = None, limit: int = 3) -> dict:
+    """Return a small debug snapshot of behavioral history state."""
+    if user_id:
+        interactions = behavioral_store.get(user_id, [])
+        return {
+            "user_id": user_id,
+            "behavioral_count": len(interactions),
+            "behavioral_jobs": user_jobs.get(user_id, [])[:limit],
+            "latest_behavioral": interactions[-limit:],
+        }
+
+    return {
+        "behavioral_users": len(behavioral_store),
+        "behavioral_user_ids": list(behavioral_store.keys())[:limit],
+        "user_jobs_users": len(user_jobs),
+        "user_jobs_user_ids": list(user_jobs.keys())[:limit],
+    }
+
 # Map resume_id → user_id (jobSeekerId). Populated when resume nodes are added.
 # Needed so get_recommendations(resume_id) can resolve the user for preference vector.
 resume_to_user: Dict[str, str] = {}
@@ -104,6 +123,11 @@ def _record_behavioral_signal(user_id: str, job_id: str, action_type: str) -> No
     """
     if job_id not in job_catalog:
         raise ValueError(f"Job '{job_id}' not found in job catalog.")
+    
+    logger.info(
+        "[Behavioral] record user_id=%s job_id=%s action_type=%s before_count=%d",
+        user_id, job_id, action_type, len(behavioral_store.get(user_id, [])),
+    )
 
     weight = ACTION_WEIGHT_MAP.get(action_type, 0.1)
     timestamp = datetime.now(timezone.utc).isoformat()
@@ -115,9 +139,18 @@ def _record_behavioral_signal(user_id: str, job_id: str, action_type: str) -> No
         "timestamp": timestamp,
     }
     behavioral_store.setdefault(user_id, []).append(entry)
+    graph_store.persist_behavioral_signal(user_id, job_id, action_type, weight, timestamp)
 
     if job_id not in user_jobs.setdefault(user_id, []):
         user_jobs.setdefault(user_id, []).append(job_id)
+
+    logger.info(
+        "[Behavioral] stored user_id=%s after_count=%d jobs_count=%d latest=%s",
+        user_id,
+        len(behavioral_store.get(user_id, [])),
+        len(user_jobs.get(user_id, [])),
+        _debug_behavioral_snapshot(user_id),
+    )
 
     logger.debug(
         "[Behavioral] user=%s job=%s action=%s weight=%.1f recorded",
@@ -396,8 +429,24 @@ def process_application(resume_id: str, job_id: str, weight: float, graphsage_mo
         old_vec = graphsage_store.get(resume_id, updated_resume_vec)
         blended = SMOOTHING_ALPHA * old_vec + (1 - SMOOTHING_ALPHA) * updated_resume_vec
         smoothed_vec = F.normalize(blended.unsqueeze(0), p=2, dim=1).squeeze(0)
-    
+
     graphsage_store[resume_id] = smoothed_vec
+    graph_store.persist_gnn_embedding(resume_id, smoothed_vec)
+
+    # Persist GNN embeddings for the applied-to jobs and 2-hop similar users
+    # so they survive restarts even if a global refresh hasn't run yet.
+    num_jobs = len(job_features)
+    user_offset = 1 + num_jobs
+    job_offset  = 1
+    if num_jobs > 0 and updated_all.shape[0] > user_offset:
+        for i in range(num_jobs):
+            job_id = edges[i]["job_id"]
+            graphsage_store[job_id] = updated_all[job_offset + i]
+            graph_store.persist_gnn_embedding(job_id, updated_all[job_offset + i])
+    if len(similar_users) > 0 and updated_all.shape[0] > user_offset:
+        for k, u_id in enumerate(similar_users):
+            graphsage_store[u_id] = updated_all[user_offset + k]
+            graph_store.persist_gnn_embedding(u_id, updated_all[user_offset + k])
 
     elapsed = time.time() - start
     logger.debug("process_application(%s→%s) in %.3fs", resume_id, job_id, elapsed)
@@ -632,9 +681,10 @@ def run_graphsage_global(graphsage_model, device) -> int:
     with torch.no_grad():
         updated = graphsage_model(x, edge_index, edge_weight)  # (N, 768)
 
-    # ── Write all outputs to graphsage_store ──────────────────────────────────
+    # ── Write all outputs to graphsage_store and Redis ─────────────────────────
     for i, nid in enumerate(node_ids):
         graphsage_store[nid] = updated[i]  # (768,)
+        graph_store.persist_gnn_embedding(nid, updated[i])
 
     logger.info(
         "Global GNN refresh complete — updated %d node embeddings, %d edges.",
@@ -698,6 +748,15 @@ def _compute_blend_alpha(num_interactions: int) -> float:
     return max(BLEND_ALPHA_MIN, BLEND_ALPHA_BASE - BLEND_ALPHA_STEP * n)
 
 
+def get_activities_query_vector(user_id: str) -> Optional[torch.Tensor]:
+    """Return pure preference vector for user — no GraphSAGE mixing.
+
+    Returns the recency-weighted preference vector built from behavioral_store.
+    Returns None if no behavioral signals exist for this user.
+    """
+    return _compute_preference_vector(user_id)
+
+
 def _build_query_vector(resume_id: str) -> torch.Tensor:
     """Blend GNN structural embedding with user-level behavioral preference vector.
 
@@ -733,11 +792,19 @@ def get_recommendations(
     top_k: int,
     device,
     excluded_job_ids: Optional[List[str]] = None,
+    mode: str = "resume",
+    user_id: Optional[str] = None,
 ) -> dict:
     """Return ranked job recommendations for a resume, optionally excluding certain jobs.
 
+    The `mode` parameter controls how the query vector is built:
+      - "resume"     : pure GraphSAGE structural embedding (graphsage_store) — no preference blend
+      - "activities" : pure behavioral preference vector from behavioral_store, keyed by user_id
+
+    When mode=activities, user_id must be provided (passed from the API layer).
+
     Steps:
-      1. Retrieve the GraphSAGE-updated resume embedding.
+      1. Build the query vector based on mode.
       2. Score every job in job_catalog using cosine similarity.
       3. Filter out excluded job IDs.
       4. Sort by score descending and return top-k.
@@ -747,38 +814,90 @@ def get_recommendations(
         top_k:    Maximum number of recommendations to return
         device:   Torch device for computations
         excluded_job_ids: Job IDs to exclude (e.g. already-applied jobs)
+        mode:     "resume" or "activities"
+        user_id:  Job seeker UUID — required when mode=activities
 
     Returns:
-        Dict with resume_id and list of {"job_id": str, "score": float}
+        Dict with resume_id, list of {"job_id": str, "score": float}, and meta.
     """
-    query_vec = _build_query_vector(resume_id)
+    if mode == "activities":
+        if not user_id:
+            logger.warning(
+                "[get_recommendations] mode=activities missing user_id resume_id=%s top_k=%d excluded_count=%d",
+                resume_id, top_k, len(excluded_job_ids or []),
+            )
+            return {
+                "resume_id": resume_id,
+                "recommendations": [],
+                "meta": {"mode": mode, "has_signals": False, "error": "user_id is required for activities mode"},
+            }
 
-    # ── Diagnostic: embedding state ───────────────────────────────────────────
-    n_edges         = len(edge_store.get(resume_id, []))
-    has_edges       = n_edges > 0
-    used_preference = has_edges
-    alpha_used      = _compute_blend_alpha(n_edges) if used_preference else 1.0
-    logger.info(
-        "[get_recommendations] resume_id=%s query_norm=%.6f n_edges=%d "
-        "used_preference=%s alpha=%.2f embedding_shape=%s device=%s",
-        resume_id, float(query_vec.norm().item()), n_edges,
-        used_preference, alpha_used,
-        list(query_vec.shape) if hasattr(query_vec, "shape") else "unknown",
-        str(query_vec.device),
-    )
-    if not has_edges:
-        logger.warning(
-            "[get_recommendations] resume_id=%s has NO graph edges — recommendations are based "
-            "on raw NLP similarity. Scores will vary; no longer clamped to 1.0.",
-            resume_id,
+        interactions = behavioral_store.get(user_id, [])
+        logger.info(
+            "[get_recommendations] mode=activities resume_id=%s user_id=%s interactions=%d top_k=%d snapshot=%s",
+            resume_id, user_id, len(interactions), top_k, _debug_behavioral_snapshot(user_id),
+        )
+        logger.debug(
+            "[get_recommendations] behavioral_store_keys=%s user_jobs_keys=%s",
+            list(behavioral_store.keys())[:10],
+            list(user_jobs.keys())[:10],
+        )
+        if interactions:
+            latest = sorted(interactions, key=lambda x: x.get("timestamp", ""), reverse=True)[:3]
+            logger.info(
+                "[get_recommendations] mode=activities user_id=%s latest_interactions=%s",
+                user_id,
+                [
+                    {
+                        "job_id": i.get("job_id"),
+                        "action_type": i.get("action_type"),
+                        "weight": i.get("weight"),
+                        "timestamp": i.get("timestamp"),
+                    }
+                    for i in latest
+                ],
+            )
+
+        query_vec = get_activities_query_vector(user_id)
+        if query_vec is None:
+            logger.warning(
+                "[get_recommendations] mode=activities user_id=%s query_vec=None (no usable signals or missing embeddings)",
+                user_id,
+            )
+            return {
+                "resume_id": resume_id,
+                "recommendations": [],
+                "meta": {"mode": mode, "has_signals": False},
+            }
+        logger.info(
+            "[get_recommendations] mode=activities user_id=%s query_norm=%.6f",
+            user_id, float(query_vec.norm().item()),
+        )
+    else:
+        # mode == "resume": pure GraphSAGE structural embedding, no preference blend
+        query_vec = graphsage_store.get(resume_id)
+        if query_vec is None:
+            return {
+                "resume_id": resume_id,
+                "recommendations": [],
+                "meta": {"mode": mode, "error": "resume not found in graphsage_store"},
+            }
+        logger.info(
+            "[get_recommendations] mode=resume resume_id=%s query_norm=%.6f",
+            resume_id, float(query_vec.norm().item()),
         )
 
     excluded_set = set(excluded_job_ids or [])
     catalog_size = len(job_catalog)
     logger.info(
-        "[get_recommendations] resume_id=%s top_k=%d job_catalog_size=%d excluded_count=%d",
-        resume_id, top_k, catalog_size, len(excluded_set),
+        "[get_recommendations] resume_id=%s top_k=%d job_catalog_size=%d excluded_count=%d mode=%s",
+        resume_id, top_k, catalog_size, len(excluded_set), mode,
     )
+    if excluded_set:
+        logger.debug(
+            "[get_recommendations] resume_id=%s excluded_job_ids=%s",
+            resume_id, list(excluded_set),
+        )
 
     # Deduplicate: job_catalog is a list that may contain duplicates if the same
     # job was added multiple times (e.g. re-sync). Keep first occurrence.
@@ -786,8 +905,11 @@ def get_recommendations(
     scored_jobs: List[tuple[str, float]] = []
     skipped_excluded = 0
     skipped_missing = 0
+    skipped_duplicate = 0
+    scored_sample: List[dict] = []
     for job_id in job_catalog:
         if job_id in seen:
+            skipped_duplicate += 1
             continue
         seen.add(job_id)
         if job_id in excluded_set:
@@ -803,12 +925,22 @@ def get_recommendations(
         score   = float(sim_raw.item())
 
         scored_jobs.append((job_id, score))
+        if len(scored_sample) < 5:
+            scored_sample.append({
+                "job_id": job_id,
+                "score": score,
+                "job_norm": float(job_vec.norm().item()),
+            })
 
     scored_jobs.sort(key=lambda x: x[1], reverse=True)
 
     logger.info(
-        "[get_recommendations] resume_id=%s scored=%d skipped_excluded=%d skipped_missing=%d",
-        resume_id, len(scored_jobs), skipped_excluded, skipped_missing,
+        "[get_recommendations] resume_id=%s scored=%d skipped_excluded=%d skipped_missing=%d skipped_duplicate=%d",
+        resume_id, len(scored_jobs), skipped_excluded, skipped_missing, skipped_duplicate,
+    )
+    logger.debug(
+        "[get_recommendations] resume_id=%s sample_scored_jobs=%s",
+        resume_id, scored_sample,
     )
 
     # Log top-5 candidates with their scores
@@ -828,4 +960,8 @@ def get_recommendations(
         resume_id, len(recommendations), top_k,
     )
 
-    return {"resume_id": resume_id, "recommendations": recommendations}
+    return {
+        "resume_id": resume_id,
+        "recommendations": recommendations,
+        "meta": {"mode": mode},
+    }

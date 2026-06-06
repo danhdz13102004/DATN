@@ -212,6 +212,8 @@ export default function JobsPage() {
   const [recommendedJobs, setRecommendedJobs] = useState<{ job: Job; score: number }[]>([]);
   const [recommendLoading, setRecommendLoading] = useState(false);
   const [recommendError, setRecommendError] = useState<string | null>(null);
+  const [recommendMode, setRecommendMode] = useState(true); // true = resume, false = activities
+  const [recommendMeta, setRecommendMeta] = useState<Record<string, unknown>>({});
 
   const fetchJobs = (f: JobFilter) => {
     setLoading(true);
@@ -234,11 +236,14 @@ export default function JobsPage() {
       .finally(() => setSavedLoading(false));
   };
 
-  const fetchRecommendations = (resumeId: string) => {
+  const fetchRecommendations = (resumeId: string, useResume: boolean) => {
     setRecommendLoading(true);
     setRecommendError(null);
-    jobService.getRecommendations(resumeId)
-      .then(setRecommendedJobs)
+    jobService.getRecommendations(resumeId, 12, useResume ? 'resume' : 'activities')
+      .then((res) => {
+        setRecommendedJobs(res.recommendations ?? []);
+        setRecommendMeta(res.meta ?? {});
+      })
       .catch(() => setRecommendError('Failed to load recommendations. Please try again.'))
       .finally(() => setRecommendLoading(false));
   };
@@ -257,9 +262,17 @@ export default function JobsPage() {
 
   useEffect(() => {
     if (viewMode === 'recommended' && selectedResumeId) {
-      fetchRecommendations(selectedResumeId);
+      fetchRecommendations(selectedResumeId, recommendMode);
     }
-  }, [viewMode, selectedResumeId]);
+  }, [viewMode, selectedResumeId, recommendMode]);
+
+  // Auto-select a resume when switching to activities mode
+  useEffect(() => {
+    if (!recommendMode && resumes.length > 0 && !selectedResumeId) {
+      const primary = resumes.find((r: Resume) => r.isPrimary) ?? resumes[0];
+      setSelectedResumeId(primary.id);
+    }
+  }, [recommendMode, resumes, selectedResumeId]);
 
   useEffect(() => { fetchJobs(filters); }, [filters]);
 
@@ -455,73 +468,134 @@ export default function JobsPage() {
                 <p style={{
                   fontSize: '0.9rem', color: '#64748B', margin: '4px 0 0',
                 }}>
-                  AI-matched jobs based on your selected resume and profile.
+                  {recommendMode
+                    ? 'AI-matched jobs based on your selected resume and profile.'
+                    : 'AI-matched jobs based on your recent browsing activity.'}
                 </p>
               </div>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              {resumes.length > 0 ? (
-                <div style={{ position: 'relative' }}>
-                  <select
-                    style={{
-                      padding: '12px 44px 12px 18px',
-                      border: '2px solid #E2E7F0',
-                      borderRadius: 14,
-                      fontSize: '0.9rem',
-                      color: '#0F172A',
-                      outline: 'none',
-                      background: '#FFFFFF',
-                      cursor: 'pointer',
-                      fontFamily: 'inherit',
-                      appearance: 'none',
-                      WebkitAppearance: 'none',
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2364748B' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E")`,
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: 'right 14px center',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onFocus={e => {
-                      (e.target as HTMLElement).style.borderColor = '#6366F1';
-                      (e.target as HTMLElement).style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)';
-                    }}
-                    onBlur={e => {
-                      (e.target as HTMLElement).style.borderColor = '#E2E7F0';
-                      (e.target as HTMLElement).style.boxShadow = 'none';
-                    }}
-                    value={selectedResumeId ?? ''}
-                    onChange={e => setSelectedResumeId(e.target.value || null)}
-                  >
-                    {resumes.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.label ?? 'Resume'} {r.isPrimary ? '(Primary)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
+              {/* Resume selector — only shown in resume mode */}
+              {recommendMode && (
+                <>
+                  {resumes.length > 0 ? (
+                    <div style={{ position: 'relative' }}>
+                      <select
+                        style={{
+                          padding: '12px 44px 12px 18px',
+                          border: '2px solid #E2E7F0',
+                          borderRadius: 14,
+                          fontSize: '0.9rem',
+                          color: '#0F172A',
+                          outline: 'none',
+                          background: '#FFFFFF',
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                          appearance: 'none',
+                          WebkitAppearance: 'none',
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2364748B' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E")`,
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'right 14px center',
+                          transition: 'all 0.2s ease',
+                        }}
+                        onFocus={e => {
+                          (e.target as HTMLElement).style.borderColor = '#6366F1';
+                          (e.target as HTMLElement).style.boxShadow = '0 0 0 3px rgba(99,102,241,0.1)';
+                        }}
+                        onBlur={e => {
+                          (e.target as HTMLElement).style.borderColor = '#E2E7F0';
+                          (e.target as HTMLElement).style.boxShadow = 'none';
+                        }}
+                        value={selectedResumeId ?? ''}
+                        onChange={e => setSelectedResumeId(e.target.value || null)}
+                      >
+                        {resumes.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.label ?? 'Resume'} {r.isPrimary ? '(Primary)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => navigate('/resumes')}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        padding: '12px 22px', fontSize: '0.9rem',
+                        color: '#64748B', background: '#FFFFFF',
+                        border: '2px solid #E2E7F0', borderRadius: 14,
+                        cursor: 'pointer', fontFamily: 'inherit',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={e => {
+                        (e.currentTarget as HTMLElement).style.borderColor = '#6366F1';
+                        (e.currentTarget as HTMLElement).style.color = '#6366F1';
+                      }}
+                      onMouseLeave={e => {
+                        (e.currentTarget as HTMLElement).style.borderColor = '#E2E7F0';
+                        (e.currentTarget as HTMLElement).style.color = '#64748B';
+                      }}
+                    >
+                      <i className="fas fa-plus" /> Add Resume
+                    </button>
+                  )}
+                </>
+              )}
+
+              {/* Mode toggle: resume vs activities */}
+              <div style={{
+                display: 'flex',
+                background: '#F1F5F9',
+                borderRadius: 50,
+                padding: 4,
+                gap: 0,
+              }}>
                 <button
-                  onClick={() => navigate('/resumes')}
+                  onClick={() => setRecommendMode(true)}
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '12px 22px', fontSize: '0.9rem',
-                    color: '#64748B', background: '#FFFFFF',
-                    border: '2px solid #E2E7F0', borderRadius: 14,
-                    cursor: 'pointer', fontFamily: 'inherit',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLElement).style.borderColor = '#6366F1';
-                    (e.currentTarget as HTMLElement).style.color = '#6366F1';
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLElement).style.borderColor = '#E2E7F0';
-                    (e.currentTarget as HTMLElement).style.color = '#64748B';
+                    padding: '8px 18px',
+                    borderRadius: 50,
+                    border: 'none',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    transition: 'all 0.25s ease',
+                    background: recommendMode
+                      ? 'linear-gradient(135deg, #6366F1, #4F46E5)'
+                      : 'transparent',
+                    color: recommendMode ? '#FFFFFF' : '#64748B',
+                    boxShadow: recommendMode
+                      ? '0 4px 12px rgba(99,102,241,0.3)'
+                      : 'none',
                   }}
                 >
-                  <i className="fas fa-plus" /> Add Resume
+                  Resume
                 </button>
-              )}
+                <button
+                  onClick={() => setRecommendMode(false)}
+                  style={{
+                    padding: '8px 18px',
+                    borderRadius: 50,
+                    border: 'none',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    transition: 'all 0.25s ease',
+                    background: !recommendMode
+                      ? 'linear-gradient(135deg, #F59E0B, #D97706)'
+                      : 'transparent',
+                    color: !recommendMode ? '#FFFFFF' : '#64748B',
+                    boxShadow: !recommendMode
+                      ? '0 4px 12px rgba(245,158,11,0.3)'
+                      : 'none',
+                  }}
+                >
+                  Activities
+                </button>
+              </div>
 
               <span style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -591,8 +665,53 @@ export default function JobsPage() {
                 Upload Resume
               </button>
             </div>
+          ) : !recommendMode && recommendMeta && recommendMeta.has_signals === false ? (
+            <div style={{
+              textAlign: 'center', padding: '48px 24px',
+            }}>
+              <div style={{
+                width: 100, height: 100, borderRadius: 28,
+                background: 'linear-gradient(135deg, #FEF3C7, #FDE68A)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 20px',
+                boxShadow: '0 8px 24px rgba(245,158,11,0.12)',
+              }}>
+                <i className="fas fa-chart-line" style={{ fontSize: '2.2rem', color: '#D97706' }} />
+              </div>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A', margin: '0 0 10px' }}>
+                No activity data yet
+              </h3>
+              <p style={{ fontSize: '0.9rem', color: '#64748B', margin: '0 0 24px', maxWidth: 380, marginLeft: 'auto', marginRight: 'auto' }}>
+                Start clicking or saving jobs to see recommendations based on your browsing activity.
+              </p>
+              <button
+                onClick={() => setViewMode('all')}
+                style={{
+                  padding: '14px 28px',
+                  background: 'linear-gradient(135deg, #D97706, #F59E0B)',
+                  color: '#FFFFFF', fontSize: '0.95rem', fontWeight: 600,
+                  border: 'none', borderRadius: 14,
+                  cursor: 'pointer', fontFamily: 'inherit',
+                  boxShadow: '0 4px 14px rgba(245,158,11,0.35)',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
+                  (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 20px rgba(245,158,11,0.4)';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                  (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 14px rgba(245,158,11,0.35)';
+                }}
+              >
+                <i className="fas fa-search" style={{ marginRight: 8 }} />
+                Browse Jobs
+              </button>
+            </div>
           ) : recommendedJobs.length === 0 ? (
-            <RecommendedEmptyState description="Try selecting a different resume or check back when more jobs are available." />
+            <RecommendedEmptyState description={!recommendMode
+              ? "No recommendations found based on your activity. Try browsing and saving more jobs."
+              : "Try selecting a different resume or check back when more jobs are available."} />
           ) : (
             <div style={gridStyle}>
               {recommendedJobs.map(({ job, score }) => (

@@ -140,11 +140,6 @@ export default function ApplicationsPage() {
 
   return (
     <div className="space-y-5">
-      {/* Page Header */}
-      <PageHeader
-        title="My Applications"
-        subtitle="Track your submitted jobs and application progress."
-      />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

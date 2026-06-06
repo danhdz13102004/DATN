@@ -4,6 +4,7 @@ Responsibilities:
 - Persist every graph mutation (add_node, handle_interaction) to Redis.
 - Restore full graph state into in-memory stores on service startup.
 - Re-encode NLP embeddings after restore using the loaded NLP model.
+- Persist GraphSAGE GNN embeddings so they survive service restarts.
 
 Key schema (all under GRAPH_KEY_PREFIX = "graph:"):
   graph:node:<node_id>        → Redis Hash  { node_type, text_snippet }
@@ -12,11 +13,13 @@ Key schema (all under GRAPH_KEY_PREFIX = "graph:"):
   graph:job_edges:<job_id>    → Redis Hash  { resume_id: cumulative_weight, … }  (reverse)
   graph:job_catalog           → Redis List  [job_id, ...]
   graph:job_users:<job_id>    → Redis Set   {resume_id, ...}
+  graph:gnn:<node_id>         → Redis String  base64-encoded torch.Tensor (GNN embedding)
 
 Edge persistence uses HINCRBYFLOAT so weights accumulate across interactions;
 an edge is created automatically on first write.
 """
 
+import base64
 import io
 import json
 import logging
@@ -54,6 +57,49 @@ def _edges_ts_key(resume_id: str) -> str:
     return f"{_PFX}edges_ts:{resume_id}"
 
 CATALOG_KEY = f"{_PFX}job_catalog"
+BEHAVIORAL_KEY = f"{_PFX}behavioral"
+
+
+def persist_behavioral_signal(user_id: str, job_id: str, action_type: str, weight: float, timestamp: str) -> None:
+    """Persist one behavioral interaction to Redis."""
+    try:
+        payload = json.dumps({
+            "job_id": job_id,
+            "action_type": action_type,
+            "weight": weight,
+            "timestamp": timestamp,
+        })
+        get_redis().rpush(f"{BEHAVIORAL_KEY}:{user_id}", payload)
+    except Exception as exc:
+        logger.warning("graph_store.persist_behavioral_signal(%s, %s) failed: %s", user_id, job_id, exc)
+
+
+def load_behavioral_into_memory(behavioral_store: dict, user_jobs: dict) -> int:
+    """Restore behavioral history from Redis into in-memory stores."""
+    r = get_redis()
+    total = 0
+    for key in r.scan_iter(f"{BEHAVIORAL_KEY}:*"):
+        user_id = key[len(f"{BEHAVIORAL_KEY}:"):]
+        try:
+            raw_items = r.lrange(key, 0, -1)
+            interactions = []
+            jobs = []
+            for raw in raw_items:
+                item = json.loads(raw)
+                interactions.append(item)
+                job_id = item.get("job_id")
+                if job_id and job_id not in jobs:
+                    jobs.append(job_id)
+            behavioral_store[user_id] = interactions
+            user_jobs[user_id] = jobs
+            total += len(interactions)
+        except Exception as exc:
+            logger.warning("graph_store.load_behavioral_into_memory(%s) failed: %s", user_id, exc)
+    return total
+
+
+def _gnn_key(node_id: str) -> str:
+    return f"{_PFX}gnn:{node_id}"
 
 
 # ── Redis client (lazy singleton) ─────────────────────────────────────────────
@@ -194,6 +240,22 @@ def persist_job_users(job_id: str, resume_id: str) -> None:
         logger.warning("graph_store.persist_job_users(%s, %s) failed: %s", job_id, resume_id, exc)
 
 
+def persist_gnn_embedding(node_id: str, tensor: torch.Tensor) -> None:
+    """Persist a GraphSAGE GNN embedding so it survives service restarts.
+
+    The tensor is serialized as a base64-encoded pickle, which is compact and
+    preserves dtype/shape exactly. Redis STRING is used because each node has
+    exactly one embedding.
+    """
+    try:
+        buf = io.BytesIO()
+        torch.save(tensor.cpu(), buf)
+        encoded = base64.b64encode(buf.getvalue()).decode("ascii")
+        get_redis().set(_gnn_key(node_id), encoded)
+    except Exception as exc:
+        logger.warning("graph_store.persist_gnn_embedding(%s) failed: %s", node_id, exc)
+
+
 # ── Restore on startup ────────────────────────────────────────────────────────
 
 def restore_graph(
@@ -286,8 +348,27 @@ def restore_graph(
         existing = set(job_to_users.get(job_id, []))
         job_to_users[job_id] = list(existing | set(members))
 
+    # ── 6. Restore GNN embeddings from Redis (fallback to NLP on miss) ────────
+    gnn_keys = list(r.scan_iter(f"{_PFX}gnn:*"))
+    gnn_restored = 0
+    for key in gnn_keys:
+        node_id = key[len(f"{_PFX}gnn:"):]
+        raw = r.get(key)
+        if not raw:
+            continue
+        try:
+            buf = io.BytesIO(base64.b64decode(raw))
+            tensor = torch.load(buf, map_location=device, weights_only=False)
+            graphsage_store[node_id] = tensor.squeeze(0).to(device)
+            gnn_restored += 1
+        except Exception as exc:
+            logger.warning("graph_store: failed to restore GNN embedding for %s: %s", node_id, exc)
+    if gnn_keys:
+        logger.info("graph_store: restored %d GNN embedding(s) from Redis (fallback to NLP for %d).",
+                    gnn_restored, len(gnn_keys) - gnn_restored)
+
     logger.info(
-        "graph_store: restore complete — %d encoded, %d edges, %d job→user mappings.",
-        restored, edge_count, len(job_to_users),
+        "graph_store: restore complete — %d encoded, %d edges, %d job→user mappings, %d GNN embeddings.",
+        restored, edge_count, len(job_to_users), gnn_restored,
     )
     return restored

@@ -103,10 +103,12 @@ public class JobSeekerApplicationController {
     }
 
     @GetMapping("/recommendations")
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getRecommendations(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getRecommendations(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam UUID resumeId,
-            @RequestParam(defaultValue = "12") int topK) {
+            @RequestParam(defaultValue = "12") int topK,
+            @RequestParam(defaultValue = "resume") String mode,
+            @RequestParam(required = false) String userId) {
 
         UUID seekerId = jobSeekerService.findByUserId(UUID.fromString(principal.getId())).getId();
 
@@ -116,26 +118,37 @@ public class JobSeekerApplicationController {
                 .map(UUID::toString)
                 .collect(Collectors.joining(","));
 
-        // 2. Call AI service
-        List<Map<String, Object>> aiRecommendations =
-                aiServiceClient.getRecommendations(resumeId.toString(), topK, excluded);
+        // 2. Call AI service — activities mode uses seekerId, resume mode ignores it
+        String effectiveUserId = "activities".equals(mode) ? seekerId.toString() : null;
+        Map<String, Object> aiResponse =
+                aiServiceClient.getRecommendationsWithMeta(resumeId.toString(), topK, excluded, mode, effectiveUserId);
 
-        if (aiRecommendations == null || aiRecommendations.isEmpty()) {
-            return ResponseEntity.ok(ApiResponse.ok(List.of()));
+        if (aiResponse == null) {
+            return ResponseEntity.ok(ApiResponse.ok(Map.of("recommendations", List.of(), "meta", Map.of())));
         }
 
-        // 3. Fetch full JobDto objects, preserving AI ordering
+        // 3. Extract recommendations and meta
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> aiRecommendations = (List<Map<String, Object>>) aiResponse.get("recommendations");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> meta = (Map<String, Object>) aiResponse.getOrDefault("meta", Map.of());
+
+        if (aiRecommendations == null || aiRecommendations.isEmpty()) {
+            return ResponseEntity.ok(ApiResponse.ok(Map.of("recommendations", List.of(), "meta", meta)));
+        }
+
+        // 4. Fetch full JobDto objects, preserving AI ordering
         List<UUID> jobIds = aiRecommendations.stream()
                 .map(r -> UUID.fromString((String) r.get("job_id")))
                 .collect(Collectors.toList());
         List<JobDto> jobs = jobService.findByIds(jobIds, seekerId);
 
-        // 4. Build result map: job DTO + AI score
+        // 5. Build result map: job DTO + AI score + meta
         Map<String, Double> scoreMap = aiRecommendations.stream()
                 .collect(Collectors.toMap(
                         r -> (String) r.get("job_id"),
                         r -> ((Number) r.get("score")).doubleValue(),
-                        (existing, replacement) -> existing  // keep first if duplicate (defensive)
+                        (existing, replacement) -> existing
                 ));
 
         List<Map<String, Object>> result = jobs.stream().map(job -> {
@@ -145,6 +158,10 @@ public class JobSeekerApplicationController {
             return m;
         }).collect(Collectors.toList());
 
-        return ResponseEntity.ok(ApiResponse.ok(result));
+        Map<String, Object> responseBody = new java.util.LinkedHashMap<>();
+        responseBody.put("recommendations", result);
+        responseBody.put("meta", meta);
+
+        return ResponseEntity.ok(ApiResponse.ok(responseBody));
     }
 }

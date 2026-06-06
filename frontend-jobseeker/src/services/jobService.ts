@@ -40,8 +40,8 @@ export const jobService = {
       // Silent — interaction logging must never break UI
     }),
 
-  getRecommendations: (resumeId: string, topK = 12) =>
-    api.get(`/jobseeker/applications/recommendations?resumeId=${resumeId}&topK=${topK}`)
-      .then(r => r.data.data as { job: Job; score: number }[]),
+  getRecommendations: (resumeId: string, topK = 12, mode = 'resume') =>
+    api.get(`/jobseeker/applications/recommendations?resumeId=${resumeId}&topK=${topK}&mode=${mode}`)
+      .then(r => r.data.data as { recommendations: { job: Job; score: number }[]; meta: Record<string, unknown> }),
 };
 

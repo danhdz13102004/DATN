@@ -81,7 +81,7 @@ body {
 
 /* ── Focus Ring Styles ── */
 .focus-ring:focus-visible {
-  outline: 2px solid #11d134;
+  outline: 2px solid #19a633;
   outline-offset: 2px;
 }
 
@@ -169,7 +169,7 @@ button, a, input, select, textarea {
 
 /* ── Form Focus States ── */
 input:focus, select:focus, textarea:focus {
-  border-color: #11d134 !important;
+  border-color: #19a633 !important;
   box-shadow: 0 0 0 3px rgba(17, 209, 52, 0.1) !important;
   outline: none !important;
 }
@@ -222,7 +222,7 @@ input:focus, select:focus, textarea:focus {
 /* ── Avatar Gradient Circle ── */
 .avatar-gradient-green {
   background: linear-gradient(145deg, #f0fdf4, #dcfce7);
-  color: #15803d;
+  color: #0a8a22;
 }
 .avatar-gradient-blue {
   background: linear-gradient(145deg, #eff6ff, #dbeafe);
@@ -262,7 +262,7 @@ input:focus, select:focus, textarea:focus {
 }
 .tab-segmented button.active {
   background: #ffffff;
-  color: #11d134;
+  color: #19a633;
   font-weight: 600;
   box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
@@ -286,13 +286,13 @@ input:focus, select:focus, textarea:focus {
   display: inline-block;
   width: 4px;
   height: 20px;
-  background: linear-gradient(180deg, #11d134, #0eb02b);
+  background: linear-gradient(180deg, #19a633, #0eb02b);
   border-radius: 2px;
 }
 
 /* ── Notification Item Left Border ── */
 .notification-unread {
-  border-left: 3px solid #11d134;
+  border-left: 3px solid #19a633;
   background: rgba(17, 209, 52, 0.03);
 }
 
@@ -311,7 +311,7 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 12px 40px rgba(0,0,0,0.1);
 }
 .pricing-card.featured {
-  border-color: #11d134;
+  border-color: #19a633;
   box-shadow: 0 4px 20px rgba(17, 209, 52, 0.15);
 }
 
@@ -332,7 +332,7 @@ input:focus, select:focus, textarea:focus {
 
 /* ── Animated Gradient Text ── */
 .text-gradient {
-  background: linear-gradient(135deg, #11d134, #0eb02b, #4ae564, #11d134);
+  background: linear-gradient(135deg, #19a633, #0eb02b, #4ae564, #19a633);
   background-size: 300% 300%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -374,19 +374,19 @@ input:focus, select:focus, textarea:focus {
 
 /* ── Better Focus Ring ── */
 .focus-primary:focus-visible {
-  outline: 2px solid #11d134;
+  outline: 2px solid #19a633;
   outline-offset: 2px;
   border-radius: 6px;
 }
 
 /* ── Text Selection ── */
 ::selection {
-  background: #bbf7d0;
-  color: #14532d;
+  background: #dcfce7;
+  color: #0a8a22;
 }
 ::-moz-selection {
-  background: #bbf7d0;
-  color: #14532d;
+  background: #dcfce7;
+  color: #0a8a22;
 }
 
 /* ── Sidebar Active Link Glow ── */
@@ -401,7 +401,7 @@ input:focus, select:focus, textarea:focus {
   transform: translateY(-50%);
   width: 3px;
   height: 60%;
-  background: #11d134;
+  background: #19a633;
   border-radius: 0 2px 2px 0;
   box-shadow: 0 0 10px rgba(17, 209, 52, 0.5);
 }

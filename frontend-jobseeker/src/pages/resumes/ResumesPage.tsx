@@ -375,11 +375,6 @@ export default function ResumesPage() {
         />
       )}
 
-      {/* Page Header */}
-      <PageHeader
-        title="My Resumes"
-        subtitle="Upload and manage your resumes for job applications."
-      />
 
       {/* Quick Upload Card */}
       <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm mb-5">

@@ -190,10 +190,10 @@ export default function Sidebar({ isOpen, onToggle, userName, userRole, userInit
         }
         .sidebar-nav-item.active {
           background: #ECFDF5;
-          color: #059669;
+          color: #19a633;
         }
         .sidebar-nav-item.active .nav-icon-wrap {
-          color: #059669;
+          color: #19a633;
         }
         .nav-icon-wrap {
           width: 32px;
@@ -210,15 +210,15 @@ export default function Sidebar({ isOpen, onToggle, userName, userRole, userInit
         }
         .sidebar-nav-item:hover:not(.active) .nav-icon-wrap {
           background: #ECFDF5;
-          color: #10B981;
+          color: #0eb02b;
         }
         .sidebar-nav-item.active .nav-icon-wrap {
-          background: rgba(16, 185, 129, 0.1);
-          color: #059669;
+          background: rgba(17, 209, 52, 0.1);
+          color: #19a633;
         }
         .nav-active-dot {
-          background: #059669;
-          box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+          background: #19a633;
+          box-shadow: 0 0 0 3px rgba(17, 209, 52, 0.15);
         }
         @keyframes scaleIn {
           from {
