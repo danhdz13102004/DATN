@@ -5,6 +5,7 @@ import { authService } from '../../services/authService';
 import { AUTH_STRINGS, ROUTES } from '../../constants';
 
 interface SignupForm {
+  fullName: string;
   email: string;
   password: string;
   confirmPassword: string;
@@ -22,7 +23,12 @@ export default function SignupPage() {
     setError('');
     setLoading(true);
     try {
-      await authService.register({ email: data.email, password: data.password, role: 'JOBSEEKER' });
+      await authService.register({
+        fullName: data.fullName.trim(),
+        email: data.email,
+        password: data.password,
+        role: 'JOBSEEKER',
+      });
       navigate(ROUTES.VERIFY_OTP, { state: { email: data.email, type: 'VERIFY_ACCOUNT' } });
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || 'Registration failed.';
@@ -65,6 +71,12 @@ export default function SignupPage() {
 
           <form onSubmit={handleSubmit(onSubmit)}>
             <div className="mb-5">
+              <label className="block font-medium text-sm mb-1.5">Full name <span className="text-red-500">{AUTH_STRINGS.REQUIRED}</span></label>
+              <input type="text" className={`w-full px-3.5 py-3 border-[1.5px] rounded-[10px] text-sm font-satoshi transition-all bg-white focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 ${errors.fullName ? 'border-red-500' : 'border-border'}`} placeholder="Enter your full name" {...register('fullName', { required: 'Full name is required', validate: v => v.trim().length > 0 || 'Full name is required' })} />
+              {errors.fullName && <span className="block text-red-500 text-xs mt-1">{errors.fullName.message}</span>}
+            </div>
+
+            <div className="mb-5">
               <label className="block font-medium text-sm mb-1.5">{AUTH_STRINGS.EMAIL_LABEL} <span className="text-red-500">{AUTH_STRINGS.REQUIRED}</span></label>
               <input type="email" className={`w-full px-3.5 py-3 border-[1.5px] rounded-[10px] text-sm font-satoshi transition-all bg-white focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 ${errors.email ? 'border-red-500' : 'border-border'}`} placeholder="you@email.com" {...register('email', { required: 'Email is required' })} />
               {errors.email && <span className="block text-red-500 text-xs mt-1">{errors.email.message}</span>}
@@ -93,16 +105,7 @@ export default function SignupPage() {
             </button>
           </form>
 
-          <div className="flex items-center gap-4 my-7 text-text-light text-[0.85rem] before:content-[''] before:flex-1 before:h-px before:bg-border after:content-[''] after:flex-1 after:h-px after:bg-border">{AUTH_STRINGS.OR_CONTINUE}</div>
 
-          <div className="flex gap-3 mb-6">
-            <button type="button" className="flex-1 py-3 border-[1.5px] border-border rounded-[10px] bg-white cursor-pointer flex items-center justify-center gap-2 text-sm font-medium font-satoshi transition-all text-text hover:border-border-hover hover:bg-gray-50">
-              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" width={20} height={20} /> Google
-            </button>
-            <button type="button" className="flex-1 py-3 border-[1.5px] border-border rounded-[10px] bg-white cursor-pointer flex items-center justify-center gap-2 text-sm font-medium font-satoshi transition-all text-text hover:border-border-hover hover:bg-gray-50">
-              <i className="fab fa-github text-lg" /> GitHub
-            </button>
-          </div>
         </div>
       </div>
     </div>

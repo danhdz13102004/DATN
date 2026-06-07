@@ -66,6 +66,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
     background: hoveredBtn === id ? '#F3F4F6' : 'transparent', borderRadius: '10px',
     cursor: 'pointer', color: hoveredBtn === id ? '#111827' : '#6B7280', fontSize: '1rem',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
+    position: 'relative',
     transition: 'all 0.15s ease',
   });
 
@@ -198,21 +199,23 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
             {unreadCount > 0 && (
               <span style={{
                 position: 'absolute',
-                top: '6px',
-                right: '4px',
-                minWidth: '18px',
-                height: '18px',
+                top: '5px',
+                right: '5px',
+                minWidth: '16px',
+                height: '16px',
                 borderRadius: '999px',
                 background: '#EF4444',
                 border: '2px solid #fff',
                 color: '#fff',
-                fontSize: '10px',
+                fontSize: '9px',
                 fontWeight: 700,
                 lineHeight: '1',
-                padding: '0 5px',
+                padding: '0 4px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                boxSizing: 'border-box',
+                pointerEvents: 'none',
               }}>
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
