@@ -2,11 +2,10 @@ fastapi==0.109.2
 uvicorn[standard]==0.27.1
 pydantic==2.6.1
 pydantic-settings==2.1.0
-sentence-transformers==2.3.1
-# Pin transformers/tokenizers compatible with torch==2.1.2
-# (newer transformers uses register_pytree_node removed in torch 2.1.x)
-transformers==4.37.2
-tokenizers==0.15.2
+sentence-transformers==5.4.1
+# Keep Torch/PyG pinned, but use the Transformers range required by sentence-transformers 5.x.
+transformers==4.41.2
+tokenizers==0.19.1
 psycopg2-binary==2.9.9
 redis==5.0.1
 numpy==1.26.4

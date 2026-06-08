@@ -207,6 +207,7 @@ export default function JobsPage() {
   const [savedLoading, setSavedLoading] = useState(false);
   const [savedTotal, setSavedTotal] = useState(0);
   const [savePendingId, setSavePendingId] = useState<string | null>(null);
+  const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
   const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [recommendedJobs, setRecommendedJobs] = useState<{ job: Job; score: number }[]>([]);
@@ -277,6 +278,13 @@ export default function JobsPage() {
   useEffect(() => { fetchJobs(filters); }, [filters]);
 
   useEffect(() => {
+    if (!isAuthenticated) return;
+    jobService.getAppliedJobIds().then(ids => {
+      setAppliedJobIds(new Set(ids));
+    }).catch(() => {});
+  }, [isAuthenticated]);
+
+  useEffect(() => {
     if (viewMode === 'saved') fetchSavedJobs();
   }, [viewMode]);
 
@@ -289,10 +297,12 @@ export default function JobsPage() {
     if (savePendingId === jobId) return;
     setSavePendingId(jobId);
 
-    const job = jobs.find(j => j.id === jobId);
+    const allJobs = [...jobs, ...recommendedJobs.map(r => r.job)];
+    const job = allJobs.find(j => j.id === jobId);
     const wasSaved = job?.isSaved ?? false;
 
     setJobs(prev => prev.map(j => j.id === jobId ? { ...j, isSaved: !wasSaved } : j));
+    setRecommendedJobs(prev => prev.map(r => r.job.id === jobId ? { ...r, job: { ...r.job, isSaved: !wasSaved } } : r));
 
     try {
       if (wasSaved) {
@@ -306,6 +316,7 @@ export default function JobsPage() {
       }
     } catch {
       setJobs(prev => prev.map(j => j.id === jobId ? { ...j, isSaved: wasSaved } : j));
+      setRecommendedJobs(prev => prev.map(r => r.job.id === jobId ? { ...r, job: { ...r.job, isSaved: wasSaved } } : r));
     } finally {
       setSavePendingId(null);
     }
@@ -379,6 +390,7 @@ export default function JobsPage() {
                     <JobCard
                       key={job.id}
                       job={job}
+                      isApplied={appliedJobIds.has(job.id)}
                       onClick={() => navigate(`/jobs/${job.id}`)}
                       onToggleSave={handleToggleSave}
                       savePendingId={savePendingId}
@@ -387,48 +399,93 @@ export default function JobsPage() {
                 </div>
 
                 {totalPages > 1 && (
-                  <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8 }}>
-                    {Array.from({ length: totalPages }, (_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setFilters(f => ({ ...f, page: i + 1 }))}
-                        className="page-btn"
-                        style={{
-                          width: 44,
-                          height: 44,
-                          borderRadius: 12,
-                          fontSize: '0.95rem',
-                          fontWeight: 600,
-                          border: filters.page === i + 1 ? 'none' : '2px solid #E2E7F0',
-                          background: filters.page === i + 1
-                            ? 'linear-gradient(135deg, #1E40AF, #2563EB)'
-                            : '#FFFFFF',
-                          color: filters.page === i + 1 ? '#FFFFFF' : '#64748B',
-                          cursor: 'pointer',
-                          fontFamily: 'inherit',
-                          transition: 'all 0.2s ease',
-                          boxShadow: filters.page === i + 1
-                            ? '0 4px 12px rgba(37,99,235,0.3)'
-                            : '0 1px 3px rgba(0,0,0,0.04)',
-                        }}
-                        onMouseEnter={e => {
-                          if (filters.page !== i + 1) {
-                            (e.currentTarget as HTMLElement).style.borderColor = '#2563EB';
-                            (e.currentTarget as HTMLElement).style.color = '#2563EB';
-                            (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
-                          }
-                        }}
-                        onMouseLeave={e => {
-                          if (filters.page !== i + 1) {
-                            (e.currentTarget as HTMLElement).style.borderColor = '#E2E7F0';
-                            (e.currentTarget as HTMLElement).style.color = '#64748B';
-                            (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                          }
-                        }}
-                      >
-                        {i + 1}
-                      </button>
-                    ))}
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => setFilters(f => ({ ...f, page: Math.max(1, f.page! - 1) }))}
+                      disabled={filters.page === 1}
+                      style={{
+                        width: 44, height: 44, borderRadius: 12,
+                        fontSize: '0.95rem', fontWeight: 600,
+                        border: '2px solid #E2E7F0',
+                        background: '#FFFFFF', color: '#64748B',
+                        cursor: 'pointer', fontFamily: 'inherit',
+                        transition: 'all 0.2s ease',
+                        opacity: filters.page === 1 ? 0.4 : 1,
+                      }}
+                    >
+                      <i className="fas fa-chevron-left" style={{ fontSize: '0.75rem' }} />
+                    </button>
+
+                    {(() => {
+                      const current = filters.page!;
+                      const pages: (number | '...')[] = [];
+                      const delta = 2;
+
+                      if (totalPages <= 7) {
+                        for (let i = 1; i <= totalPages; i++) pages.push(i);
+                      } else {
+                        pages.push(1);
+                        if (current - delta > 2) pages.push('...');
+                        for (let i = Math.max(2, current - delta); i <= Math.min(totalPages - 1, current + delta); i++) {
+                          pages.push(i);
+                        }
+                        if (current + delta < totalPages - 1) pages.push('...');
+                        pages.push(totalPages);
+                      }
+
+                      return pages.map((p, idx) => p === '...'
+                        ? <span key={`ellipsis-${idx}`} style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8', fontSize: '0.9rem', fontWeight: 600 }}>…</span>
+                        : <button
+                            key={p}
+                            onClick={() => setFilters(f => ({ ...f, page: p as number }))}
+                            className="page-btn"
+                            style={{
+                              width: 44, height: 44, borderRadius: 12,
+                              fontSize: '0.95rem', fontWeight: 600,
+                              border: current === p ? 'none' : '2px solid #E2E7F0',
+                              background: current === p
+                                ? 'linear-gradient(135deg, #1E40AF, #2563EB)'
+                                : '#FFFFFF',
+                              color: current === p ? '#FFFFFF' : '#64748B',
+                              cursor: 'pointer', fontFamily: 'inherit',
+                              transition: 'all 0.2s ease',
+                              boxShadow: current === p ? '0 4px 12px rgba(37,99,235,0.3)' : '0 1px 3px rgba(0,0,0,0.04)',
+                            }}
+                            onMouseEnter={e => {
+                              if (current !== p) {
+                                (e.currentTarget as HTMLElement).style.borderColor = '#2563EB';
+                                (e.currentTarget as HTMLElement).style.color = '#2563EB';
+                                (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
+                              }
+                            }}
+                            onMouseLeave={e => {
+                              if (current !== p) {
+                                (e.currentTarget as HTMLElement).style.borderColor = '#E2E7F0';
+                                (e.currentTarget as HTMLElement).style.color = '#64748B';
+                                (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                              }
+                            }}
+                          >
+                            {p}
+                          </button>
+                      );
+                    })()}
+
+                    <button
+                      onClick={() => setFilters(f => ({ ...f, page: Math.min(totalPages, f.page! + 1) }))}
+                      disabled={filters.page === totalPages}
+                      style={{
+                        width: 44, height: 44, borderRadius: 12,
+                        fontSize: '0.95rem', fontWeight: 600,
+                        border: '2px solid #E2E7F0',
+                        background: '#FFFFFF', color: '#64748B',
+                        cursor: 'pointer', fontFamily: 'inherit',
+                        transition: 'all 0.2s ease',
+                        opacity: filters.page === totalPages ? 0.4 : 1,
+                      }}
+                    >
+                      <i className="fas fa-chevron-right" style={{ fontSize: '0.75rem' }} />
+                    </button>
                   </div>
                 )}
               </>
@@ -718,6 +775,7 @@ export default function JobsPage() {
                 <RecommendedJobCard
                   key={job.id}
                   job={job}
+                  isApplied={appliedJobIds.has(job.id)}
                   score={score}
                   onClick={() => navigate(`/jobs/${job.id}`)}
                   onToggleSave={handleToggleSave}

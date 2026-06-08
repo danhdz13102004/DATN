@@ -3,6 +3,7 @@ import MatchScoreBadge from './MatchScoreBadge';
 
 interface RecommendedJobCardProps {
   job: Job;
+  isApplied?: boolean;
   score: number;
   onClick: () => void;
   onToggleSave: (jobId: string, e: React.MouseEvent) => void;
@@ -33,7 +34,7 @@ const levelBg: Record<string, string> = {
 };
 
 export default function RecommendedJobCard({
-  job, score, onClick, onToggleSave, savePendingId,
+  job, isApplied, score, onClick, onToggleSave, savePendingId,
 }: RecommendedJobCardProps) {
   const initial = job.companyName
     ? job.companyName.charAt(0).toUpperCase()
@@ -113,6 +114,19 @@ export default function RecommendedJobCard({
           {/* Right: match score + save */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
             <MatchScoreBadge score={score} size="sm" />
+            {isApplied && (
+              <div
+                title="Already applied"
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  width: 34, height: 34, borderRadius: 10,
+                  background: '#D1FAE5', border: '1px solid #A7F3D0',
+                  color: '#059669', boxShadow: '0 2px 6px rgba(5, 150, 105, 0.15)',
+                }}
+              >
+                <i className="fas fa-check" style={{ fontSize: '0.75rem' }} />
+              </div>
+            )}
             <button
               onClick={e => onToggleSave(job.id, e)}
               disabled={isPending}

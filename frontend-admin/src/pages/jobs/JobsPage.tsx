@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import Topbar from '../../components/layout/Topbar';
 import StatusBadge from '../../components/ui/StatusBadge';
 import Pagination from '../../components/ui/Pagination';
@@ -84,13 +84,14 @@ export default function JobsPage() {
                   <th className="text-left px-6 py-3 font-semibold">Location</th>
                   <th className="text-left px-6 py-3 font-semibold">Status</th>
                   <th className="text-left px-6 py-3 font-semibold">Posted</th>
+                  <th className="text-right px-6 py-3 font-semibold">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {isLoading ? (
                   [...Array(5)].map((_, i) => (
                     <tr key={i}>
-                      {[...Array(5)].map((_, j) => (
+                      {[...Array(6)].map((_, j) => (
                         <td key={j} className="px-6 py-4">
                           <div className="h-4 bg-gray-100 rounded animate-pulse" />
                         </td>
@@ -99,7 +100,7 @@ export default function JobsPage() {
                   ))
                 ) : data?.data.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-gray-400">
+                    <td colSpan={6} className="px-6 py-12 text-center text-gray-400">
                       <i className="fas fa-briefcase text-3xl mb-3 block opacity-30" />
                       No jobs found
                     </td>
@@ -107,7 +108,11 @@ export default function JobsPage() {
                 ) : (
                   data?.data.map((job) => (
                     <tr key={job.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 font-medium text-gray-900">{job.title}</td>
+                      <td className="px-6 py-4 font-medium text-gray-900">
+                        <Link to={`/jobs/${job.id}`} className="hover:text-primary transition-colors">
+                          {job.title}
+                        </Link>
+                      </td>
                       <td className="px-6 py-4 text-gray-500">{job.jobType ?? '—'}</td>
                       <td className="px-6 py-4 text-gray-500">{job.location ?? '—'}</td>
                       <td className="px-6 py-4">
@@ -115,6 +120,15 @@ export default function JobsPage() {
                       </td>
                       <td className="px-6 py-4 text-gray-400">
                         {new Date(job.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Link
+                          to={`/jobs/${job.id}`}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-colors"
+                        >
+                          <i className="fas fa-eye text-xs" />
+                          View
+                        </Link>
                       </td>
                     </tr>
                   ))

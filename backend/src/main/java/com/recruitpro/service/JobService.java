@@ -12,6 +12,7 @@ import com.recruitpro.model.Skill;
 import com.recruitpro.model.enums.ExperienceLevel;
 import com.recruitpro.model.enums.JobStatus;
 import com.recruitpro.model.enums.JobType;
+import com.recruitpro.model.enums.NotificationType;
 import com.recruitpro.repository.*;
 import com.recruitpro.security.UserPrincipal;
 import com.recruitpro.storage.StorageService;
@@ -46,6 +47,7 @@ public class JobService {
     private final CompanyAddressRepository companyAddressRepository;
     private final StaffRepository staffRepository;
     private final StorageService storageService;
+    private final NotificationService notificationService;
 
     /**
      * Public job listing — only shows PUBLISHED jobs.
@@ -96,6 +98,13 @@ public class JobService {
         Job job = findPublicById(id);
         boolean saved = seekerId != null && savedJobRepository.existsByJobSeekerIdAndJobId(seekerId, id);
         return toJobDetailDto(job, saved);
+    }
+
+    /**
+     * Admin detail view can inspect any non-deleted job, regardless of publication status.
+     */
+    public JobDetailDto findByIdAsAdminJobDetailDto(UUID id) {
+        return toJobDetailDto(findById(id), false);
     }
 
     private JobDetailDto toJobDetailDto(Job job, boolean isSaved) {
@@ -363,6 +372,31 @@ public class JobService {
         job.setDeletedAt(Instant.now());
         jobRepository.save(job);
         log.info("Job soft-deleted: {} (id={})", job.getTitle(), id);
+    }
+
+    /**
+     * Soft-delete a job from the admin console and notify all company staff.
+     */
+    @Transactional
+    public void deleteByAdmin(UUID id) {
+        Job job = findById(id);
+        job.setDeletedAt(Instant.now());
+        jobRepository.save(job);
+
+        staffRepository.findAllByCompanyId(job.getCompanyId()).forEach(staff -> {
+            if (staff.getUser() != null && staff.getUser().getId() != null) {
+                notificationService.createAndPublish(
+                        staff.getUser().getId(),
+                        NotificationType.JOB_DELETED,
+                        "Job removed by admin",
+                        "Your job \"" + job.getTitle() + "\" was removed by an administrator.",
+                        job.getId(),
+                        "JOB"
+                );
+            }
+        });
+
+        log.info("Job soft-deleted by admin: {} (id={})", job.getTitle(), id);
     }
 
     /**

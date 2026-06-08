@@ -86,9 +86,7 @@ def gs_env():
         result = _run_graphsage_local(
             resume_id=env["resume_id"],
             job_features=[svc.feature_store["J1"]],
-            user_features=[svc.graphsage_store["U_B"]],
             edge_store_snapshot=[{"job_id": "J1"}],
-            similar_users=["U_B"],
             graphsage_model=env["gs_model"],
             device=env["device"],
         )

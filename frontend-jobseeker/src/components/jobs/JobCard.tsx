@@ -2,6 +2,7 @@ import type { Job, Skill } from '../../types/job';
 
 interface JobCardProps {
   job: Job;
+  isApplied?: boolean;
   onClick: () => void;
   onToggleSave: (jobId: string, e: React.MouseEvent) => void;
   savePendingId: string | null;
@@ -14,6 +15,23 @@ const JOB_TYPE_LABELS: Record<string, string> = {
   HYBRID: 'Hybrid',
 };
 
+const LEVEL_COLORS: Record<string, string> = {
+  INTERN: '#7C3AED',
+  FRESHER: '#059669',
+  JUNIOR: '#0891B2',
+  MIDDLE: '#1D4ED8',
+  SENIOR: '#B45309',
+  LEADER: '#DC2626',
+};
+const LEVEL_BG: Record<string, string> = {
+  INTERN: '#EDE9FE',
+  FRESHER: '#D1FAE5',
+  JUNIOR: '#E0F2FE',
+  MIDDLE: '#DBEAFE',
+  SENIOR: '#FEF3C7',
+  LEADER: '#FEE2E2',
+};
+
 function formatSalary(min: number | null, max: number | null) {
   if (!min && !max) return 'Negotiable';
   if (min && max) return `$${min.toLocaleString()} – $${max.toLocaleString()}`;
@@ -21,29 +39,12 @@ function formatSalary(min: number | null, max: number | null) {
   return `Up to $${max!.toLocaleString()}`;
 }
 
-export default function JobCard({ job, onClick, onToggleSave, savePendingId }: JobCardProps) {
+export default function JobCard({ job, isApplied, onClick, onToggleSave, savePendingId }: JobCardProps) {
   const initial = job.companyName
     ? job.companyName.charAt(0).toUpperCase()
     : job.title.charAt(0).toUpperCase();
 
   const isPending = savePendingId === job.id;
-  const levelColors: Record<string, string> = {
-    INTERN: '#7C3AED',
-    FRESHER: '#059669',
-    JUNIOR: '#0891B2',
-    MIDDLE: '#1D4ED8',
-    SENIOR: '#B45309',
-    LEADER: '#DC2626',
-  };
-  const levelBg: Record<string, string> = {
-    INTERN: '#EDE9FE',
-    FRESHER: '#D1FAE5',
-    JUNIOR: '#E0F2FE',
-    MIDDLE: '#DBEAFE',
-    SENIOR: '#FEF3C7',
-    LEADER: '#FEE2E2',
-  };
-  const level = job.experienceLevels?.[0] ?? '';
 
   return (
     <article
@@ -147,6 +148,28 @@ export default function JobCard({ job, onClick, onToggleSave, savePendingId }: J
         >
           <i className={`${job.isSaved ? 'fas' : 'far'} fa-bookmark`} style={{ fontSize: '1rem' }} />
         </button>
+
+        {/* Applied Badge */}
+        {isApplied && (
+          <div
+            title="Already applied"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 34,
+              height: 34,
+              borderRadius: 10,
+              background: '#D1FAE5',
+              border: '1px solid #A7F3D0',
+              color: '#059669',
+              flexShrink: 0,
+              boxShadow: '0 2px 6px rgba(5, 150, 105, 0.15)',
+            }}
+          >
+            <i className="fas fa-check" style={{ fontSize: '0.75rem' }} />
+          </div>
+        )}
       </div>
 
       {/* Badges row */}
@@ -181,21 +204,24 @@ export default function JobCard({ job, onClick, onToggleSave, savePendingId }: J
             {JOB_TYPE_LABELS[job.jobType] ?? job.jobType}
           </span>
         )}
-        {level && (
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            padding: '5px 11px',
-            background: levelBg[level] ?? '#F1F5F9',
-            border: `1px solid ${(levelColors[level] ?? '#64748B')}22`,
-            borderRadius: 8,
-            fontSize: '0.8rem',
-            color: levelColors[level] ?? '#64748B',
-            fontWeight: 600,
-          }}>
+        {job.experienceLevels?.map((level) => (
+          <span
+            key={level}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '5px 11px',
+              background: LEVEL_BG[level] ?? '#F1F5F9',
+              border: `1px solid ${(LEVEL_COLORS[level] ?? '#64748B')}22`,
+              borderRadius: 8,
+              fontSize: '0.8rem',
+              color: LEVEL_COLORS[level] ?? '#64748B',
+              fontWeight: 600,
+            }}
+          >
             <i className="fas fa-signal" style={{ fontSize: '0.7rem' }} />
             {level.charAt(0) + level.slice(1).toLowerCase()}
           </span>
-        )}
+        ))}
       </div>
 
       {/* Skills */}

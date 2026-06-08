@@ -65,6 +65,7 @@ const Icon = ({ name, size = 16, color = 'currentColor' }: { name: string; size?
     'chevron': <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>,
     'industry': <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></svg>,
     'external': <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>,
+    'search': <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
   };
   return icons[name] || <span style={{ width: size, height: size, display: 'inline-block' }} />;
 };
@@ -345,6 +346,7 @@ export default function JobDetailPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [isSaved, setIsSaved] = useState(false);
   const [savePending, setSavePending] = useState(false);
+  const [isApplied, setIsApplied] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [coverFocused, setCoverFocused] = useState(false);
 
@@ -374,7 +376,10 @@ export default function JobDetailPage() {
           if (primary) setSelectedResume(primary.id);
           else if (r.length > 0) setSelectedResume(r[0].id);
         }).catch(() => setResumes([])),
-        jobService.getSaveStatus(id).then(saved => setIsSaved(saved)).catch(() => setIsSaved(false))
+        jobService.getSaveStatus(id).then(saved => setIsSaved(saved)).catch(() => setIsSaved(false)),
+        jobService.getAppliedJobIds().then(ids => {
+          setIsApplied(ids.includes(id));
+        }).catch(() => setIsApplied(false))
       );
     }
 
@@ -456,6 +461,7 @@ export default function JobDetailPage() {
         coverLetter: coverLetter || undefined,
       });
       setSuccessMsg('Application submitted successfully!');
+      setIsApplied(true);
       showToast('Application submitted successfully!', 'success');
       setTimeout(() => navigate('/applications'), 2000);
     } catch (err: any) {
@@ -778,7 +784,7 @@ export default function JobDetailPage() {
 
           {/* Nice to Have Skills */}
           {job.niceToHaveSkills && job.niceToHaveSkills.length > 0 && (
-            <SectionCard icon="star" title="Nice to Have">
+            <SectionCard icon="external" title="Nice to Have">
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {job.niceToHaveSkills.map((skill, idx) => (
                   <span key={idx} style={{
@@ -858,27 +864,79 @@ export default function JobDetailPage() {
                 <Icon name="send" size={16} color={c.primary} />
               </div>
               Apply for This Position
+              {isApplied && (
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '4px 12px', borderRadius: 50,
+                  fontSize: 12, fontWeight: 700,
+                  background: c.successLight, color: c.success,
+                  border: `1px solid ${'#A7F3D0'}`,
+                  letterSpacing: '0.03em',
+                  boxShadow: '0 2px 8px rgba(16, 185, 129, 0.15)',
+                }}>
+                  <Icon name="check" size={12} color={c.success} />
+                  APPLIED
+                </span>
+              )}
             </h3>
             <p style={{ fontSize: '0.82rem', color: '#9CA3AF', margin: '0 0 20px', paddingLeft: 46 }}>
               Submit your application in just a few clicks
             </p>
 
             {successMsg ? (
-              <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <div style={{
-                  width: 72, height: 72, borderRadius: 20,
-                  background: c.successLight, color: c.success,
+                  width: 64, height: 64, borderRadius: '50%',
+                  background: c.successLight,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  margin: '0 auto 20px',
+                  margin: '0 auto 16px',
+                  border: `2px solid ${'#A7F3D0'}`,
+                  boxShadow: '0 4px 16px rgba(16, 185, 129, 0.2)',
                 }}>
-                  <Icon name="check" size={32} color={c.success} />
+                  <Icon name="check" size={28} color={c.success} />
                 </div>
-                <p style={{ fontSize: 16, fontWeight: 600, color: '#065F46', marginBottom: 8 }}>
-                  {successMsg}
+                <h4 style={{ fontSize: 16, fontWeight: 700, color: '#065F46', margin: '0 0 8px' }}>
+                  Application Submitted!
+                </h4>
+                <p style={{ fontSize: 13, color: '#047857', margin: '0 0 16px', lineHeight: 1.6 }}>
+                  Your application has been sent to {job.company?.name || 'the company'}.<br />
+                  Good luck with your application!
                 </p>
-                <p style={{ fontSize: 14, color: c.text3 }}>
-                  Redirecting to your applications...
-                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  <button
+                    onClick={() => navigate('/applications')}
+                    style={{
+                      width: '100%', padding: '13px 20px',
+                      borderRadius: 12,
+                      fontSize: 14, fontWeight: 600,
+                      background: c.success, color: '#FFFFFF',
+                      border: 'none', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                      transition: 'all 0.2s',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    <Icon name="briefcase" size={15} color="#FFFFFF" />
+                    View My Applications
+                  </button>
+                  <button
+                    onClick={() => navigate('/jobs')}
+                    style={{
+                      width: '100%', padding: '13px 20px',
+                      borderRadius: 12,
+                      fontSize: 14, fontWeight: 600,
+                      background: c.white, color: c.text2,
+                      border: `1.5px solid ${c.border}`, cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      transition: 'all 0.2s',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    <Icon name="search" size={15} color={c.text2} />
+                    Browse More Jobs
+                  </button>
+                </div>
               </div>
             ) : !isAuthenticated ? (
               <div style={{ textAlign: 'center', padding: '24px 0' }}>
@@ -926,6 +984,43 @@ export default function JobDetailPage() {
                     Create Account
                   </button>
                 </div>
+              </div>
+            ) : isApplied ? (
+              <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                <div style={{
+                  width: 64, height: 64, borderRadius: '50%',
+                  background: c.successLight,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  margin: '0 auto 16px',
+                  border: `2px solid ${'#A7F3D0'}`,
+                  boxShadow: '0 4px 16px rgba(16, 185, 129, 0.2)',
+                }}>
+                  <Icon name="check" size={28} color={c.success} />
+                </div>
+                <h4 style={{ fontSize: 16, fontWeight: 700, color: '#065F46', margin: '0 0 8px' }}>
+                  You've Already Applied
+                </h4>
+                <p style={{ fontSize: 13, color: '#047857', margin: '0 0 20px', lineHeight: 1.6 }}>
+                  Your application is currently under review.<br />
+                  Good luck!
+                </p>
+                <button
+                  onClick={() => navigate('/applications')}
+                  style={{
+                    width: '100%', padding: '13px 20px',
+                    borderRadius: 12,
+                    fontSize: 14, fontWeight: 600,
+                    background: c.success, color: '#FFFFFF',
+                    border: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)',
+                    transition: 'all 0.2s',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  <Icon name="briefcase" size={15} color="#FFFFFF" />
+                  View My Applications
+                </button>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>

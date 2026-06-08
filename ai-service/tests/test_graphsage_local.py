@@ -134,9 +134,7 @@ class SyntheticDatasetBuilder:
         result = _run_graphsage_local(
             resume_id=builder.resume_id,
             job_features=[svc.feature_store[j] for j in builder.job_ids],
-            user_features=[svc.graphsage_store[u] for u in builder.user_ids],
             edge_store_snapshot=[{"job_id": j} for j in builder.job_ids[:3]],
-            similar_users=builder.user_ids,
             graphsage_model=gs_model,
             device=torch.device("cpu"),
         )
@@ -240,9 +238,7 @@ def test_basic_output_shape_and_type(gs_env):
     result = _run_graphsage_local(
         resume_id=env["resume_id"],
         job_features=[svc.feature_store["J1"]],
-        user_features=[svc.graphsage_store["U_B"]],
         edge_store_snapshot=[{"job_id": "J1"}],
-        similar_users=["U_B"],
         graphsage_model=gs_model,
         device=device,
     )
@@ -298,9 +294,7 @@ def test_embedding_is_different_from_input(gs_env):
     result = _run_graphsage_local(
         resume_id=env["resume_id"],
         job_features=[svc.feature_store["J1"], svc.feature_store["J2"]],
-        user_features=[svc.graphsage_store["U_B"]],
         edge_store_snapshot=[{"job_id": "J1"}, {"job_id": "J2"}],
-        similar_users=["U_B"],
         graphsage_model=gs_model,
         device=device,
     )
@@ -371,9 +365,7 @@ def test_weight_influence_via_feature_scaling(gs_env):
     emb_a = _run_graphsage_local(
         resume_id=env["resume_id"],
         job_features=job_features_equal,
-        user_features=[svc.graphsage_store["U_B"]],
         edge_store_snapshot=edges_snapshot,
-        similar_users=["U_B"],
         graphsage_model=gs_model,
         device=device,
     )
@@ -381,9 +373,7 @@ def test_weight_influence_via_feature_scaling(gs_env):
     emb_b = _run_graphsage_local(
         resume_id=env["resume_id"],
         job_features=job_features_skewed,
-        user_features=[svc.graphsage_store["U_B"]],
         edge_store_snapshot=edges_snapshot,
-        similar_users=["U_B"],
         graphsage_model=gs_model,
         device=device,
     )
@@ -437,9 +427,7 @@ def test_graph_structure_removing_collaborative_edges(gs_env):
     emb_with_bridges = _run_graphsage_local(
         resume_id=env["resume_id"],
         job_features=[svc.feature_store["J1"], svc.feature_store["J2"]],
-        user_features=[svc.graphsage_store["U_B"]],
         edge_store_snapshot=edges_snapshot,
-        similar_users=["U_B"],
         graphsage_model=gs_model,
         device=device,
     )
@@ -451,9 +439,7 @@ def test_graph_structure_removing_collaborative_edges(gs_env):
     emb_without_bridges = _run_graphsage_local(
         resume_id=env["resume_id"],
         job_features=[svc.feature_store["J1"], svc.feature_store["J2"]],
-        user_features=[svc.graphsage_store["U_B"]],
         edge_store_snapshot=edges_snapshot,
-        similar_users=["U_B"],
         graphsage_model=gs_model,
         device=device,
     )
@@ -535,9 +521,7 @@ def test_collaborative_filtering_resume_a_closer_to_j3(gs_env):
     r_a_updated = _run_graphsage_local(
         resume_id=env["resume_id"],
         job_features=[svc.feature_store["J1"]],
-        user_features=[svc.graphsage_store["U_B"]],
         edge_store_snapshot=[{"job_id": "J1"}],
-        similar_users=["U_B"],
         graphsage_model=gs_model,
         device=device,
     )
@@ -592,9 +576,7 @@ def test_no_edges_returns_original_embedding(gs_env):
     result = _run_graphsage_local(
         resume_id=env["resume_id"],
         job_features=[],        # no jobs
-        user_features=[],       # no similar users
         edge_store_snapshot=[], # no edges → local_edges stays empty
-        similar_users=[],
         graphsage_model=gs_model,
         device=device,
     )
@@ -632,9 +614,7 @@ def test_embeddings_deterministic_across_runs(gs_env):
     args = dict(
         resume_id=env["resume_id"],
         job_features=[svc.feature_store["J1"], svc.feature_store["J2"]],
-        user_features=[svc.graphsage_store["U_B"]],
         edge_store_snapshot=[{"job_id": "J1"}, {"job_id": "J2"}],
-        similar_users=["U_B"],
         graphsage_model=gs_model,
         device=device,
     )
@@ -684,9 +664,7 @@ def test_missing_feature_raises_keyerror(gs_env):
         _run_graphsage_local(
             resume_id=nonexistent_id,
             job_features=[svc.feature_store["J1"]],
-            user_features=[],
             edge_store_snapshot=[{"job_id": "J1"}],
-            similar_users=[],
             graphsage_model=gs_model,
             device=device,
         )
@@ -703,15 +681,14 @@ def test_missing_feature_raises_keyerror(gs_env):
         print(f"  [PASS] KeyError raised for missing feature: {exc}")
 
 
-def test_empty_similar_users_produces_valid_output(gs_env):
+def test_resume_job_only_subgraph_produces_valid_output(gs_env):
     """
-    When similar_users is empty (no collaborative user nodes), the function
-    should still run successfully using only job nodes.
+    The function should run successfully using only resume-job nodes.
 
     Assertions:
-    - returns (1, 768) tensor
+    - returns one row per local node
     - no NaN / Inf
-    - norm ≈ 1.0
+    - row norms ≈ 1.0
     """
     env = gs_env
     gs_model = env["gs_model"]
@@ -720,24 +697,22 @@ def test_empty_similar_users_produces_valid_output(gs_env):
     result = _run_graphsage_local(
         resume_id=env["resume_id"],
         job_features=[svc.feature_store["J1"], svc.feature_store["J2"], svc.feature_store["J3"]],
-        user_features=[],        # no similar users
         edge_store_snapshot=[{"job_id": "J1"}, {"job_id": "J2"}, {"job_id": "J3"}],
-        similar_users=[],         # empty
         graphsage_model=gs_model,
         device=device,
     )
 
-    assert result.shape == torch.Size([1, 768])
+    assert result.shape == torch.Size([4, 768])
     assert not torch.isnan(result).any()
     assert not torch.isinf(result).any()
-    assert abs(float(result.norm().item()) - 1.0) < 1e-4
+    assert torch.allclose(result.norm(dim=1), torch.ones(4), atol=1e-4)
 
-    print(f"  [PASS] empty similar_users: valid output shape={tuple(result.shape)}, norm={float(result.norm().item()):.6f}")
+    print(f"  [PASS] resume-job local graph: valid output shape={tuple(result.shape)}")
 
 
-def test_large_graph_50_jobs_10_users(gs_env):
+def test_large_graph_50_jobs(gs_env):
     """
-    Stress test with a large local graph: 50 job nodes + 10 user nodes.
+    Stress test with a large local graph: 50 job nodes.
 
     Verifies:
     - Function completes without crashing
@@ -750,11 +725,9 @@ def test_large_graph_50_jobs_10_users(gs_env):
     gs_model = env["gs_model"]
     device   = env["device"]
 
-    # Build 50 job features and 10 user features
-    n_jobs  = 50
-    n_users = 10
+    # Build 50 job features
+    n_jobs = 50
     large_job_ids = [f"LARGE_J{i}" for i in range(n_jobs)]
-    large_user_ids = [f"LARGE_U{i}" for i in range(n_users)]
 
     job_features = []
     for jid in large_job_ids:
@@ -762,39 +735,29 @@ def test_large_graph_50_jobs_10_users(gs_env):
         svc.feature_store[jid] = vec
         job_features.append(vec)
 
-    user_features = []
-    for uid in large_user_ids:
-        vec = make_embedding(seed=hash(f"large_user_{uid}") % 99999)
-        svc.feature_store[uid] = vec
-        svc.graphsage_store[uid] = vec.clone()
-        user_features.append(vec)
-
-    # Build edges for the first 10 jobs bridging to all 10 users
+    # Build edges for the first 10 jobs.
     edge_snapshot = []
     for i in range(10):
         jid = large_job_ids[i]
-        svc.job_to_users[jid] = large_user_ids
         edge_snapshot.append({"job_id": jid})
 
     start = time.time()
     result = _run_graphsage_local(
         resume_id=env["resume_id"],
         job_features=job_features,
-        user_features=user_features,
         edge_store_snapshot=edge_snapshot,
-        similar_users=large_user_ids,
         graphsage_model=gs_model,
         device=device,
     )
     elapsed = time.time() - start
 
-    assert result.shape == torch.Size([1, 768])
+    assert result.shape == torch.Size([51, 768])
     assert not torch.isnan(result).any()
     assert not torch.isinf(result).any()
     assert elapsed < 5.0, (
-        f"Large graph (50 jobs + 10 users) took {elapsed:.2f}s (>5s threshold). "
+        f"Large graph (50 jobs) took {elapsed:.2f}s (>5s threshold). "
         f"Consider batching or reducing the local subgraph size."
     )
 
-    print(f"  [PASS] large graph (50 jobs + 10 users): shape={tuple(result.shape)}, "
+    print(f"  [PASS] large graph (50 jobs): shape={tuple(result.shape)}, "
           f"elapsed={elapsed:.3f}s, norm={float(result.norm().item()):.6f}")

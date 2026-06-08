@@ -89,6 +89,9 @@ public class CompanyService {
     @Transactional
     public CompanyAddress createAddress(UUID companyId, CompanyAddress address) {
         address.setCompanyId(companyId);
+        if (address.isDefault()) {
+            clearDefaultAddresses(companyId);
+        }
         return addressRepository.save(address);
     }
 
@@ -102,6 +105,10 @@ public class CompanyService {
         if (updates.getAddressLine() != null) address.setAddressLine(updates.getAddressLine());
         if (updates.getCity() != null) address.setCity(updates.getCity());
         if (updates.getCountry() != null) address.setCountry(updates.getCountry());
+        if (updates.isDefault()) {
+            clearDefaultAddresses(address.getCompanyId());
+            address.setDefault(true);
+        }
 
         return addressRepository.save(address);
     }
@@ -127,17 +134,20 @@ public class CompanyService {
                 .orElseThrow(() -> new ResourceNotFoundException("Address not found"));
         verifyCompanyOwnership(address.getCompanyId(), principal);
 
-        // Clear all defaults for this company
-        List<CompanyAddress> allAddresses = addressRepository.findAllByCompanyId(address.getCompanyId());
+        clearDefaultAddresses(address.getCompanyId());
+
+        // Set the target as default
+        address.setDefault(true);
+        return addressRepository.save(address);
+    }
+
+    private void clearDefaultAddresses(UUID companyId) {
+        List<CompanyAddress> allAddresses = addressRepository.findAllByCompanyId(companyId);
         for (CompanyAddress addr : allAddresses) {
             if (addr.isDefault()) {
                 addr.setDefault(false);
                 addressRepository.save(addr);
             }
         }
-
-        // Set the target as default
-        address.setDefault(true);
-        return addressRepository.save(address);
     }
 }

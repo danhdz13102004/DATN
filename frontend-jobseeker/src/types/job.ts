@@ -28,6 +28,7 @@ export interface Job {
   createdAt: string;
   updatedAt: string;
   isSaved?: boolean;
+  isApplied?: boolean;
   // For list endpoint: company name from job listing (if available)
   companyName?: string;
   // For detail endpoint: full company details

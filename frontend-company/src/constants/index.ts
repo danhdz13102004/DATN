@@ -35,6 +35,7 @@ export const AUTH_STRINGS = {
   FORGOT_SUBTITLE: 'Enter the email address associated with your account and we\'ll send you a verification code.',
   FORGOT_BUTTON: 'Send Verification Code',
   EMAIL_LABEL: 'Email Address',
+  FULL_NAME_LABEL: 'Full Name',
   PASSWORD_LABEL: 'Password',
   CONFIRM_PASSWORD_LABEL: 'Confirm Password',
   COMPANY_NAME_LABEL: 'Company Name',
@@ -73,4 +74,3 @@ export const STATUS_COLORS: Record<string, string> = {
   COMPLETED: 'bg-emerald-100 text-emerald-700',
   CANCELLED: 'bg-red-100 text-red-700',
 };
-

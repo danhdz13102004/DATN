@@ -10,6 +10,7 @@ const UsersPage = lazy(() => import('./pages/users/UsersPage'));
 const CompaniesPage = lazy(() => import('./pages/companies/CompaniesPage'));
 const CompanyDetailPage = lazy(() => import('./pages/companies/CompanyDetailPage'));
 const JobsPage = lazy(() => import('./pages/jobs/JobsPage'));
+const JobDetailPage = lazy(() => import('./pages/jobs/JobDetailPage'));
 const ApplicationsPage = lazy(() => import('./pages/applications/ApplicationsPage'));
 const SubscriptionsPage = lazy(() => import('./pages/subscriptions/SubscriptionsPage'));
 const SkillsIndustriesPage = lazy(() => import('./pages/skills/SkillsIndustriesPage'));
@@ -39,6 +40,7 @@ function App() {
           <Route path={ROUTES.COMPANIES} element={<CompaniesPage />} />
           <Route path={`${ROUTES.COMPANIES}/:id`} element={<CompanyDetailPage />} />
           <Route path={ROUTES.JOBS} element={<JobsPage />} />
+          <Route path={`${ROUTES.JOBS}/:id`} element={<JobDetailPage />} />
           <Route path={ROUTES.APPLICATIONS} element={<ApplicationsPage />} />
           <Route path={ROUTES.SUBSCRIPTIONS} element={<SubscriptionsPage />} />
           <Route path={ROUTES.SKILLS} element={<SkillsIndustriesPage />} />
@@ -50,4 +52,3 @@ function App() {
 }
 
 export default App;
-

@@ -5,6 +5,7 @@ import { authService } from '../../services/authService';
 import { AUTH_STRINGS, ROUTES } from '../../constants';
 
 interface SignupForm {
+  fullName: string;
   email: string;
   password: string;
   confirmPassword: string;
@@ -23,7 +24,13 @@ export default function SignupPage() {
     setError('');
     setLoading(true);
     try {
-      await authService.register({ email: data.email, password: data.password, role: 'COMPANY', companyName: data.companyName });
+      await authService.register({
+        email: data.email,
+        password: data.password,
+        fullName: data.fullName,
+        role: 'COMPANY',
+        companyName: data.companyName,
+      });
       navigate(ROUTES.VERIFY_OTP, { state: { email: data.email, type: 'VERIFY_ACCOUNT' } });
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || 'Registration failed.';
@@ -65,6 +72,12 @@ export default function SignupPage() {
           {error && <div className="bg-red-50 text-red-600 border border-red-200 rounded-[10px] px-4 py-3 text-sm mb-5">{error}</div>}
 
           <form onSubmit={handleSubmit(onSubmit)}>
+            <div className="mb-5">
+              <label className="block font-medium text-sm mb-1.5">{AUTH_STRINGS.FULL_NAME_LABEL} <span className="text-red-500">{AUTH_STRINGS.REQUIRED}</span></label>
+              <input type="text" className={`w-full px-3.5 py-3 border-[1.5px] rounded-[10px] text-sm font-sans transition-all bg-white focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 ${errors.fullName ? 'border-red-500' : 'border-border'}`} placeholder="Your full name" {...register('fullName', { required: 'Full name is required' })} />
+              {errors.fullName && <span className="block text-red-500 text-xs mt-1">{errors.fullName.message}</span>}
+            </div>
+
             <div className="mb-5">
               <label className="block font-medium text-sm mb-1.5">{AUTH_STRINGS.COMPANY_NAME_LABEL} <span className="text-red-500">{AUTH_STRINGS.REQUIRED}</span></label>
               <input type="text" className={`w-full px-3.5 py-3 border-[1.5px] rounded-[10px] text-sm font-sans transition-all bg-white focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 ${errors.companyName ? 'border-red-500' : 'border-border'}`} placeholder="Your Company Name" {...register('companyName', { required: 'Company name is required' })} />

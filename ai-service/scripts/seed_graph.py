@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """seed_graph.py — Insert synthetic data into PostgreSQL, then sync graph to AI service.
 
-Phase 1 (DB):  Insert 5 companies, 200+ jobs (mostly IT/web-focused), 105+ job seekers,
+Phase 1 (DB):  Insert 5 companies, 200+ jobs by creating multiple variants per job title, 105+ job seekers,
                resumes, job_interactions, and applications into PostgreSQL.
 Phase 2 (AI):  POST every job/resume as add_node, then POST every
                interaction as /interact (apply) or /interact/behavioral (click/save).
@@ -15,7 +15,7 @@ Usage:
 
     # Custom endpoints
     python seed_graph.py --db-url postgresql://user:pass@localhost:5432/recruitpro \
-                         --ai-url http://localhost:8000 --delay 0.05
+                         --ai-url http://localhost:8000 --delay 0.05 --jobs-per-title 4
 
 Environment vars (used when --db-url is not given):
     POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD
@@ -239,7 +239,7 @@ JOB_TEMPLATES = {
     },
     "Angular Developer": {
         "essential_clusters": ["frontend_core", "angular", "rest_api"],
-        "nice_clusters": ["ngrx", "testing", "graphql"],
+        "nice_clusters": ["testing", "graphql"],
         "responsibilities": [
             "Build enterprise Angular applications with modern RxJS patterns",
             "Develop reusable components using Angular Material UI library",
@@ -278,7 +278,7 @@ JOB_TEMPLATES = {
         ],
     },
     "NestJS Developer": {
-        "essential_clusters": ["nodejs", "sql_db", "typescript"],
+        "essential_clusters": ["nodejs", "sql_db", "rest_api"],
         "nice_clusters": ["graphql", "devops", "architecture", "api_security"],
         "responsibilities": [
             "Build enterprise-grade backend services using NestJS framework",
@@ -634,8 +634,8 @@ JOB_TEMPLATES = {
         ],
     },
     "iOS Developer": {
-        "essential_clusters": ["ios", "swift"],
-        "nice_clusters": ["android", "firebase", "testing"],
+        "essential_clusters": ["ios"],
+        "nice_clusters": ["android", "testing"],
         "responsibilities": [
             "Develop native iOS applications using Swift and UIKit/SwiftUI",
             "Build complex UI layouts with Auto Layout and SwiftUI",
@@ -653,8 +653,8 @@ JOB_TEMPLATES = {
         ],
     },
     "Android Developer": {
-        "essential_clusters": ["android", "kotlin"],
-        "nice_clusters": ["ios", "firebase", "testing"],
+        "essential_clusters": ["android"],
+        "nice_clusters": ["ios", "testing"],
         "responsibilities": [
             "Develop native Android applications with Kotlin and Jetpack",
             "Build responsive UIs with Compose or XML layouts",
@@ -940,6 +940,7 @@ COMPANIES_DATA = [
 ]
 
 SEEKERS_PER_INDUSTRY = 21   # 5 × 21 = 105 job seekers
+DEFAULT_JOBS_PER_TITLE = 4  # 54 base titles × 4 variants = 216 jobs by default
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -949,7 +950,18 @@ def new_id() -> str:
 
 
 def pick(pool: list, n: int) -> list:
-    return random.sample(pool, min(n, len(pool)))
+    pool_list = sorted(pool) if isinstance(pool, set) else list(pool)
+    return random.sample(pool_list, min(n, len(pool_list)))
+
+
+def ordered_unique(items: list) -> list:
+    seen = set()
+    result = []
+    for item in items:
+        if item not in seen:
+            seen.add(item)
+            result.append(item)
+    return result
 
 
 def get_clusters_skills(clusters: list) -> set:
@@ -961,6 +973,107 @@ def get_clusters_skills(clusters: list) -> set:
     return skills
 
 
+def get_title_skill_profile(title: str) -> tuple[list, list]:
+    """Return title-specific must-have and nice-to-have skill pools.
+
+    Cluster pools are intentionally broad for resume generation, but job skills
+    should read like a real vacancy. These profiles make the job title the source
+    of truth, then generate_job_content can add small amounts of variety.
+    """
+    t = title.lower()
+
+    if "react native" in t:
+        return ["React Native", "TypeScript", "Redux", "Jest"], ["iOS", "Android", "Firebase"]
+    if "react" in t:
+        return ["React", "TypeScript", "JavaScript", "Redux", "Jest"], ["Next.js", "Tailwind CSS", "GraphQL"]
+    if "next" in t:
+        return ["Next.js", "React", "TypeScript", "JavaScript", "REST API"], ["Tailwind CSS", "GraphQL", "AWS"]
+    if "vue" in t:
+        return ["Vue.js", "Vue 3", "TypeScript", "Pinia", "Vitest"], ["Nuxt.js", "Tailwind CSS", "GraphQL"]
+    if "angular" in t:
+        return ["Angular", "TypeScript", "RxJS", "NgRx", "Angular Material"], ["Jest", "REST API", "GraphQL"]
+    if "frontend" in t:
+        return ["JavaScript", "TypeScript", "HTML", "CSS", "React"], ["Vue.js", "Angular", "Tailwind CSS"]
+
+    if "nestjs" in t:
+        return ["NestJS", "Node.js", "TypeScript", "PostgreSQL", "REST API"], ["GraphQL", "Prisma", "Docker"]
+    if "node" in t:
+        return ["Node.js", "Express", "TypeScript", "PostgreSQL", "REST API"], ["NestJS", "GraphQL", "Redis"]
+    if "fastapi" in t:
+        return ["FastAPI", "Python", "Pydantic", "PostgreSQL", "REST API"], ["Docker", "Redis", "OpenAPI"]
+    if "django" in t:
+        return ["Django", "Python", "PostgreSQL", "REST API"], ["Redis", "Docker", "HTML"]
+    if "python backend" in t:
+        return ["Python", "FastAPI", "Django", "PostgreSQL", "REST API"], ["Redis", "Docker", "GraphQL"]
+    if "spring" in t:
+        return ["Spring Boot", "Java", "Spring Security", "Hibernate", "REST API"], ["Kafka", "Docker", "Kubernetes"]
+    if "java" in t:
+        return ["Java", "Spring Boot", "Hibernate", "PostgreSQL", "REST API"], ["Kafka", "Docker", "Kubernetes"]
+    if "golang" in t or t.startswith("go "):
+        return ["Go", "gRPC", "PostgreSQL", "REST API", "Docker"], ["Kubernetes", "Kafka", "Prometheus"]
+    if "backend" in t:
+        return ["Node.js", "Python", "PostgreSQL", "REST API", "Docker"], ["Redis", "GraphQL", "Microservices"]
+
+    if "healthcare software" in t:
+        return ["JavaScript", "TypeScript", "React", "Node.js", "REST API"], ["FHIR", "HIPAA", "PostgreSQL"]
+    if "healthcare it" in t:
+        return ["SQL", "PostgreSQL", "Cybersecurity", "API Gateway"], ["FHIR", "HIPAA", "Cloud Storage"]
+    if "medical data" in t:
+        return ["Python", "SQL", "Pandas", "Data Analysis"], ["FHIR", "HIPAA", "Data Visualization"]
+
+    if "edtech" in t or "e-learning" in t or "education platform" in t:
+        return ["React", "TypeScript", "Node.js", "REST API", "PostgreSQL"], ["LMS", "Moodle", "Canvas"]
+
+    if "marketing tech" in t or "digital marketing" in t or "marketing automation" in t:
+        return ["JavaScript", "TypeScript", "React", "REST API", "SQL"], ["HubSpot", "Marketo", "A/B Testing"]
+
+    if "security engineer" in t:
+        return ["Cybersecurity", "OWASP", "SAST", "DAST", "API Gateway"], ["OAuth", "JWT", "Kubernetes"]
+
+    if "full stack" in t:
+        return ["React", "Node.js", "TypeScript", "PostgreSQL", "REST API"], ["Docker", "GraphQL", "AWS"]
+    if "software engineer" in t:
+        return ["JavaScript", "TypeScript", "Python", "SQL", "Git"], ["Docker", "Unit Testing", "System Design"]
+
+    if "ml engineer" in t or "ai/ml" in t:
+        return ["Python", "Machine Learning", "PyTorch", "TensorFlow", "Scikit-learn"], ["Pandas", "AWS", "Docker"]
+    if "ai engineer" in t:
+        return ["Python", "LLM", "LangChain", "RAG", "OpenAI API"], ["Hugging Face", "NLP", "Docker"]
+    if "data scientist" in t:
+        return ["Python", "Pandas", "NumPy", "Scikit-learn", "SQL"], ["TensorFlow", "PyTorch", "Data Visualization"]
+    if "data engineer" in t:
+        return ["Python", "SQL", "Spark", "Airflow", "ETL"], ["Kafka", "dbt", "Snowflake"]
+
+    if "devops" in t:
+        return ["Docker", "Kubernetes", "Terraform", "CI/CD", "AWS"], ["Prometheus", "Grafana", "GitHub Actions"]
+    if "sre" in t:
+        return ["Kubernetes", "Prometheus", "Grafana", "Docker", "AWS"], ["Terraform", "ELK Stack", "Go"]
+    if "aws" in t:
+        return ["AWS", "EC2", "S3", "Lambda", "EKS"], ["Terraform", "Docker", "CloudFormation"]
+
+    if "mobile" in t:
+        return ["React Native", "Flutter", "iOS", "Android", "Firebase"], ["Kotlin", "Swift", "Dart"]
+    if "flutter" in t:
+        return ["Flutter", "Dart", "BLoC", "Firebase"], ["iOS", "Android", "Unit Testing"]
+    if "ios" in t:
+        return ["iOS", "Swift", "SwiftUI", "Xcode"], ["Objective-C", "Firebase", "Unit Testing"]
+    if "android" in t:
+        return ["Android", "Kotlin", "Java", "Jetpack Compose"], ["Firebase", "Unit Testing", "REST API"]
+
+    if "database" in t:
+        return ["PostgreSQL", "MySQL", "MongoDB", "SQL", "Redis"], ["AWS", "Prometheus", "Python"]
+    if "cybersecurity" in t:
+        return ["Cybersecurity", "OWASP", "SAST", "DAST", "API Gateway"], ["OAuth", "JWT", "Kubernetes"]
+    if "qa" in t:
+        return ["Cypress", "Playwright", "Postman", "Integration Testing", "E2E Testing"], ["Jest", "CI/CD", "REST API"]
+    if "product manager" in t:
+        return ["System Design", "REST API", "SQL", "Data Analysis"], ["LLM", "Microservices", "A/B Testing"]
+    if "scrum master" in t:
+        return ["Jira", "Agile", "Scrum", "Sprint Planning"], ["Kanban", "Confluence", "Backlog Management"]
+
+    return [], []
+
+
 def get_job_template(title: str) -> dict:
     """Get job template by title, or return fallback if not found."""
     return JOB_TEMPLATES.get(title, FALLBACK_TEMPLATE)
@@ -969,18 +1082,27 @@ def get_job_template(title: str) -> dict:
 def generate_job_content(title: str) -> dict:
     """Generate skills, responsibilities, and requirements for a job based on its template."""
     template = get_job_template(title)
+    title_must_skills, title_nice_skills = get_title_skill_profile(title)
 
-    # Get essential skills from clusters
-    essential_skills = get_clusters_skills(template["essential_clusters"])
-    nice_skills = get_clusters_skills(template["nice_clusters"])
+    # Title profiles are authoritative. Use broad clusters only for fallback
+    # titles that do not have a specific profile.
+    essential_skills = ordered_unique(title_must_skills) or sorted(
+        get_clusters_skills(template["essential_clusters"])
+    )
+    nice_skills = ordered_unique(title_nice_skills) or sorted(
+        get_clusters_skills(template["nice_clusters"])
+    )
 
     # Remove overlap: nice skills should not include essential skills
-    nice_skills = nice_skills - essential_skills
+    nice_skills = [skill for skill in nice_skills if skill not in set(essential_skills)]
 
-    # LIMIT SKILLS: Pick only 2-5 essential skills and 1-2 nice skills
-    # This ensures each job focuses on specific skills rather than having too many
-    essential_list = pick(list(essential_skills), random.randint(2, 5))
-    nice_list = pick(list(nice_skills), random.randint(1, 2))
+    # LIMIT SKILLS: Pick only 2-5 essential skills and 1-2 nice skills.
+    max_must_count = min(5, len(essential_skills))
+    min_must_count = min(2, max_must_count)
+    target_must_count = random.randint(min_must_count, max_must_count) if max_must_count else 0
+    essential_list = pick(essential_skills, target_must_count)
+
+    nice_list = pick(nice_skills, random.randint(1, 2))
 
     # Select random subset of responsibilities (3-5)
     responsibilities = pick(template["responsibilities"], min(4, len(template["responsibilities"])))
@@ -994,6 +1116,33 @@ def generate_job_content(title: str) -> dict:
         "responsibilities": responsibilities,
         "requirements": requirements,
     }
+
+
+def make_variant_title(title: str, variant_idx: int) -> str:
+    """Keep the semantic title stable, but add a small variant label for DB/UI uniqueness."""
+    if variant_idx == 0:
+        return title
+    suffixes = ["Platform", "Product", "Internal Tools", "Customer Portal", "Growth"]
+    return f"{title} - {suffixes[variant_idx % len(suffixes)]}"
+
+
+def build_resume_skills_for_role(role: str, max_skills: int = 8) -> list:
+    """Generate seeker skills from the same title profile used for jobs.
+
+    This makes synthetic interactions less random because resumes and jobs now
+    share a controlled skill vocabulary for the same role family.
+    """
+    must_skills, nice_skills = get_title_skill_profile(role)
+    profile_skills = ordered_unique(must_skills + nice_skills)
+
+    if len(profile_skills) >= 4:
+        base_count = random.randint(4, min(max_skills, len(profile_skills)))
+        return pick(profile_skills, base_count)
+
+    # Fallback only for broad/non-engineering roles that do not map to a title profile.
+    fallback_clusters = ["fullstack", "web_dev", "sql_db", "testing", "devops"]
+    fallback_skills = list(get_clusters_skills(fallback_clusters))
+    return pick(fallback_skills, max_skills)
 
 
 def make_job_text(title: str, industry: str, skills: list, levels: list, responsibilities: list) -> str:
@@ -1016,7 +1165,7 @@ def make_resume_text(role: str, industry: str, seniority: str, skills: list,
 
 # ── Phase 1: PostgreSQL inserts ───────────────────────────────────────────────
 
-def phase_db(conn) -> tuple:
+def phase_db(conn, jobs_per_title: int = DEFAULT_JOBS_PER_TITLE) -> tuple:
     """Insert all synthetic data.  Returns (job_records, seeker_records, stats)."""
     cur = conn.cursor()
     stats = {k: 0 for k in ("companies", "jobs", "job_seekers", "resumes", "interactions", "applications")}
@@ -1030,6 +1179,15 @@ def phase_db(conn) -> tuple:
     all_skills: set = set()
     for cluster_skills in SKILL_CLUSTERS.values():
         all_skills.update(cluster_skills)
+    for title in JOB_TEMPLATES:
+        must_skills, nice_skills = get_title_skill_profile(title)
+        all_skills.update(must_skills)
+        all_skills.update(nice_skills)
+    for pool in INDUSTRIES.values():
+        for role in pool["roles"]:
+            must_skills, nice_skills = get_title_skill_profile(role)
+            all_skills.update(must_skills)
+            all_skills.update(nice_skills)
 
     skill_map: dict = {}
     for name in sorted(all_skills):
@@ -1101,68 +1259,74 @@ def phase_db(conn) -> tuple:
         address_id = address_ids[c["name"]]
 
         for title in pool["job_titles"]:
-            job_id = new_id()
+            for variant_idx in range(max(1, jobs_per_title)):
+                job_id = new_id()
+                display_title = make_variant_title(title, variant_idx)
 
-            # Get template-based content (consistent with job title)
-            content = generate_job_content(title)
-            must_skills = content["must_skills"]
-            nice_skills = content["nice_skills"]
-            responsibilities = content["responsibilities"]
-            requirements = content["requirements"]
+                # Get template-based content. Each variant samples a different
+                # subset from the same title-specific skill profile, so jobs are
+                # more diverse but still match the title correctly.
+                content = generate_job_content(title)
+                must_skills = content["must_skills"]
+                nice_skills = content["nice_skills"]
+                responsibilities = content["responsibilities"]
+                requirements = content["requirements"]
 
-            # Determine seniority levels based on template
-            template = get_job_template(title)
-            # Map template to appropriate seniority levels (smaller pool for variety)
-            if "SENIOR" in str(template.get("requirements", [""])):
-                levels = random.sample(["MIDDLE", "SENIOR", "LEADER"], k=random.randint(2, 3))
-            else:
-                levels = random.sample(["JUNIOR", "MIDDLE", "SENIOR"], k=random.randint(2, 3))
+                # Determine seniority levels based on template.
+                template = get_job_template(title)
+                if "SENIOR" in str(template.get("requirements", [""])):
+                    levels = random.sample(["MIDDLE", "SENIOR", "LEADER"], k=random.randint(2, 3))
+                else:
+                    levels = random.sample(["JUNIOR", "MIDDLE", "SENIOR"], k=random.randint(2, 3))
 
-            salary_min = random.choice([800, 1000, 1200, 1500, 2000])
-            salary_max = salary_min + random.choice([500, 700, 1000, 1500])
-            job_type   = random.choice(["FULLTIME", "REMOTE", "HYBRID"])
+                salary_min = random.choice([800, 1000, 1200, 1500, 2000])
+                salary_max = salary_min + random.choice([500, 700, 1000, 1500])
+                job_type   = random.choice(["FULLTIME", "REMOTE", "HYBRID"])
 
-            cur.execute(
-                """INSERT INTO jobs
-                   (id, company_id, company_address_id, industry_id,
-                    title, description, location, salary_min, salary_max,
-                    job_type, status, responsibilities, requirements, nice_to_have_skills,
-                    created_at)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::job_type,'PUBLISHED',%s,%s,%s,NOW())""",
-                (
-                    job_id, company_id, address_id, industry_id,
-                    title,
-                    f"{title} at {c['name']} in the {industry_name} sector.",
-                    c["city"], salary_min, salary_max, job_type,
-                    responsibilities, requirements, nice_skills,
-                ),
-            )
-
-            for level in levels:
                 cur.execute(
-                    "INSERT INTO job_experience_levels (job_id, level) VALUES (%s, %s::experience_level) ON CONFLICT DO NOTHING",
-                    (job_id, level),
+                    """INSERT INTO jobs
+                       (id, company_id, company_address_id, industry_id,
+                        title, description, location, salary_min, salary_max,
+                        job_type, status, responsibilities, requirements, nice_to_have_skills,
+                        created_at)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::job_type,'PUBLISHED',%s,%s,%s,NOW())""",
+                    (
+                        job_id, company_id, address_id, industry_id,
+                        display_title,
+                        f"{display_title} at {c['name']} in the {industry_name} sector. "
+                        f"Core skills: {', '.join(must_skills)}.",
+                        c["city"], salary_min, salary_max, job_type,
+                        responsibilities, requirements, nice_skills,
+                    ),
                 )
 
-            # job_skills — composite PK (job_id, skill_id), no id column (V32)
-            for skill_name in must_skills:
-                skill_id = skill_map.get(skill_name)
-                if skill_id:
+                for level in levels:
                     cur.execute(
-                        "INSERT INTO job_skills (job_id, skill_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
-                        (job_id, skill_id),
+                        "INSERT INTO job_experience_levels (job_id, level) VALUES (%s, %s::experience_level) ON CONFLICT DO NOTHING",
+                        (job_id, level),
                     )
 
-            job_records.append({
-                "job_id":           job_id,
-                "title":            title,
-                "industry":         industry_name,
-                "must_skills":      must_skills,
-                "nice_skills":      nice_skills,
-                "levels":           levels,
-                "responsibilities": responsibilities,
-            })
-            stats["jobs"] += 1
+                # Required skills go into job_skills. Nice-to-have skills stay in
+                # jobs.nice_to_have_skills so matching can treat them differently.
+                for skill_name in must_skills:
+                    skill_id = skill_map.get(skill_name)
+                    if skill_id:
+                        cur.execute(
+                            "INSERT INTO job_skills (job_id, skill_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                            (job_id, skill_id),
+                        )
+
+                job_records.append({
+                    "job_id":           job_id,
+                    "title":            display_title,
+                    "base_title":       title,
+                    "industry":         industry_name,
+                    "must_skills":      must_skills,
+                    "nice_skills":      nice_skills,
+                    "levels":           levels,
+                    "responsibilities": responsibilities,
+                })
+                stats["jobs"] += 1
 
         conn.commit()
 
@@ -1180,26 +1344,9 @@ def phase_db(conn) -> tuple:
             role      = random.choice(pool["roles"])
             seniority = random.choice(SENIORITY_ORDER[1:5])   # FRESHER–SENIOR
 
-            # Get skills from clusters for consistent role-based skills
-            # Pick 2-3 clusters that match the role
-            if "React" in role or "Frontend" in role or "Full Stack" in role:
-                clusters = random.sample(["frontend_core", "react", "vue", "angular", "css_styling"], k=3)
-            elif "Node" in role or "Backend" in role or "Python" in role or "Go" in role:
-                clusters = random.sample(["nodejs", "python", "go", "java", "sql_db", "rest_api"], k=3)
-            elif "DevOps" in role or "SRE" in role or "Cloud" in role:
-                clusters = random.sample(["devops", "aws", "gcp", "azure", "git_cicd", "monitoring"], k=3)
-            elif "Mobile" in role or "Flutter" in role or "iOS" in role or "Android" in role:
-                clusters = random.sample(["flutter", "ios", "android", "react_native"], k=2)
-            elif "Data" in role or "ML" in role or "AI" in role:
-                clusters = random.sample(["ml_data", "data_eng", "llm_ai", "sql_db", "python"], k=3)
-            else:
-                clusters = random.sample(list(SKILL_CLUSTERS.keys())[:10], k=3)
-
-            skills = list(get_clusters_skills(clusters))
-            if len(skills) > 8:
-                skills = pick(skills, 8)
-            if len(skills) < 4:
-                skills = pick(list(SKILL_CLUSTERS.values())[0], 5) + skills
+            # Generate resume skills from the same role/title profiles used by jobs.
+            # This improves overlap quality and makes interactions more realistic.
+            skills = build_resume_skills_for_role(role, max_skills=8)
 
             years_exp = SENIORITY_ORDER.index(seniority) * random.randint(1, 2)
             full_name = f"Seeker {industry_name[:3]}{idx:02d}{j:02d}"
@@ -1347,7 +1494,10 @@ def phase_sync(job_records: list, seeker_records: list, ai_url: str, delay: floa
     # ── 2a. Job nodes ─────────────────────────────────────────────────────────
     logger.info("Syncing %d job nodes...", len(job_records))
     for jr in job_records:
-        text = make_job_text(jr["title"], jr["industry"], jr["must_skills"],
+        # Include both required and nice-to-have skills in the text embedding,
+        # while DB matching still keeps required skills separate in job_skills.
+        graph_skills = ordered_unique(jr["must_skills"] + jr["nice_skills"])
+        text = make_job_text(jr["title"], jr["industry"], graph_skills,
                              jr["levels"], jr["responsibilities"])
         try:
             r = session.post(f"{base}/api/v1/add_node",
@@ -1460,12 +1610,15 @@ def main():
                         help="Delay in seconds between AI HTTP calls (default: 0.05)")
     parser.add_argument("--skip-sync", action="store_true",
                         help="Insert into DB only; skip AI service sync")
+    parser.add_argument("--jobs-per-title", type=int, default=DEFAULT_JOBS_PER_TITLE,
+                        help="How many variants to generate for each base job title. "
+                             "Default 4 gives about 216 jobs.")
     args = parser.parse_args()
 
     conn = get_conn(args.db_url)
     try:
         logger.info("=== Phase 1: Inserting synthetic data into PostgreSQL ===")
-        job_records, seeker_records, db_stats = phase_db(conn)
+        job_records, seeker_records, db_stats = phase_db(conn, jobs_per_title=args.jobs_per_title)
         logger.info("DB totals: %s", db_stats)
 
         if not args.skip_sync:

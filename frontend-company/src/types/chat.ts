@@ -49,7 +49,7 @@ export type ChatEvent = ChatMessageEvent | ReadReceiptEvent;
 
 export interface Notification {
   id: string;
-  type: 'JOB_APPLIED' | 'INTERVIEW_INVITE' | 'MESSAGE' | 'APPLICATION_UPDATE';
+  type: 'JOB_APPLIED' | 'INTERVIEW_INVITE' | 'MESSAGE' | 'APPLICATION_UPDATE' | 'JOB_DELETED';
   title: string;
   content: string;
   isRead: boolean;

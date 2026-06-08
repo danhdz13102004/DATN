@@ -381,11 +381,10 @@ def process_application(resume_id: str, job_id: str, weight: float, graphsage_mo
         if e["job_id"] in feature_store
     ]
 
-    # Collect 2-hop neighbors (similar users) per job so each job node has a richer
-    # neighborhood during Layer-2 aggregation.  We cap per-job to bound subgraph size.
+    # Collect 2-hop neighbors (similar users/resumes) per job so the 2-layer
+    # GraphSAGE model can propagate collaborative signal through job nodes.
     MAX_USERS_PER_JOB = 3
     similar_users: List[str] = []
-    # Track which similar_user belongs to which job (for edge building in _run_graphsage_local)
     similar_users_per_job: List[List[str]] = []
     seen: set = set()
     for edge in edges:
@@ -399,13 +398,12 @@ def process_application(resume_id: str, job_id: str, weight: float, graphsage_mo
                     break
         similar_users_per_job.append(job_neighbors)
 
-    # Always use raw NLP features for 2-hop user nodes — same reason as job_features above.
+    # Always use raw NLP features for 2-hop user nodes, same as job_features.
     user_features = [
         feature_store[u]
         for u in similar_users
         if u in feature_store
     ]
-    # Keep similar_users aligned with user_features (drop any missing from feature_store)
     similar_users = [u for u in similar_users if u in feature_store]
 
     # Run local GraphSAGE subgraph — returns (N, 768) where index 0 is the resume,
@@ -438,7 +436,7 @@ def process_application(resume_id: str, job_id: str, weight: float, graphsage_mo
     num_jobs = len(job_features)
     user_offset = 1 + num_jobs
     job_offset  = 1
-    if num_jobs > 0 and updated_all.shape[0] > user_offset:
+    if num_jobs > 0 and updated_all.shape[0] >= user_offset:
         for i in range(num_jobs):
             job_id = edges[i]["job_id"]
             graphsage_store[job_id] = updated_all[job_offset + i]
@@ -529,26 +527,41 @@ def _build_interaction_message(confidence_level: str, num_attributed: int) -> st
 def _run_graphsage_local(
     resume_id:             str,
     job_features:          List[torch.Tensor],
-    user_features:         List[torch.Tensor],
     edge_store_snapshot:   List[dict],
-    similar_users:         List[str],
-    similar_users_per_job: List[List[str]],
     graphsage_model,
     device,
+    user_features:         Optional[List[torch.Tensor]] = None,
+    similar_users:         Optional[List[str]] = None,
+    similar_users_per_job: Optional[List[List[str]]] = None,
 ) -> torch.Tensor:
     """Build a local 2-hop subgraph and run GraphSAGE inference on it.
 
     Node layout in x_local:
         [0]           = target resume
         [1..num_jobs] = jobs this resume applied to  (1-hop)
-        [num_jobs+1..]= other resumes that applied to the same jobs (2-hop)
+        [num_jobs+1..]= other resumes/users that applied to the same jobs (2-hop)
 
-    Edge structure matches the training graph exactly:
-        resume ↔ job        (1-hop, bidirectional)
-        job    ↔ user       (2-hop, bidirectional)
-        NO resume ↔ user edges — those don't exist in the training graph.
+    Edge structure:
+        resume ↔ job  (bidirectional)
+        job    ↔ user (bidirectional)
     """
     resume_vec = feature_store[resume_id]  # always raw NLP — GNN input
+    valid_job_edges = [e for e in edge_store_snapshot if e["job_id"] in feature_store]
+
+    if similar_users is None or similar_users_per_job is None or user_features is None:
+        similar_users = []
+        similar_users_per_job = []
+        seen: set = set()
+        for edge in valid_job_edges:
+            job_neighbors: List[str] = []
+            for other in job_to_users.get(edge["job_id"], []):
+                if other != resume_id and other not in seen and other in feature_store:
+                    seen.add(other)
+                    similar_users.append(other)
+                    job_neighbors.append(other)
+            similar_users_per_job.append(job_neighbors)
+        user_features = [feature_store[u] for u in similar_users]
+
     all_nodes  = [resume_vec] + job_features + user_features
     if len(all_nodes) == 1:
         # No neighbors at all — return raw NLP wrapped in a 2D tensor so caller
@@ -559,38 +572,20 @@ def _run_graphsage_local(
 
     num_jobs    = len(job_features)
     user_offset = 1 + num_jobs
-
-    # Build a user_id → local index map for O(1) lookup below.
     user_local_idx: dict = {u_id: user_offset + k for k, u_id in enumerate(similar_users)}
 
-    local_edges:  List[List[int]] = []
-    edge_weights: List[float]     = []
+    local_edges: List[List[int]] = []
 
-    valid_job_edges = [e for e in edge_store_snapshot if e["job_id"] in feature_store]
-    for i, edge in enumerate(valid_job_edges):
-        j       = 1 + i
-        job_vec = feature_store[edge["job_id"]]
-        cos_sim = float(F.cosine_similarity(resume_vec.unsqueeze(0), job_vec.unsqueeze(0)).item())
-        w       = (cos_sim + 1) / 2  # Maps -1..1 to 0..1
-        if w < 1e-4:
-            w = 1e-4
+    for i, _edge in enumerate(valid_job_edges):
+        j = 1 + i
         local_edges  += [[0, j], [j, 0]]  # bidirectional
-        edge_weights += [w, w]
 
-    # ── job↔user edges: semantic weight only (no behavioral signal for 2-hop) ─
-    for i, (edge, job_neighbors) in enumerate(zip(valid_job_edges, similar_users_per_job)):
-        j       = 1 + i
-        job_vec = feature_store[edge["job_id"]]
+    for i, (_edge, job_neighbors) in enumerate(zip(valid_job_edges, similar_users_per_job)):
+        j = 1 + i
         for u_id in job_neighbors:
             if u_id in user_local_idx:
-                u        = user_local_idx[u_id]
-                user_vec = feature_store[u_id]
-                cos_sim  = float(F.cosine_similarity(job_vec.unsqueeze(0), user_vec.unsqueeze(0)).item())
-                w        = (cos_sim + 1) / 2  # Maps -1..1 to 0..1
-                if w < 1e-4:
-                    w = 1e-4
-                local_edges  += [[j, u], [u, j]]  # bidirectional
-                edge_weights += [w, w]
+                u = user_local_idx[u_id]
+                local_edges += [[j, u], [u, j]]  # bidirectional
 
     if local_edges:
         edge_index = (
@@ -599,14 +594,12 @@ def _run_graphsage_local(
             .contiguous()
             .to(device)
         )
-        edge_weight = torch.tensor(edge_weights, dtype=torch.float, device=device)
     else:
-        edge_index  = torch.zeros((2, 0), dtype=torch.long, device=device)
-        edge_weight = torch.zeros(0,      dtype=torch.float, device=device)
+        edge_index = torch.zeros((2, 0), dtype=torch.long, device=device)
 
     graphsage_model.eval()
     with torch.no_grad():
-        updated = graphsage_model(x_local, edge_index, edge_weight)
+        updated = graphsage_model(x_local, edge_index)
 
     # Return ALL node embeddings (N, 768) — caller reads [0] for resume,
     # [1..num_jobs] for jobs.  All are 1D (768,) per row.
@@ -618,13 +611,10 @@ def _run_graphsage_local(
 def run_graphsage_global(graphsage_model, device) -> int:
     """Re-run GraphSAGE over the entire in-memory graph, updating graphsage_store for ALL nodes.
 
-    Unlike _run_graphsage_local() which builds a per-resume 2-hop subgraph,
+    Unlike _run_graphsage_local() which builds a per-resume subgraph,
     this runs one forward pass over the full graph so every node sees a globally
     consistent neighbourhood — important for cold-start jobs (no interactions yet)
     and for keeping all embeddings in the same GNN output space.
-
-    Edge weights use the same fused semantic × behavioral formula as
-    _run_graphsage_local(); job↔user (2-hop) edges use semantic weight only.
 
     Called by:
       • POST /api/v1/graph/refresh  (on-demand)
@@ -642,26 +632,18 @@ def run_graphsage_global(graphsage_model, device) -> int:
     x        = torch.stack([feature_store[nid] for nid in node_ids], dim=0).to(device)  # (N, 768)
 
     # ── Build edges from edge_store (resume↔job, bidirectional) ──────────────
-    all_edges:   List[List[int]] = []
-    all_weights: List[float]     = []
+    all_edges: List[List[int]] = []
 
     for resume_id, job_edges in edge_store.items():
         if resume_id not in node_idx:
             continue
-        src        = node_idx[resume_id]
-        resume_vec = feature_store[resume_id]
+        src = node_idx[resume_id]
         for edge in job_edges:
             job_id = edge["job_id"]
             if job_id not in node_idx:
                 continue
-            dst     = node_idx[job_id]
-            job_vec = feature_store[job_id]
-            cos_sim = float(F.cosine_similarity(resume_vec.unsqueeze(0), job_vec.unsqueeze(0)).item())
-            w       = (cos_sim + 1) / 2  # Maps -1..1 to 0..1
-            if w < 1e-4:
-                w = 1e-4
-            all_edges   += [[src, dst], [dst, src]]
-            all_weights += [w, w]
+            dst = node_idx[job_id]
+            all_edges += [[src, dst], [dst, src]]
 
     # ── Build tensors ─────────────────────────────────────────────────────────
     if all_edges:
@@ -671,15 +653,13 @@ def run_graphsage_global(graphsage_model, device) -> int:
             .contiguous()
             .to(device)
         )
-        edge_weight = torch.tensor(all_weights, dtype=torch.float, device=device)
     else:
-        edge_index  = torch.zeros((2, 0), dtype=torch.long, device=device)
-        edge_weight = torch.zeros(0,      dtype=torch.float, device=device)
+        edge_index = torch.zeros((2, 0), dtype=torch.long, device=device)
 
     # ── Forward pass ──────────────────────────────────────────────────────────
     graphsage_model.eval()
     with torch.no_grad():
-        updated = graphsage_model(x, edge_index, edge_weight)  # (N, 768)
+        updated = graphsage_model(x, edge_index)  # (N, 768)
 
     # ── Write all outputs to graphsage_store and Redis ─────────────────────────
     for i, nid in enumerate(node_ids):
@@ -688,7 +668,7 @@ def run_graphsage_global(graphsage_model, device) -> int:
 
     logger.info(
         "Global GNN refresh complete — updated %d node embeddings, %d edges.",
-        len(node_ids), len(all_weights) // 2,
+        len(node_ids), len(all_edges) // 2,
     )
     return len(node_ids)
 

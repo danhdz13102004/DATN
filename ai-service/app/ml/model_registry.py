@@ -3,12 +3,12 @@
 import logging
 import os
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import MessagePassing
+from torch_geometric.nn import SAGEConv
 from sentence_transformers import SentenceTransformer
 
 from app.core.config import settings
@@ -18,93 +18,40 @@ logger = logging.getLogger(__name__)
 EMBEDDING_DIM = 768
 
 
-# ── GraphSAGE architecture (must match training config — v2.4) ────────────────
-#
-# WeightedSAGEConv replaces the standard SAGEConv used in earlier checkpoints.
-# Key differences from torch_geometric SAGEConv:
-#   • Parameter names: lin_self / lin_neigh  (SAGEConv uses lin_l / lin_r)
-#   • forward() accepts an optional edge_weight tensor  (per-edge float in [0,1])
-#   • Aggregation: epsilon-normalised weighted mean instead of uniform mean
-#
-# This class must be kept in sync with the notebook definition so that
-# load_state_dict() succeeds with the v2.4 checkpoint.
-
-class WeightedSAGEConv(MessagePassing):
-    """SAGEConv with weighted mean neighbour aggregation (epsilon-normalised).
-
-    During inference, edge_weight fuses two signals:
-        semantic_weight  = cos²(feature_store[src], feature_store[dst])
-        behavioral_weight = ACTION_WEIGHT_MAP[action_type]  (apply=1.0, save=0.7, click=0.1)
-        final_weight     = semantic_weight × behavioral_weight
-
-    When edge_weight is None (e.g. cold-start, no edges) the layer falls back
-    to a uniform mean — identical behaviour to standard SAGEConv.
-    """
-
-    def __init__(self, in_channels: int, out_channels: int):
-        super().__init__(aggr="add")
-        self.lin_self  = nn.Linear(in_channels, out_channels)
-        self.lin_neigh = nn.Linear(in_channels, out_channels, bias=False)
-
-    def reset_parameters(self):
-        self.lin_self.reset_parameters()
-        self.lin_neigh.reset_parameters()
-
-    def forward(
-        self,
-        x:           torch.Tensor,
-        edge_index:  torch.Tensor,
-        edge_weight: Optional[torch.Tensor] = None,
-    ) -> torch.Tensor:
-        N = x.size(0)
-        if edge_weight is None:
-            edge_weight = torch.ones(edge_index.size(1), device=x.device)
-
-        # Denominator: sum of incoming weights per destination node
-        dst   = edge_index[1]
-        w_sum = torch.zeros(N, device=x.device)
-        w_sum.scatter_add_(0, dst, edge_weight)
-        w_sum = w_sum.unsqueeze(1)  # (N, 1)
-
-        # Numerator: weighted sum of neighbour features
-        agg = self.propagate(edge_index, x=x, edge_weight=edge_weight)  # (N, C)
-
-        # Epsilon-normalised weighted mean — ε only fires for isolated nodes
-        neigh_mean = agg / (w_sum + 1e-8)  # (N, C)
-
-        return self.lin_self(x) + self.lin_neigh(neigh_mean)
-
-    def message(self, x_j: torch.Tensor, edge_weight: torch.Tensor) -> torch.Tensor:
-        return edge_weight.view(-1, 1) * x_j
-
-
 class GraphSAGE_Recommender(nn.Module):
-    """Two-layer GraphSAGE with semantic-confidence weighted mean aggregation.
+    """Two-layer homogeneous GraphSAGE on a resume-job bipartite graph.
 
-    Architecture matches the v2.4 training notebook exactly:
-    - Input/hidden/output: 768-d throughout (no compression)
-    - Residual connection: preserves pre-trained NLP signal across GNN layers
-    - edge_weight: optional per-edge confidence score; falls back to uniform mean when None
+    - input = MPNet/SentenceTransformer node features
+    - GraphSAGE message passing over candidate-job edges
+    - residual connection keeps pretrained semantic signal
     """
 
-    def __init__(self, in_channels: int, hidden_channels: int):
-        super().__init__()
-        self.conv1 = WeightedSAGEConv(in_channels, hidden_channels)
-        self.conv2 = WeightedSAGEConv(hidden_channels, hidden_channels)
-
-    def forward(
+    def __init__(
         self,
-        x:           torch.Tensor,
-        edge_index:  torch.Tensor,
-        edge_weight: Optional[torch.Tensor] = None,
-    ) -> torch.Tensor:
-        x0 = x
-        x  = self.conv1(x, edge_index, edge_weight)
-        x  = F.relu(x)
-        x  = F.dropout(x, p=0.1, training=self.training)
-        x  = self.conv2(x, edge_index, edge_weight)
-        x  = x + x0
-        return F.normalize(x, p=2, dim=1)
+        in_channels: int,
+        hidden_channels: int | None = None,
+        dropout: float = 0.25,
+    ):
+        super().__init__()
+        if hidden_channels is None:
+            hidden_channels = in_channels
+
+        self.conv1 = SAGEConv(in_channels, hidden_channels)
+        self.conv2 = SAGEConv(hidden_channels, in_channels)
+        self.dropout = nn.Dropout(dropout)
+        self.norm1 = nn.LayerNorm(hidden_channels)
+        self.norm2 = nn.LayerNorm(in_channels)
+
+    def forward(self, x: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
+        h = self.conv1(x, edge_index)
+        h = self.norm1(h)
+        h = F.relu(h)
+        h = self.dropout(h)
+
+        h = self.conv2(h, edge_index)
+        h = self.norm2(h)
+
+        return F.normalize(x + h, p=2, dim=1)
 
 
 # ── Registry ──────────────────────────────────────────────────────────────────
@@ -145,8 +92,8 @@ class ModelRegistry:
             settings.model_path, self._version, self._device,
         )
 
-        graphsage_path = os.path.join(settings.model_path, "graphsage_recommender_v2.4.pt")
-        nlp_path       = os.path.join(settings.model_path, "finetuned_mpnet_job_matcher")
+        graphsage_path = os.path.join(settings.model_path, "graphsage_2node_new_dataset.pt")
+        nlp_path       = os.path.join(settings.model_path, "finetuned_mpnet_v2_hard_neg")
 
         # ── Validate paths exist ──────────────────────────────────────────────
         nlp_missing       = not os.path.exists(nlp_path)
@@ -182,7 +129,8 @@ class ModelRegistry:
             in_channels=EMBEDDING_DIM,
             hidden_channels=EMBEDDING_DIM,
         ).to(self._device)
-        gs_model.load_state_dict(checkpoint["model_state_dict"])
+        state_dict = checkpoint.get("model_state_dict", checkpoint)
+        gs_model.load_state_dict(state_dict)
         gs_model.eval()
         self._models["graphsage"] = gs_model
 
@@ -190,8 +138,8 @@ class ModelRegistry:
         logger.info(
             "All models loaded in %.2fs — num_users=%s, num_items=%s",
             elapsed,
-            checkpoint.get("num_users"),
-            checkpoint.get("num_items"),
+            checkpoint.get("num_users") if isinstance(checkpoint, dict) else None,
+            checkpoint.get("num_items") if isinstance(checkpoint, dict) else None,
         )
         self._is_loaded = True
 

@@ -104,6 +104,39 @@ export interface AdminJob {
   updatedAt: string;
 }
 
+export interface AdminJobDetailCompany {
+  id: string;
+  name: string;
+  description: string | null;
+  website: string | null;
+  logoUrl: string | null;
+  verified: boolean;
+  location: string | null;
+  industry: string | null;
+  staffCount: number | null;
+  foundedAt: string | null;
+  benefits: string | null;
+  activeJobsCount: number;
+}
+
+export interface AdminJobDetail extends AdminJob {
+  companyAddressId: string | null;
+  description: string | null;
+  industry: { id: string; name: string } | null;
+  responsibilities: string[] | null;
+  requirements: string[] | null;
+  niceToHaveSkills: string[] | null;
+  benefits: string[] | null;
+  jobDataStructure: Record<string, unknown> | null;
+  experienceLevels: string[];
+  salaryMin: number | null;
+  salaryMax: number | null;
+  salaryCurrency: string | null;
+  addressDetail: string | null;
+  skills: { id: string; name: string }[];
+  company: AdminJobDetailCompany | null;
+}
+
 // ── Subscription Plans ───────────────────────────────────
 export type SubscriptionStatus = 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
 

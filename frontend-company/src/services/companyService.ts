@@ -8,6 +8,11 @@ import type {
   UserProfile,
 } from '../types/company';
 
+const normalizeAddress = (address: CompanyAddress): CompanyAddress => ({
+  ...address,
+  isDefault: address.isDefault ?? address.default ?? false,
+});
+
 export const companyService = {
   getMe: () =>
     api.get<ApiResponse<UserProfile>>('/auth/me'),
@@ -26,14 +31,38 @@ export const companyService = {
     });
   },
 
-  getAddresses: () =>
-    api.get<ApiResponse<CompanyAddress[]>>('/company/addresses'),
+  getAddresses: async () => {
+    const res = await api.get<ApiResponse<CompanyAddress[]>>('/company/addresses');
+    return {
+      ...res,
+      data: {
+        ...res.data,
+        data: res.data.data.map(normalizeAddress),
+      },
+    };
+  },
 
-  createAddress: (data: CompanyAddressRequest) =>
-    api.post<ApiResponse<CompanyAddress>>('/company/addresses', data),
+  createAddress: async (data: CompanyAddressRequest) => {
+    const res = await api.post<ApiResponse<CompanyAddress>>('/company/addresses', data);
+    return {
+      ...res,
+      data: {
+        ...res.data,
+        data: normalizeAddress(res.data.data),
+      },
+    };
+  },
 
-  updateAddress: (id: string, data: CompanyAddressRequest) =>
-    api.put<ApiResponse<CompanyAddress>>(`/company/addresses/${id}`, data),
+  updateAddress: async (id: string, data: CompanyAddressRequest) => {
+    const res = await api.put<ApiResponse<CompanyAddress>>(`/company/addresses/${id}`, data);
+    return {
+      ...res,
+      data: {
+        ...res.data,
+        data: normalizeAddress(res.data.data),
+      },
+    };
+  },
 
   deleteAddress: (id: string) =>
     api.delete<ApiResponse<null>>(`/company/addresses/${id}`),

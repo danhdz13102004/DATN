@@ -245,150 +245,107 @@ export default function StaffManagementPage() {
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
           onClick={(e) => e.target === e.currentTarget && setInviteModal(false)}
         >
-          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-scale-in">
-            {/* Header with gradient banner */}
-            <div className="relative bg-gradient-to-r from-primary to-primary-hover px-6 py-5">
-              {/* Decorative circles */}
-              <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-white/10" />
-              <div className="absolute -bottom-4 -left-4 w-20 h-20 rounded-full bg-white/5" />
-              <div className="absolute top-2 right-16 w-6 h-6 rounded-full bg-white/20" />
-
-              <div className="relative flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center shadow-inner">
-                  <i className="fas fa-user-plus text-white text-lg" />
-                </div>
-                <div>
-                  <h3 className="text-white font-bold text-lg leading-none">Add Team Member</h3>
-                  <p className="text-white/70 text-sm mt-1">Create a new HR staff account</p>
-                </div>
+          <div className="bg-white rounded-2xl shadow-modal w-full max-w-sm overflow-hidden animate-scale-in">
+            {/* Header */}
+            <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <i className="fas fa-user-plus text-base" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-gray-900">Add Team Member</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Create a new HR staff account</p>
               </div>
             </div>
 
-            <form onSubmit={inviteSubmit(handleInvite)} className="p-8 space-y-6">
+            <form onSubmit={inviteSubmit(handleInvite)} className="p-6 space-y-5">
               {/* Full Name */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-base font-semibold text-gray-700">
-                  <i className="fas fa-user text-primary/60 text-sm" />
-                  Full Name <span className="text-red-500 text-sm">*</span>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-semibold text-gray-700">
+                  Full Name <span className="text-red-500 text-xs">*</span>
                 </label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 rounded border border-gray-300 bg-gray-50 flex items-center justify-center pointer-events-none opacity-60">
-                    <i className="fas fa-at text-xs text-gray-400" />
-                  </div>
-                  <input
-                    className="w-full pl-12 pr-5 py-3.5 border-2 border-gray-100 rounded-xl text-base text-gray-800 placeholder-gray-300 focus:outline-none focus:border-primary focus:bg-white focus:shadow-inner transition-all"
-                    placeholder="John Doe"
-                    {...inviteRegister('fullName', { required: 'Full name is required' })}
-                  />
-                </div>
+                <input
+                  className="w-full px-4 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                  placeholder="John Doe"
+                  {...inviteRegister('fullName', { required: 'Full name is required' })}
+                />
                 {inviteErrors.fullName && (
-                  <p className="flex items-center gap-1.5 text-sm text-red-500 mt-1">
-                    <i className="fas fa-circle-exclamation text-xs" />
+                  <p className="flex items-center gap-1 text-xs text-red-500">
+                    <i className="fas fa-circle-exclamation" />
                     {inviteErrors.fullName.message}
                   </p>
                 )}
               </div>
 
               {/* Email */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-base font-semibold text-gray-700">
-                  <i className="fas fa-envelope text-primary/60 text-sm" />
-                  Email Address <span className="text-red-500 text-sm">*</span>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-semibold text-gray-700">
+                  Email Address <span className="text-red-500 text-xs">*</span>
                 </label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 rounded border border-gray-300 bg-gray-50 flex items-center justify-center pointer-events-none opacity-60">
-                    <i className="fas fa-at text-xs text-gray-400" />
-                  </div>
-                  <input
-                    type="email"
-                    className="w-full pl-12 pr-5 py-3.5 border-2 border-gray-100 rounded-xl text-base text-gray-800 placeholder-gray-300 focus:outline-none focus:border-primary focus:bg-white focus:shadow-inner transition-all"
-                    placeholder="john@company.com"
-                    {...inviteRegister('email', {
-                      required: 'Email is required',
-                      pattern: { value: /\S+@\S+\.\S+/, message: 'Invalid email address' },
-                    })}
-                  />
-                </div>
+                <input
+                  type="email"
+                  className="w-full px-4 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                  placeholder="john@company.com"
+                  {...inviteRegister('email', {
+                    required: 'Email is required',
+                    pattern: { value: /\S+@\S+\.\S+/, message: 'Invalid email address' },
+                  })}
+                />
                 {inviteErrors.email && (
-                  <p className="flex items-center gap-1.5 text-sm text-red-500 mt-1">
-                    <i className="fas fa-circle-exclamation text-xs" />
+                  <p className="flex items-center gap-1 text-xs text-red-500">
+                    <i className="fas fa-circle-exclamation" />
                     {inviteErrors.email.message}
                   </p>
                 )}
               </div>
 
               {/* Role — auto-assigned HR */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-base font-semibold text-gray-700">
-                  <i className="fas fa-briefcase text-primary/60 text-sm" />
-                  Assigned Role
-                </label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold text-primary bg-primary/10 border border-primary/20">
-                      <i className="fas fa-id-card text-xs" />
-                      HR
-                    </span>
-                  </div>
-                  <div className="w-full pl-[96px] pr-5 py-3.5 border-2 border-gray-100 rounded-xl text-base text-gray-400 bg-gray-50 cursor-not-allowed">
-                    HR Manager
-                  </div>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-semibold text-gray-700">Assigned Role</label>
+                <div className="flex items-center gap-2 px-4 py-2.5 border-[1.5px] border-gray-200 rounded-xl bg-gray-50 text-sm text-gray-500">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-bold text-primary bg-primary/10 px-2.5 py-1 rounded-full">
+                    <i className="fas fa-id-card" />
+                    HR
+                  </span>
+                  <span>HR Manager · new members always added as HR</span>
                 </div>
-                <p className="text-sm text-gray-400 flex items-center gap-1.5 mt-1">
-                  <i className="fas fa-info-circle text-xs" />
-                  New members are always added as HR
-                </p>
               </div>
 
               {/* Password */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-base font-semibold text-gray-700">
-                  <i className="fas fa-lock text-primary/60 text-sm" />
-                  Password
-                  <span className="text-sm text-gray-400 font-normal bg-gray-100 px-2 py-0.5 rounded">optional</span>
+              <div className="space-y-1.5">
+                <label className="block text-sm font-semibold text-gray-700">
+                  Password <span className="text-xs text-gray-400 font-normal bg-gray-100 px-1.5 py-0.5 rounded">optional</span>
                 </label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 flex items-center justify-center opacity-60">
-                    <i className="fas fa-key text-sm text-gray-400" />
-                  </div>
-                  <input
-                    type="password"
-                    className="w-full pl-12 pr-5 py-3.5 border-2 border-gray-100 rounded-xl text-base text-gray-800 placeholder-gray-300 focus:outline-none focus:border-primary focus:bg-white focus:shadow-inner transition-all"
-                    placeholder="Leave blank for default: 12345678"
-                    {...inviteRegister('password')}
-                  />
-                </div>
-                <p className="text-sm text-gray-400 flex items-center gap-1.5 mt-1">
-                  <i className="fas fa-shield-halved text-xs" />
-                  If left blank, default password is <strong>12345678</strong>
-                </p>
+                <input
+                  type="password"
+                  className="w-full px-4 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                  placeholder="Leave blank for default: 12345678"
+                  {...inviteRegister('password')}
+                />
+                <p className="text-xs text-gray-400">If blank, default is <strong>12345678</strong></p>
               </div>
 
-              {/* Divider */}
-              <div className="border-t border-dashed border-gray-100" />
-
               {/* Actions */}
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3 pt-1">
                 <button
                   type="button"
-                  className="flex-1 px-5 py-3.5 border-2 border-gray-100 rounded-xl text-base font-medium text-gray-500 hover:border-gray-200 hover:bg-gray-50 hover:text-gray-600 transition-all"
+                  className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-500 hover:border-gray-300 hover:bg-gray-50 transition-colors"
                   onClick={() => setInviteModal(false)}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-[2] px-5 py-3.5 bg-gradient-to-r from-primary to-primary-hover text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-primary/25 hover:-translate-y-px active:translate-y-0 transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="flex-[2] px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover transition-colors flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   disabled={createStaff.isPending}
                 >
                   {createStaff.isPending ? (
                     <>
-                      <i className="fas fa-spinner fa-spin text-sm" />
+                      <i className="fas fa-spinner fa-spin text-xs" />
                       Adding...
                     </>
                   ) : (
                     <>
-                      <i className="fas fa-user-plus text-sm" />
+                      <i className="fas fa-user-plus text-xs" />
                       Add Member
                     </>
                   )}

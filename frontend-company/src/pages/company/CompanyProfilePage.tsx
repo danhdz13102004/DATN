@@ -42,10 +42,18 @@ export default function CompanyProfilePage() {
   };
 
   const handleAddrSave = async (data: CompanyAddressRequest) => {
+    const payload: CompanyAddressRequest = {
+      label: data.label,
+      addressLine: data.addressLine,
+      city: data.city,
+      country: data.country,
+      isDefault: Boolean(data.isDefault),
+    };
+
     if (addrModal.editing) {
-      await updateAddress.mutateAsync({ id: addrModal.editing, data });
+      await updateAddress.mutateAsync({ id: addrModal.editing, data: payload });
     } else {
-      await createAddress.mutateAsync(data);
+      await createAddress.mutateAsync(payload);
     }
     setAddrModal({ open: false });
     addrForm.reset();
@@ -486,7 +494,6 @@ export default function CompanyProfilePage() {
                   <button
                     type="submit"
                     className="px-6 py-2.5 bg-gradient-to-r from-primary to-emerald-500 text-white rounded-xl text-sm font-bold hover:from-primary-hover hover:to-emerald-600 transition-all flex items-center gap-2 shadow-md hover:shadow-lg hover:-translate-y-px"
-                    onClick={addrForm.handleSubmit(handleAddrSave)}
                   >
                     <i className="fas fa-check text-xs" />
                     {addrModal.editing ? 'Update Location' : 'Add Location'}

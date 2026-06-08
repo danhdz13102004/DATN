@@ -34,6 +34,7 @@ const ICON_STYLE: Record<string, { icon: string; bg: string; text: string }> = {
   INTERVIEW_INVITE:   { icon: 'fa-calendar-check', bg: 'bg-amber-100',   text: 'text-amber-600'   },
   MESSAGE:            { icon: 'fa-comment',          bg: 'bg-sky-100',     text: 'text-sky-600'     },
   APPLICATION_UPDATE:  { icon: 'fa-arrow-right-arrow-left', bg: 'bg-rose-100', text: 'text-rose-600'  },
+  JOB_DELETED:         { icon: 'fa-trash',            bg: 'bg-red-100',     text: 'text-red-600'     },
   SYSTEM:             { icon: 'fa-bell',              bg: 'bg-gray-100',    text: 'text-gray-500'    },
 };
 

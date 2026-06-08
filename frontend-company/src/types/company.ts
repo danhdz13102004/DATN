@@ -21,6 +21,7 @@ export interface CompanyAddress {
   city: string;
   country: string;
   isDefault: boolean;
+  default?: boolean;
 }
 
 export interface CompanyAddressRequest {

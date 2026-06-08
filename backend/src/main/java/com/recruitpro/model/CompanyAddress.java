@@ -1,5 +1,7 @@
 package com.recruitpro.model;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -34,6 +36,8 @@ public class CompanyAddress {
 
     @Column(name = "is_default")
     @Builder.Default
+    @JsonProperty("isDefault")
+    @JsonAlias("default")
     private boolean isDefault = false;
 
     @Column(name = "created_at", nullable = false, updatable = false)
