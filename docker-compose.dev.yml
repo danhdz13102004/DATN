@@ -30,6 +30,8 @@ services:
       - ./backend/pom.xml:/app/pom.xml
       - backend_target:/app/target
       - maven_repo:/root/.m2
+    ports:
+      - "8080:8080"
 
   # ── AI Service (Hot Reload) ──────────────────
   ai-service:

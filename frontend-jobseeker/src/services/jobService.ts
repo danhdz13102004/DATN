@@ -10,6 +10,8 @@ export const jobService = {
       filters.experienceLevels.forEach(l => params.append('experienceLevels', l));
     }
     if (filters.location) params.set('location', filters.location);
+    if (filters.countryId != null) params.set('countryId', String(filters.countryId));
+    if (filters.cityId != null) params.set('cityId', String(filters.cityId));
     if (filters.salaryMin != null) params.set('salaryMin', String(filters.salaryMin));
     if (filters.salaryMax != null) params.set('salaryMax', String(filters.salaryMax));
     params.set('page', String((filters.page ?? 1) - 1));
@@ -40,7 +42,7 @@ export const jobService = {
       // Silent — interaction logging must never break UI
     }),
 
-  getRecommendations: (resumeId: string, topK = 12, mode = 'resume') =>
+  getRecommendations: (resumeId: string, topK = 25, mode = 'resume') =>
     api.get(`/jobseeker/applications/recommendations?resumeId=${resumeId}&topK=${topK}&mode=${mode}`)
       .then(r => r.data.data as { recommendations: { job: Job; score: number }[]; meta: Record<string, unknown> }),
 

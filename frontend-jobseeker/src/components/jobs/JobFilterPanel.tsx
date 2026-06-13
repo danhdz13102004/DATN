@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import type { JobFilter } from '../../types/job';
+import { useCountries, useCities } from '../../hooks/useLocation';
 
 const JOB_TYPES = ['FULLTIME', 'PARTTIME', 'REMOTE', 'HYBRID'];
 const EXP_LEVELS = ['INTERN', 'FRESHER', 'JUNIOR', 'MIDDLE', 'SENIOR', 'LEADER'];
@@ -7,7 +8,7 @@ const EXP_LEVELS = ['INTERN', 'FRESHER', 'JUNIOR', 'MIDDLE', 'SENIOR', 'LEADER']
 interface JobFilterPanelProps {
   draftFilters: JobFilter;
   onDraftChange: (f: JobFilter) => void;
-  onApply: () => void;
+  onApply: (filters?: JobFilter) => void;
 }
 
 function SalaryRangeSlider({
@@ -221,18 +222,23 @@ function SalaryRangeSlider({
 }
 
 export default function JobFilterPanel({ draftFilters, onDraftChange, onApply }: JobFilterPanelProps) {
+  const { data: countries } = useCountries();
+  const { data: cities } = useCities(draftFilters.countryId);
+
   const hasFilters = !!(
     draftFilters.keyword ||
     draftFilters.jobType ||
     draftFilters.experienceLevels?.[0] ||
-    draftFilters.location ||
+    draftFilters.countryId ||
+    draftFilters.cityId ||
     draftFilters.salaryMin != null ||
     draftFilters.salaryMax != null
   );
 
   const handleReset = () => {
-    onDraftChange({ page: 1, size: 12 });
-    onApply();
+    const resetFilters = { page: 1, size: draftFilters.size ?? 12 };
+    onDraftChange(resetFilters);
+    onApply(resetFilters);
   };
 
   return (
@@ -289,7 +295,7 @@ export default function JobFilterPanel({ draftFilters, onDraftChange, onApply }:
         </div>
 
         {/* Job Type */}
-        <div style={{ position: 'relative', flex: '0 0 auto', minWidth: 150 }}>
+        <div style={{ position: 'relative', flex: '0 0 180px', width: 180 }}>
           <i className="fas fa-briefcase" style={{
             position: 'absolute',
             left: 14,
@@ -316,7 +322,10 @@ export default function JobFilterPanel({ draftFilters, onDraftChange, onApply }:
               backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%2364748B' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E")`,
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'right 12px center',
-              minWidth: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
               transition: 'all 0.2s ease',
             }}
             onFocus={e => {
@@ -342,7 +351,7 @@ export default function JobFilterPanel({ draftFilters, onDraftChange, onApply }:
         </div>
 
         {/* Experience Level */}
-        <div style={{ position: 'relative', flex: '0 0 auto', minWidth: 150 }}>
+        <div style={{ position: 'relative', flex: '0 0 150px', width: 150 }}>
           <i className="fas fa-layer-group" style={{
             position: 'absolute',
             left: 14,
@@ -369,7 +378,10 @@ export default function JobFilterPanel({ draftFilters, onDraftChange, onApply }:
               backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%2364748B' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E")`,
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'right 12px center',
-              minWidth: '100%',
+              width: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
               transition: 'all 0.2s ease',
             }}
             onFocus={e => {
@@ -392,9 +404,9 @@ export default function JobFilterPanel({ draftFilters, onDraftChange, onApply }:
           </select>
         </div>
 
-        {/* Location */}
-        <div style={{ position: 'relative', flex: '0 0 auto', minWidth: 150 }}>
-          <i className="fas fa-map-marker-alt" style={{
+        {/* Location: Country + City dropdowns */}
+        <div style={{ position: 'relative', flex: '0 0 180px', width: 180 }}>
+          <i className="fas fa-globe-americas" style={{
             position: 'absolute',
             left: 14,
             top: '50%',
@@ -404,21 +416,27 @@ export default function JobFilterPanel({ draftFilters, onDraftChange, onApply }:
             pointerEvents: 'none',
             zIndex: 1,
           }} />
-          <input
-            type="text"
-            placeholder="City, Remote..."
+          <select
             style={{
-              padding: '12px 14px 12px 38px',
+              padding: '12px 38px 12px 38px',
               border: '1.5px solid #E2E7F0',
               borderRadius: 12,
               fontSize: '0.875rem',
-              color: '#0F172A',
+              color: draftFilters.countryId ? '#0F172A' : '#94A3B8',
               outline: 'none',
               background: '#F8FAFC',
+              cursor: 'pointer',
               fontFamily: 'inherit',
-              minWidth: '100%',
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%2364748B' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              width: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
               transition: 'all 0.2s ease',
-              boxSizing: 'border-box',
             }}
             onFocus={e => {
               (e.target as HTMLElement).style.borderColor = '#2563EB';
@@ -430,9 +448,70 @@ export default function JobFilterPanel({ draftFilters, onDraftChange, onApply }:
             }}
             onMouseEnter={e => { (e.target as HTMLElement).style.borderColor = '#CBD5E1'; }}
             onMouseLeave={e => { (e.target as HTMLElement).style.borderColor = '#E2E7F0'; }}
-            value={draftFilters.location ?? ''}
-            onChange={e => onDraftChange({ ...draftFilters, location: e.target.value || undefined })}
-          />
+            value={draftFilters.countryId ?? ''}
+            onChange={e => onDraftChange({ ...draftFilters, countryId: e.target.value ? Number(e.target.value) : undefined, cityId: undefined })}
+          >
+            <option value="">All Countries</option>
+            {countries?.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* City */}
+        <div style={{ position: 'relative', flex: '0 0 150px', width: 150 }}>
+          <i className="fas fa-city" style={{
+            position: 'absolute',
+            left: 14,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: '#94A3B8',
+            fontSize: '0.8rem',
+            pointerEvents: 'none',
+            zIndex: 1,
+          }} />
+          <select
+            disabled={!draftFilters.countryId}
+            style={{
+              padding: '12px 38px 12px 38px',
+              border: '1.5px solid #E2E7F0',
+              borderRadius: 12,
+              fontSize: '0.875rem',
+              color: !draftFilters.countryId ? '#CBD5E1' : (draftFilters.cityId ? '#0F172A' : '#94A3B8'),
+              outline: 'none',
+              background: '#F8FAFC',
+              cursor: draftFilters.countryId ? 'pointer' : 'not-allowed',
+              fontFamily: 'inherit',
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' fill='%2364748B' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 12px center',
+              width: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.2s ease',
+            }}
+            onFocus={e => {
+              if (!draftFilters.countryId) return;
+              (e.target as HTMLElement).style.borderColor = '#2563EB';
+              (e.target as HTMLElement).style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+            }}
+            onBlur={e => {
+              (e.target as HTMLElement).style.borderColor = '#E2E7F0';
+              (e.target as HTMLElement).style.boxShadow = 'none';
+            }}
+            onMouseEnter={e => { if (draftFilters.countryId) (e.target as HTMLElement).style.borderColor = '#CBD5E1'; }}
+            onMouseLeave={e => { (e.target as HTMLElement).style.borderColor = '#E2E7F0'; }}
+            value={draftFilters.cityId ?? ''}
+            onChange={e => onDraftChange({ ...draftFilters, cityId: e.target.value ? Number(e.target.value) : undefined })}
+          >
+            <option value="">All Cities</option>
+            {cities?.map(city => (
+              <option key={city.id} value={city.id}>{city.name}</option>
+            ))}
+          </select>
         </div>
 
         {/* Actions */}
@@ -468,7 +547,7 @@ export default function JobFilterPanel({ draftFilters, onDraftChange, onApply }:
           )}
 
           <button
-            onClick={onApply}
+            onClick={() => onApply()}
             style={{
               display: 'flex',
               alignItems: 'center',

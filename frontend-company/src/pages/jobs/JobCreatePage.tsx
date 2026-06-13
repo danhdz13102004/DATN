@@ -58,6 +58,8 @@ export default function JobCreatePage() {
   const [niceToHaveSkills, setNiceToHaveSkills] = useState<string[]>([]);
   const niceToHaveSkillsRef = useRef<string[]>([]);
   const [niceToHaveSkillInput, setNiceToHaveSkillInput] = useState('');
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
 
   // Keep ref in sync whenever state changes
   useEffect(() => {
@@ -75,13 +77,15 @@ export default function JobCreatePage() {
         salaryMin: job.salaryMin ?? undefined,
         salaryMax: job.salaryMax ?? undefined,
         status: job.status,
+        addressId: job.companyAddressId || '',
       });
       setSelectedLevels(job.experienceLevels || []);
       setSelectedSkills(job.skills?.map((s) => s.id) || []);
       setResponsibilities(job.responsibilities || []);
       setRequirements(job.requirements || []);
       setNiceToHaveSkills(job.niceToHaveSkills || []);
-      setLocationMode('custom');
+      setLocationMode(job.companyAddressId ? 'saved' : 'custom');
+      if (job.attachmentUrl) setAttachmentPreview(job.attachmentUrl);
     }
   }, [isEdit, job, reset]);
 
@@ -106,9 +110,21 @@ export default function JobCreatePage() {
       return;
     }
 
+    if (locationMode === 'saved' && !data.addressId) {
+      toast.error('Please choose a saved company location.');
+      return;
+    }
+
+    if (locationMode === 'custom' && !data.location?.trim()) {
+      toast.error('Please enter a job location.');
+      return;
+    }
+
     try {
       const payload: JobFormData = {
         ...data,
+        location: locationMode === 'custom' ? data.location.trim() : '',
+        addressId: locationMode === 'saved' ? data.addressId : '',
         levels: selectedLevels,
         skillIds: selectedSkills,
         responsibilities,
@@ -116,10 +132,10 @@ export default function JobCreatePage() {
         niceToHaveSkills,
       };
       if (isEdit) {
-        await updateJob.mutateAsync({ id: id!, data: payload });
+        await updateJob.mutateAsync({ id: id!, data: payload, attachmentFile: attachmentFile ?? undefined });
         toast.success('Job updated successfully!');
       } else {
-        await createJob.mutateAsync(payload);
+        await createJob.mutateAsync({ data: payload, attachmentFile: attachmentFile ?? undefined });
         toast.success('Job created successfully!');
       }
       navigate(ROUTES.JOBS);
@@ -159,6 +175,27 @@ export default function JobCreatePage() {
     }
     setNiceToHaveSkillInput('');
   };
+
+  const handleAttachmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Please upload a PDF, PNG, or JPG file.');
+      e.target.value = '';
+      return;
+    }
+    setAttachmentFile(file);
+    setAttachmentPreview(URL.createObjectURL(file));
+    e.target.value = '';
+  };
+
+  const handleRemoveAttachment = () => {
+    setAttachmentFile(null);
+    setAttachmentPreview(null);
+  };
+
+  const isImageFile = (url: string) => /\.(jpeg|jpg|png)$/i.test(url);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -213,8 +250,8 @@ export default function JobCreatePage() {
 
       if (result.experienceLevels?.length) {
         const validLevels = result.experienceLevels.filter(
-          (l): l is ExperienceLevel =>
-            ['INTERN', 'FRESHER', 'JUNIOR', 'MIDDLE', 'SENIOR', 'LEADER'].includes(l)
+          (level: string): level is ExperienceLevel =>
+            EXPERIENCE_LEVELS.some((option) => option.value === level)
         );
         setSelectedLevels(validLevels);
       }
@@ -525,11 +562,11 @@ export default function JobCreatePage() {
                 {locationMode === 'saved' ? (
                   <select
                     className="w-full px-4 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all bg-white"
-                    {...register('location', { required: true })}
+                    {...register('addressId')}
                   >
                     <option value="">Choose a saved location...</option>
                     {addresses?.map((addr) => (
-                      <option key={addr.id} value={`${addr.city}, ${addr.country}`}>
+                      <option key={addr.id} value={addr.id}>
                         {addr.label} — {addr.addressLine}, {addr.city}
                         {addr.isDefault ? ' (Default)' : ''}
                       </option>
@@ -781,7 +818,7 @@ export default function JobCreatePage() {
               <h3 className="text-base font-bold text-gray-900">Publishing Options</h3>
             </div>
 
-            <div>
+            <div className="mb-4">
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Status</label>
               <select
                 className="w-full px-4 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all bg-white max-w-xs"
@@ -790,6 +827,61 @@ export default function JobCreatePage() {
                 <option value="DRAFT">Draft (save for later)</option>
                 <option value="PUBLISHED">Published (make visible immediately)</option>
               </select>
+            </div>
+
+            {/* Attachment Upload */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <i className="fas fa-paperclip text-primary mr-1" />
+                Job Attachment
+              </label>
+              {attachmentPreview ? (
+                <div className="relative rounded-xl border border-gray-200 overflow-hidden bg-gray-50">
+                  {isImageFile(attachmentPreview) ? (
+                    <img
+                      src={attachmentPreview}
+                      alt="Attachment preview"
+                      className="w-full max-h-48 object-contain"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-3 p-4">
+                      <div className="w-10 h-10 rounded-lg bg-red-50 text-red-500 flex items-center justify-center">
+                        <i className="fas fa-file-pdf text-lg" />
+                      </div>
+                      <span className="text-sm text-gray-600">PDF attached</span>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleRemoveAttachment}
+                    className="absolute top-2 right-2 w-7 h-7 bg-white border border-gray-200 rounded-full flex items-center justify-center text-gray-400 hover:text-red-500 hover:border-red-200 transition-all shadow-sm"
+                  >
+                    <i className="fas fa-times text-xs" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center gap-2 py-8 px-4 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <i className="fas fa-cloud-upload-alt text-primary text-lg" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-gray-700">Click to upload</p>
+                    <p className="text-xs text-gray-400 mt-0.5">PDF, PNG, JPG (max 10MB)</p>
+                  </div>
+                  <input
+                    type="file"
+                    accept=".pdf,image/png,image/jpeg,image/jpg"
+                    className="sr-only"
+                    onChange={handleAttachmentChange}
+                  />
+                </label>
+              )}
+              {attachmentPreview && (
+                <p className="text-xs text-gray-400 mt-1.5">
+                  <i className="fas fa-info-circle mr-1" />
+                  A new file will replace the existing attachment on save.
+                </p>
+              )}
             </div>
           </div>
 

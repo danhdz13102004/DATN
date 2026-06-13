@@ -285,6 +285,34 @@ export default function JobDetailPage() {
           </div>
         )}
 
+        {/* ── Attachment ──────────────────────────────────── */}
+        {job.attachmentUrl && (
+          <div className="bg-white rounded-2xl shadow-card border border-gray-100 p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-1.5 h-5 bg-primary rounded-full" />
+              <h3 className="text-base font-bold text-gray-900">Attachment</h3>
+            </div>
+            {/\.(jpeg|jpg|png)$/i.test(job.attachmentUrl) ? (
+              <img
+                src={job.attachmentUrl}
+                alt="Job attachment"
+                className="w-full max-h-80 object-contain rounded-xl border border-gray-100"
+              />
+            ) : (
+              <a
+                href={job.attachmentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium text-primary no-underline"
+              >
+                <i className="fas fa-file-pdf text-red-400 text-lg" />
+                <span>View PDF Attachment</span>
+                <i className="fas fa-external-link-alt text-xs ml-1" />
+              </a>
+            )}
+          </div>
+        )}
+
         {/* ── Recent Applications ────────────────────────────── */}
         <div className="bg-white rounded-2xl shadow-card border border-gray-100 overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">

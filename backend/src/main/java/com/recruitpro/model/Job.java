@@ -111,6 +111,9 @@ public class Job {
     @Column(name = "deleted_at")
     private Instant deletedAt;
 
+    @Column(name = "attachment_url", length = 1024)
+    private String attachmentUrl;
+
     @PrePersist
     protected void onCreate() {
         if (id == null) id = UUID.randomUUID();

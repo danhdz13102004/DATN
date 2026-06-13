@@ -61,6 +61,11 @@ public class JobDetailDto {
     private Instant updatedAt;
 
     // ============================================================
+    // Attachment
+    // ============================================================
+    private String attachmentUrl;
+
+    // ============================================================
     // Save Status (populated for authenticated job seekers)
     // ============================================================
     @JsonProperty("isSaved")

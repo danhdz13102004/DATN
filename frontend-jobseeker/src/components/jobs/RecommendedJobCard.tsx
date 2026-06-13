@@ -5,6 +5,7 @@ interface RecommendedJobCardProps {
   job: Job;
   isApplied?: boolean;
   score: number;
+  showMatchScore?: boolean;
   onClick: () => void;
   onToggleSave: (jobId: string, e: React.MouseEvent) => void;
   savePendingId: string | null;
@@ -34,7 +35,7 @@ const levelBg: Record<string, string> = {
 };
 
 export default function RecommendedJobCard({
-  job, isApplied, score, onClick, onToggleSave, savePendingId,
+  job, isApplied, score, showMatchScore = true, onClick, onToggleSave, savePendingId,
 }: RecommendedJobCardProps) {
   const initial = job.companyName
     ? job.companyName.charAt(0).toUpperCase()
@@ -113,7 +114,7 @@ export default function RecommendedJobCard({
 
           {/* Right: match score + save */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
-            <MatchScoreBadge score={score} size="sm" />
+            {showMatchScore && <MatchScoreBadge score={score} size="sm" />}
             {isApplied && (
               <div
                 title="Already applied"

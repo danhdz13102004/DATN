@@ -38,6 +38,9 @@ public class JobDto {
     private Instant createdAt;
     private Instant updatedAt;
 
+    // Attachment (full public URL)
+    private String attachmentUrl;
+
     // Company name for list view (populated from company lookup)
     private String companyName;
 

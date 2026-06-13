@@ -31,8 +31,12 @@ public class CompanyAddress {
 
     private String city;
 
+    private Long cityId;
+
     @Builder.Default
     private String country = "Vietnam";
+
+    private Long countryId;
 
     @Column(name = "is_default")
     @Builder.Default

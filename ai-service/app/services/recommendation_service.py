@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 raw_node_store:    Dict[str, dict]         = {}   # ALL registered nodes (id → {type, text_snippet, user_id?})
 feature_store:     Dict[str, torch.Tensor] = {}   # raw NLP embeddings
 graphsage_store:   Dict[str, torch.Tensor] = {}   # GraphSAGE-updated embeddings
-edge_store:        Dict[str, List[dict]]   = {}   # resume_id → [{job_id, weight, updated_at}]  (apply edges only)
+edge_store:        Dict[str, List[dict]]   = {}   # resume_id → [{job_id, updated_at}]  (apply edges only)
 edge_metadata:     Dict[str, dict]        = {}   # "resume_id__job_id" → {confidence, action_type, ...}
 job_to_users:      Dict[str, List[str]]    = {}   # job_id → [resume_ids]  (apply edges only)
 
@@ -74,23 +74,20 @@ def _store_edge_metadata(resume_id: str, job_id: str, metadata: dict) -> None:
         "job_id": job_id,
     }
 
-# ── Edge weight constants ─────────────────────────────────────────────────────
-MAX_EDGE_WEIGHT = 3.0   # hard cap per edge to prevent runaway accumulation
-DECAY           = 0.9   # multiplicative decay applied before adding new weight
 SMOOTHING_ALPHA = 0.7   # EMA blend: alpha * old + (1-alpha) * new
 
 # ── Recency-weighted preference vector blending ──────────────────────────────
-# Behavioral intent is computed fresh at query time from edge_store.
+# Behavioral intent is computed fresh at query time from behavioral_store.
 # query_vec = α·graphsage_store[R] + (1-α)·preference_vec
 RECENCY_HALF_LIFE_DAYS      = 30.0   # behavioral recency halves every 30 days
-MAX_PREFERENCE_INTERACTIONS = 10     # cap to N most recent edges to avoid drift toward center
+MAX_PREFERENCE_INTERACTIONS = 25    # cap to N most recent edges to avoid drift toward center
 BLEND_ALPHA_BASE            = 1.0    # α when n=0 (pure structural)
 BLEND_ALPHA_STEP            = 0.07   # α decreases by this per interaction
 BLEND_ALPHA_MIN             = 0.30   # floor — preference_vec never fully replaces structural
 
 # ── Interaction weight mapping ────────────────────────────────────────────────
-# Maps action_type → edge weight increment.  Add new actions here; the rest of
-# the system will pick them up automatically through handle_interaction().
+# Maps action_type → interaction strength. Apply uses this only for legacy
+# persistence/response compatibility; click/save use it for preference vectors.
 ACTION_WEIGHT_MAP: Dict[str, float] = {
     "apply": 1.0,
     "save":  0.7,
@@ -156,94 +153,6 @@ def _record_behavioral_signal(user_id: str, job_id: str, action_type: str) -> No
         "[Behavioral] user=%s job=%s action=%s weight=%.1f recorded",
         user_id, job_id, action_type, weight,
     )
-
-
-def _build_user_preference_vector(user_id: str) -> Optional[torch.Tensor]:
-    """Build a recency-weighted preference vector from user's behavioral signals.
-
-    Uses raw NLP embeddings from feature_store (not graphsage_store) to avoid
-    cross-user contamination through job GNN outputs.
-
-    Caps to MAX_PREFERENCE_INTERACTIONS most recent interactions to prevent
-    a diverse history from averaging toward the center of embedding space.
-
-    Returns L2-normalized preference vector, or None if no signals exist.
-    """
-    interactions = behavioral_store.get(user_id, [])
-    if not interactions:
-        return None
-
-    sorted_interactions = sorted(interactions, key=lambda x: x.get("timestamp", ""), reverse=True)
-    recent = sorted_interactions[:MAX_PREFERENCE_INTERACTIONS]
-
-    now_ts = time.time()
-    weighted_sum: Optional[torch.Tensor] = None
-    total_weight = 0.0
-
-    for interaction in recent:
-        job_vec = feature_store.get(interaction["job_id"])
-        if job_vec is None:
-            continue
-
-        days_old = (now_ts - datetime.fromisoformat(interaction["timestamp"]).timestamp()) / 86400.0
-        recency = math.exp(-math.log(2) * days_old / RECENCY_HALF_LIFE_DAYS)
-        w = interaction["weight"] * recency
-        if w <= 0.0:
-            continue
-
-        weighted_sum = w * job_vec if weighted_sum is None else weighted_sum + w * job_vec
-        total_weight += w
-
-    if weighted_sum is None or total_weight <= 0.0:
-        return None
-
-    pref = weighted_sum / total_weight
-    return F.normalize(pref.unsqueeze(0), p=2, dim=1).squeeze(0)
-
-
-# ── Soft Attribution Helpers ───────────────────────────────────────────────────
-
-def compute_similarity(resume_ids: List[str], job_id: str) -> List[float]:
-    """Compute cosine similarity between each resume and the job.
-
-    Returns a list of similarities in the same order as resume_ids.
-    All similarities are clamped to [0, 1] since embeddings are L2-normalized.
-    """
-    if job_id not in feature_store:
-        raise ValueError(f"Job '{job_id}' not found in feature store.")
-
-    job_vec = feature_store[job_id]
-    # Ensure 1D tensor [embedding_dim]
-    if job_vec.dim() > 1:
-        job_vec = job_vec.squeeze()
-
-    similarities = []
-
-    for resume_id in resume_ids:
-        if resume_id not in feature_store:
-            logger.warning("Resume '%s' not found in feature store, skipping.", resume_id)
-            similarities.append(0.0)
-            continue
-
-        resume_vec = feature_store[resume_id]
-        # Ensure 1D tensor [embedding_dim]
-        if resume_vec.dim() > 1:
-            resume_vec = resume_vec.squeeze()
-
-        # cosine_similarity expects 1D inputs, returns scalar
-        sim = torch.nn.functional.cosine_similarity(
-            resume_vec,
-            job_vec,
-            dim=0,
-        )
-        # Handle both scalar and multi-element tensor cases
-        if sim.numel() == 1:
-            sim_val = sim.item()
-        else:
-            sim_val = sim.mean().item()
-        similarities.append(float(max(0.0, sim_val)))
-
-    return similarities
 
 
 def softmax(similarities: List[float], temperature: float = 1.0) -> List[float]:
@@ -347,26 +256,24 @@ def add_node(node_id: str, text: str, node_type: str, nlp_model, device, user_id
     }
 
 
-def process_application(resume_id: str, job_id: str, weight: float, graphsage_model, device) -> dict:
+def process_application(resume_id: str, job_id: str, graphsage_model, device) -> dict:
     """Update in-memory stores and re-run GraphSAGE for a resume→job interaction.
 
-    Edges are accumulated (weight added) rather than replaced.  Persistence to
-    Redis is handled by the caller (handle_interaction) via persist_edge so that
-    a single Redis write covers both the edge hash and its reverse.
+    GraphSAGE uses unweighted topology only: an apply event records the
+    resume→job edge if it does not exist, or refreshes its timestamp if it does.
+    Persistence to Redis is handled by the caller (handle_interaction).
     """
     start = time.time()
 
-    # Accumulate edge weight with time decay then hard cap
+    # Track edge presence only; GraphSAGE consumes edge_index without edge weights.
     edges = edge_store.setdefault(resume_id, [])
     now = time.time()
     for edge in edges:
         if edge["job_id"] == job_id:
-            edge["weight"] *= DECAY
-            edge["weight"] = min(edge["weight"] + weight, MAX_EDGE_WEIGHT)
             edge["updated_at"] = now   # refresh timestamp on re-interaction
             break
     else:
-        edges.append({"job_id": job_id, "weight": weight, "updated_at": now})
+        edges.append({"job_id": job_id, "updated_at": now})
 
     # Update reverse index
     users_for_job = job_to_users.setdefault(job_id, [])
@@ -500,26 +407,12 @@ def handle_interaction(
     result = process_application(
         resume_id=resume_id,
         job_id=job_id,
-        weight=weight,
         graphsage_model=graphsage_model,
         device=device,
     )
     result["action_type"] = action_type
     result["weight"]      = weight
     return result
-
-
-
-
-def _build_interaction_message(confidence_level: str, num_attributed: int) -> str:
-    """Build human-readable message for interaction result."""
-    if confidence_level == "low":
-        return "Interaction ignored due to low confidence."
-    elif confidence_level == "medium":
-        return f"Interaction recorded with reduced weight. {num_attributed} resume(s) attributed."
-    else:
-        return f"Interaction recorded with full weight. {num_attributed} resume(s) attributed."
-
 
 
 # ── Private helpers ───────────────────────────────────────────────────────────
@@ -601,8 +494,6 @@ def _run_graphsage_local(
     with torch.no_grad():
         updated = graphsage_model(x_local, edge_index)
 
-    # Return ALL node embeddings (N, 768) — caller reads [0] for resume,
-    # [1..num_jobs] for jobs.  All are 1D (768,) per row.
     return updated   # (N, 768)
 
 
@@ -868,6 +759,19 @@ def get_recommendations(
         )
 
     excluded_set = set(excluded_job_ids or [])
+
+    # In activities mode, exclude all jobs the user has already saved so the
+    # results don't overlap with their saved-jobs list.
+    if mode == "activities" and user_id:
+        saved_job_ids = user_jobs.get(user_id, [])
+        saved_excluded = [jid for jid in saved_job_ids if jid not in excluded_set]
+        excluded_set.update(saved_excluded)
+        if saved_excluded:
+            logger.info(
+                "[get_recommendations] mode=activities user_id=%s excluded %d saved jobs from recommendations",
+                user_id, len(saved_excluded),
+            )
+
     catalog_size = len(job_catalog)
     logger.info(
         "[get_recommendations] resume_id=%s top_k=%d job_catalog_size=%d excluded_count=%d mode=%s",

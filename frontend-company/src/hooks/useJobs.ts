@@ -26,7 +26,8 @@ export function useJobDetail(id: string) {
 export function useCreateJob() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: JobFormData) => jobService.createJob(data),
+    mutationFn: ({ data, attachmentFile }: { data: JobFormData; attachmentFile?: File }) =>
+      jobService.createJob(data, attachmentFile),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company', 'jobs'] });
     },
@@ -36,8 +37,8 @@ export function useCreateJob() {
 export function useUpdateJob() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: JobFormData }) =>
-      jobService.updateJob(id, data),
+    mutationFn: ({ id, data, attachmentFile }: { id: string; data: JobFormData; attachmentFile?: File }) =>
+      jobService.updateJob(id, data, attachmentFile),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['company', 'jobs'] });
       queryClient.invalidateQueries({ queryKey: ['jobs', variables.id] });

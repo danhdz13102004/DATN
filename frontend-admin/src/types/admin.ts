@@ -135,6 +135,7 @@ export interface AdminJobDetail extends AdminJob {
   addressDetail: string | null;
   skills: { id: string; name: string }[];
   company: AdminJobDetailCompany | null;
+  attachmentUrl?: string | null;
 }
 
 // ── Subscription Plans ───────────────────────────────────

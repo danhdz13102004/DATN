@@ -39,13 +39,15 @@ public class JobController {
             @RequestParam(required = false) JobType jobType,
             @RequestParam(required = false) java.util.Set<ExperienceLevel> experienceLevels,
             @RequestParam(required = false) String location,
+            @RequestParam(required = false) Long cityId,
+            @RequestParam(required = false) Long countryId,
             @RequestParam(required = false) Double salaryMin,
             @RequestParam(required = false) Double salaryMax,
             @PageableDefault(size = 20) Pageable pageable,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
         UUID seekerId = resolveSeekerId(principal);
-        Page<JobDto> page = jobService.findPublishedJobDtos(keyword, jobType, experienceLevels, location, salaryMin, salaryMax, seekerId, pageable);
+        Page<JobDto> page = jobService.findPublishedJobDtos(keyword, jobType, experienceLevels, location, salaryMin, salaryMax, cityId, countryId, seekerId, pageable);
         PaginationMeta meta = PaginationMeta.builder()
                 .page(page.getNumber() + 1)
                 .pageSize(page.getSize())

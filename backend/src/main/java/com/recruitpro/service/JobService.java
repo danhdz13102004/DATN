@@ -3,6 +3,7 @@ package com.recruitpro.service;
 import com.recruitpro.dto.response.JobDetailDto;
 import com.recruitpro.dto.response.JobDto;
 import com.recruitpro.dto.response.JobSelectOptionDto;
+import com.recruitpro.exception.BadRequestException;
 import com.recruitpro.exception.ForbiddenException;
 import com.recruitpro.exception.ResourceNotFoundException;
 import com.recruitpro.model.Company;
@@ -53,13 +54,14 @@ public class JobService {
      * Public job listing — only shows PUBLISHED jobs.
      */
     public Page<Job> findPublishedJobs(String keyword, JobType jobType,
-                                        java.util.Set<ExperienceLevel> experienceLevels,
+                                        Set<ExperienceLevel> experienceLevels,
                                         String location, Double salaryMin, Double salaryMax,
+                                        Long cityId, Long countryId,
                                         Pageable pageable) {
         if (experienceLevels != null && !experienceLevels.isEmpty()) {
-            return jobRepository.findPublishedJobsWithLevels(keyword, jobType, experienceLevels, location, salaryMin, salaryMax, pageable);
+            return jobRepository.findPublishedJobsWithLevels(keyword, jobType, experienceLevels, location, salaryMin, salaryMax, cityId, countryId, pageable);
         }
-        return jobRepository.findPublishedJobs(keyword, jobType, location, salaryMin, salaryMax, pageable);
+        return jobRepository.findPublishedJobs(keyword, jobType, location, salaryMin, salaryMax, cityId, countryId, pageable);
     }
 
     /**
@@ -69,8 +71,9 @@ public class JobService {
     public Page<JobDto> findPublishedJobDtos(String keyword, JobType jobType,
                                               Set<ExperienceLevel> experienceLevels,
                                               String location, Double salaryMin, Double salaryMax,
+                                              Long cityId, Long countryId,
                                               UUID seekerId, Pageable pageable) {
-        Page<Job> page = findPublishedJobs(keyword, jobType, experienceLevels, location, salaryMin, salaryMax, pageable);
+        Page<Job> page = findPublishedJobs(keyword, jobType, experienceLevels, location, salaryMin, salaryMax, cityId, countryId, pageable);
         Set<UUID> savedIds = seekerId != null
                 ? savedJobRepository.findJobIdsByJobSeekerId(seekerId)
                 : Collections.emptySet();
@@ -161,6 +164,7 @@ public class JobService {
                 .skills(job.getSkills())
                 .createdAt(job.getCreatedAt())
                 .updatedAt(job.getUpdatedAt())
+                .attachmentUrl(storageService.getPublicUrl(job.getAttachmentUrl()))
                 .isSaved(isSaved)
                 .company(companyDto)
                 .build();
@@ -195,6 +199,7 @@ public class JobService {
                 .skills(job.getSkills())
                 .createdAt(job.getCreatedAt())
                 .updatedAt(job.getUpdatedAt())
+                .attachmentUrl(storageService.getPublicUrl(job.getAttachmentUrl()))
                 .companyName(companyName)
                 .isSaved(isSaved)
                 .build();
@@ -285,16 +290,22 @@ public class JobService {
      * Create a new job (COMPANY only).
      */
     @Transactional
-    public Job create(Job job, Set<UUID> skillIds, UserPrincipal principal) {
-        job.setCompanyId(UUID.fromString(principal.getCompanyId()));
+    public Job create(Job job, Set<UUID> skillIds, UserPrincipal principal, String attachmentUrl) {
+        UUID companyId = UUID.fromString(principal.getCompanyId());
+        job.setCompanyId(companyId);
         // Status defaults to DRAFT if not explicitly set by the controller
         if (job.getStatus() == null) {
             job.setStatus(JobStatus.DRAFT);
         }
+        normalizeAddressLocation(job, companyId);
 
         if (skillIds != null && !skillIds.isEmpty()) {
             Set<Skill> skills = new HashSet<>(skillRepository.findAllById(skillIds));
             job.setSkills(skills);
+        }
+
+        if (attachmentUrl != null) {
+            job.setAttachmentUrl(attachmentUrl);
         }
 
         String jobText = buildJobText(job);  // also sets job_data_structure
@@ -313,7 +324,7 @@ public class JobService {
      * Update a job (COMPANY only — must own the job).
      */
     @Transactional
-    public Job update(UUID id, Job updates, Set<UUID> skillIds, UserPrincipal principal) {
+    public Job update(UUID id, Job updates, Set<UUID> skillIds, UserPrincipal principal, String attachmentUrl) {
         Job job = findById(id);
         verifyCompanyOwnership(job, principal);
 
@@ -325,12 +336,22 @@ public class JobService {
         if (updates.getNiceToHaveSkills() != null) job.setNiceToHaveSkills(updates.getNiceToHaveSkills());
         if (updates.getExperienceLevels() != null && !updates.getExperienceLevels().isEmpty())
             job.setExperienceLevels(updates.getExperienceLevels());
-        if (updates.getLocation() != null) job.setLocation(updates.getLocation());
+        if (updates.getLocation() != null) {
+            if (updates.getCompanyAddressId() != null) {
+                normalizeAddressLocation(updates, job.getCompanyId());
+            }
+            job.setLocation(updates.getLocation());
+            job.setCompanyAddressId(updates.getCompanyAddressId());
+        } else if (updates.getCompanyAddressId() != null) {
+            normalizeAddressLocation(updates, job.getCompanyId());
+            job.setLocation(updates.getLocation());
+            job.setCompanyAddressId(updates.getCompanyAddressId());
+        }
         if (updates.getSalaryMin() != null) job.setSalaryMin(updates.getSalaryMin());
         if (updates.getSalaryMax() != null) job.setSalaryMax(updates.getSalaryMax());
         if (updates.getJobType() != null) job.setJobType(updates.getJobType());
         if (updates.getStatus() != null) job.setStatus(updates.getStatus());
-        if (updates.getCompanyAddressId() != null) job.setCompanyAddressId(updates.getCompanyAddressId());
+        if (attachmentUrl != null) job.setAttachmentUrl(attachmentUrl);
 
         if (skillIds != null) {
             Set<Skill> skills = new HashSet<>(skillRepository.findAllById(skillIds));
@@ -416,6 +437,38 @@ public class JobService {
             !job.getCompanyId().toString().equals(principal.getCompanyId())) {
             throw new ForbiddenException("You do not have permission to manage this job");
         }
+    }
+
+    private void normalizeAddressLocation(Job job, UUID companyId) {
+        if (job.getCompanyAddressId() == null) {
+            return;
+        }
+
+        CompanyAddress address = companyAddressRepository.findById(job.getCompanyAddressId())
+                .orElseThrow(() -> new BadRequestException("Company address not found"));
+
+        if (!companyId.equals(address.getCompanyId())) {
+            throw new BadRequestException("Company address does not belong to this company");
+        }
+
+        job.setLocation(formatAddressLocation(address));
+    }
+
+    private String formatAddressLocation(CompanyAddress address) {
+        List<String> parts = new ArrayList<>();
+        if (address.getAddressLine() != null && !address.getAddressLine().isBlank()) {
+            parts.add(address.getAddressLine().trim());
+        }
+        if (address.getCity() != null && !address.getCity().isBlank()) {
+            parts.add(address.getCity().trim());
+        }
+        if (address.getCountry() != null && !address.getCountry().isBlank()) {
+            parts.add(address.getCountry().trim());
+        }
+        if (!parts.isEmpty()) {
+            return String.join(", ", parts);
+        }
+        return address.getLabel();
     }
 
     /**

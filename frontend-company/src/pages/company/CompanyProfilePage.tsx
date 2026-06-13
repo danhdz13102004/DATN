@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useOutletContext } from 'react-router-dom';
 import Topbar from '../../components/layout/Topbar';
@@ -6,6 +6,7 @@ import {
   useCompanyProfile, useUpdateCompanyProfile, useUploadLogo,
   useCompanyAddresses, useCreateAddress, useUpdateAddress, useDeleteAddress,
 } from '../../hooks/useCompany';
+import { useCountries, useCities } from '../../hooks/useLocation';
 import type { CompanyProfileUpdateRequest, CompanyAddressRequest } from '../../types/company';
 import PageHeader from '../../components/common/PageHeader';
 
@@ -24,6 +25,15 @@ export default function CompanyProfilePage() {
   const { register, handleSubmit, reset } = useForm<CompanyProfileUpdateRequest>();
   const addrForm = useForm<CompanyAddressRequest>();
   const [profileMsg, setProfileMsg] = useState('');
+  const { data: allCountries } = useCountries();
+  const [selectedCountryId, setSelectedCountryId] = useState<number | null>(null);
+  const { data: citiesForCountry } = useCities(selectedCountryId);
+
+  useEffect(() => {
+    if (!addrModal.open) {
+      setSelectedCountryId(null);
+    }
+  }, [addrModal.open]);
 
   const handleProfileSave = async (data: CompanyProfileUpdateRequest) => {
     try {
@@ -42,11 +52,15 @@ export default function CompanyProfilePage() {
   };
 
   const handleAddrSave = async (data: CompanyAddressRequest) => {
+    const selectedCountry = allCountries?.find(c => c.id === selectedCountryId);
+    const selectedCity = citiesForCountry?.find(c => c.id === data.cityId);
     const payload: CompanyAddressRequest = {
       label: data.label,
       addressLine: data.addressLine,
-      city: data.city,
-      country: data.country,
+      city: selectedCity?.name ?? '',
+      country: selectedCountry?.name ?? '',
+      countryId: selectedCountryId ?? undefined,
+      cityId: data.cityId,
       isDefault: Boolean(data.isDefault),
     };
 
@@ -56,6 +70,7 @@ export default function CompanyProfilePage() {
       await createAddress.mutateAsync(payload);
     }
     setAddrModal({ open: false });
+    setSelectedCountryId(null);
     addrForm.reset();
   };
 
@@ -284,7 +299,8 @@ export default function CompanyProfilePage() {
                 className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-emerald-500 text-white rounded-xl text-sm font-bold hover:from-primary-hover hover:to-emerald-600 hover:-translate-y-px hover:shadow-md transition-all duration-200"
                 onClick={() => {
                   setAddrModal({ open: true });
-                  addrForm.reset({ label: '', addressLine: '', city: '', country: '', isDefault: false });
+                  setSelectedCountryId(null);
+                  addrForm.reset({ label: '', addressLine: '', city: '', country: '', countryId: undefined, cityId: undefined as unknown as number, isDefault: false });
                 }}
               >
                 <i className="fas fa-plus text-xs" />
@@ -309,7 +325,8 @@ export default function CompanyProfilePage() {
                       className="px-6 py-2.5 bg-gradient-to-r from-primary to-emerald-500 text-white rounded-xl text-sm font-bold hover:from-primary-hover hover:to-emerald-600 hover:-translate-y-px hover:shadow-lg transition-all duration-200 inline-flex items-center gap-2"
                       onClick={() => {
                         setAddrModal({ open: true });
-                        addrForm.reset({ label: '', addressLine: '', city: '', country: '', isDefault: false });
+                        setSelectedCountryId(null);
+                        addrForm.reset({ label: '', addressLine: '', city: '', country: '', countryId: undefined, cityId: undefined as unknown as number, isDefault: false });
                       }}
                     >
                       <i className="fas fa-plus text-xs" />
@@ -389,6 +406,7 @@ export default function CompanyProfilePage() {
                           className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary to-emerald-500 text-white rounded-xl text-xs font-bold hover:from-primary-hover hover:to-emerald-600 hover:shadow-md hover:-translate-y-px transition-all duration-200"
                           onClick={() => {
                             setAddrModal({ open: true, editing: addr.id });
+                            setSelectedCountryId(addr.countryId ?? null);
                             addrForm.reset(addr);
                           }}
                         >
@@ -462,20 +480,34 @@ export default function CompanyProfilePage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">City <span className="text-red-500">*</span></label>
-                    <input
-                      className="w-full px-4 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                      placeholder="City"
-                      {...addrForm.register('city', { required: true })}
-                    />
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Country <span className="text-red-500">*</span></label>
+                    <select
+                      className="w-full px-4 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all bg-white"
+                      value={selectedCountryId ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value ? Number(e.target.value) : null;
+                        setSelectedCountryId(val);
+                        addrForm.setValue('cityId', undefined as unknown as number);
+                      }}
+                    >
+                      <option value="">Select country...</option>
+                      {allCountries?.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Country <span className="text-red-500">*</span></label>
-                    <input
-                      className="w-full px-4 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                      placeholder="Country"
-                      {...addrForm.register('country', { required: true })}
-                    />
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">City <span className="text-red-500">*</span></label>
+                    <select
+                      className="w-full px-4 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all bg-white"
+                      disabled={!selectedCountryId}
+                      {...addrForm.register('cityId', { required: true, valueAsNumber: true })}
+                    >
+                      <option value="">Select city...</option>
+                      {citiesForCountry?.map((city) => (
+                        <option key={city.id} value={city.id}>{city.name}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 <label className="flex items-center gap-3 cursor-pointer group/checkbox p-3 rounded-xl hover:bg-gray-50 transition-colors">

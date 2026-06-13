@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jobService } from '../../services/jobService';
 import { resumeService } from '../../services/resumeService';
+import { locationService } from '../../services/locationService';
 import { useAuthStore } from '../../store/authStore';
 import type { Job, JobFilter, SavedJobDto } from '../../types/job';
 import type { Resume } from '../../types/resume';
@@ -216,6 +217,17 @@ export default function JobsPage() {
   const [recommendMode, setRecommendMode] = useState(true); // true = resume, false = activities
   const [recommendMeta, setRecommendMeta] = useState<Record<string, unknown>>({});
 
+  // Auto-detect user's country by IP on mount
+  useEffect(() => {
+    locationService.detectCountryByIp()
+      .then(res => {
+        if (res.data.data) {
+          setDraftFilters(f => ({ ...f, countryId: res.data.data!.id }));
+        }
+      })
+      .catch(() => { /* silent — no country auto-selected */ });
+  }, []);
+
   const fetchJobs = (f: JobFilter) => {
     setLoading(true);
     jobService.listJobs(f).then((res) => {
@@ -240,7 +252,7 @@ export default function JobsPage() {
   const fetchRecommendations = (resumeId: string, useResume: boolean) => {
     setRecommendLoading(true);
     setRecommendError(null);
-    jobService.getRecommendations(resumeId, 12, useResume ? 'resume' : 'activities')
+    jobService.getRecommendations(resumeId, 25, useResume ? 'resume' : 'activities')
       .then((res) => {
         setRecommendedJobs(res.recommendations ?? []);
         setRecommendMeta(res.meta ?? {});
@@ -334,8 +346,8 @@ export default function JobsPage() {
     }
   };
 
-  const handleApplyFilters = () => {
-    setFilters({ ...draftFilters, page: 1, size: filters.size ?? 12 });
+  const handleApplyFilters = (nextFilters?: JobFilter) => {
+    setFilters({ ...(nextFilters ?? draftFilters), page: 1, size: filters.size ?? 12 });
   };
 
   const handleResetFilters = () => {
@@ -777,6 +789,7 @@ export default function JobsPage() {
                   job={job}
                   isApplied={appliedJobIds.has(job.id)}
                   score={score}
+                  showMatchScore={recommendMode}
                   onClick={() => navigate(`/jobs/${job.id}`)}
                   onToggleSave={handleToggleSave}
                   savePendingId={savePendingId}

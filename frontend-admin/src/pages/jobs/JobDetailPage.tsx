@@ -214,6 +214,21 @@ export default function JobDetailPage() {
                 </div>
               </Section>
             )}
+
+            {job.attachmentUrl && (
+              <Section title="Attachment">
+                <a
+                  href={job.attachmentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors text-sm font-medium text-primary no-underline"
+                >
+                  <i className="fas fa-paperclip text-gray-400" />
+                  <span>View Attachment</span>
+                  <i className="fas fa-external-link-alt text-xs ml-1" />
+                </a>
+              </Section>
+            )}
           </div>
 
           <aside className="space-y-5">

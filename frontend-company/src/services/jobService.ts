@@ -9,11 +9,27 @@ export const jobService = {
   getJobDetail: (id: string) =>
     api.get<ApiResponse<Job>>(`/jobs/${id}`),
 
-  createJob: (data: JobFormData) =>
-    api.post<ApiResponse<Job>>('/company/jobs', data),
+  createJob: (data: JobFormData, attachmentFile?: File) => {
+    if (!attachmentFile) return api.post<ApiResponse<Job>>('/company/jobs', data);
+    const formData = new FormData();
+    formData.append('data', JSON.stringify(data));
+    formData.append('attachment', attachmentFile);
+    return api.post<ApiResponse<Job>>('/company/jobs', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60_000,
+    });
+  },
 
-  updateJob: (id: string, data: JobFormData) =>
-    api.put<ApiResponse<Job>>(`/company/jobs/${id}`, data),
+  updateJob: (id: string, data: JobFormData, attachmentFile?: File) => {
+    if (!attachmentFile) return api.put<ApiResponse<Job>>(`/company/jobs/${id}`, data);
+    const formData = new FormData();
+    formData.append('data', JSON.stringify(data));
+    formData.append('attachment', attachmentFile);
+    return api.put<ApiResponse<Job>>(`/company/jobs/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60_000,
+    });
+  },
 
   deleteJob: (id: string) =>
     api.delete<ApiResponse<null>>(`/company/jobs/${id}`),

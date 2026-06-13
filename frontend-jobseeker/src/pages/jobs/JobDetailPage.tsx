@@ -65,6 +65,8 @@ const Icon = ({ name, size = 16, color = 'currentColor' }: { name: string; size?
     'chevron': <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>,
     'industry': <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></svg>,
     'external': <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>,
+    'pdf': <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+    'image': <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>,
     'search': <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
   };
   return icons[name] || <span style={{ width: size, height: size, display: 'inline-block' }} />;
@@ -835,6 +837,57 @@ export default function JobDetailPage() {
               </div>
             )}
           </SectionCard>
+
+          {/* Attachment */}
+          {job.attachmentUrl && (
+            <SectionCard icon="paperclip" title="Job Attachment">
+              {/\.(jpeg|jpg|png)$/i.test(job.attachmentUrl) ? (
+                <div style={{ borderRadius: 12, overflow: 'hidden', border: `1px solid ${c.border}` }}>
+                  <img
+                    src={job.attachmentUrl}
+                    alt="Job attachment"
+                    style={{ width: '100%', maxHeight: 480, objectFit: 'contain', display: 'block' }}
+                  />
+                </div>
+              ) : (
+                <a
+                  href={job.attachmentUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    padding: '14px 18px',
+                    borderRadius: 12,
+                    border: `1.5px solid ${c.border}`,
+                    background: c.borderLight,
+                    textDecoration: 'none',
+                    color: c.primary,
+                    fontWeight: 600,
+                    fontSize: 14,
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 10,
+                    background: '#FEE2E2', color: '#DC2626',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    <Icon name="pdf" size={20} color="#DC2626" />
+                  </div>
+                  <div>
+                    <div>View PDF Attachment</div>
+                    <div style={{ fontSize: 12, color: c.text3, fontWeight: 400 }}>
+                      Opens in a new tab
+                    </div>
+                  </div>
+                  <div style={{ marginLeft: 'auto' }}>
+                    <Icon name="external" size={16} color={c.primary} />
+                  </div>
+                </a>
+              )}
+            </SectionCard>
+          )}
         </div>
 
         {/* Right Column - Sticky Sidebar */}

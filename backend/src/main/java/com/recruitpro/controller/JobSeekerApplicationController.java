@@ -106,7 +106,7 @@ public class JobSeekerApplicationController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> getRecommendations(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam UUID resumeId,
-            @RequestParam(defaultValue = "12") int topK,
+            @RequestParam(defaultValue = "25") int topK,
             @RequestParam(defaultValue = "resume") String mode,
             @RequestParam(required = false) String userId) {
 

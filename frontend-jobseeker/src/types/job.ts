@@ -8,6 +8,21 @@ export interface Industry {
   name: string;
 }
 
+export interface Country {
+  id: number;
+  iso2: string;
+  iso3: string | null;
+  name: string;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export interface City {
+  id: number;
+  countryId: number;
+  name: string;
+}
+
 export interface Job {
   id: string;
   companyId: string;
@@ -29,10 +44,9 @@ export interface Job {
   updatedAt: string;
   isSaved?: boolean;
   isApplied?: boolean;
-  // For list endpoint: company name from job listing (if available)
   companyName?: string;
-  // For detail endpoint: full company details
   company?: CompanyDetail;
+  attachmentUrl?: string;
 }
 
 export interface CompanyDetail {
@@ -70,6 +84,8 @@ export interface JobFilter {
   jobType?: string;
   experienceLevels?: string[];
   location?: string;
+  countryId?: number;
+  cityId?: number;
   salaryMin?: number;
   salaryMax?: number;
   page?: number;

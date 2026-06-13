@@ -317,7 +317,7 @@ def handle_behavioral_signal(req: BehavioralSignalRequest, request: Request):
 @router.get("/recommend/{resume_id}", response_model=dict)
 def recommend(
     resume_id: str,
-    top_k: int = Query(default=5, ge=1, le=50),
+    top_k: int = Query(default=25, ge=1, le=50),
     excluded_job_ids: str = Query(default="", description="Comma-separated job IDs to exclude"),
     mode: str = Query(default="resume", pattern="^(resume|activities)$"),
     user_id: Optional[str] = Query(default=None, description="Job seeker UUID — required when mode=activities"),

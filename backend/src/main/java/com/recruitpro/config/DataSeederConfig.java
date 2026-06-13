@@ -1,35 +1,31 @@
 package com.recruitpro.config;
 
+import com.recruitpro.service.LocationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
 @Slf4j
-@Component
+@Configuration
 @Profile({"dev", "test"})
-@ConditionalOnProperty(name = "app.seed.enabled", havingValue = "true")
-public class DataSeeder implements CommandLineRunner {
+public class DataSeederConfig {
 
-    private final JdbcTemplate jdbcTemplate;
-
-    public DataSeeder(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    @Bean
+    public CommandLineRunner dataSeeder(JdbcTemplate jdbcTemplate) {
+        return args -> {
+            log.info("=== DataSeeder: Starting seed operation ===");
+            seedSkills(jdbcTemplate);
+            seedPlans(jdbcTemplate);
+            log.info("=== DataSeeder: Seed operation complete ===");
+        };
     }
 
-    @Override
-    public void run(String... args) {
-        log.info("=== DataSeeder: Starting seed operation ===");
-        seedSkills();
-        seedPlans();
-        log.info("=== DataSeeder: Seed operation complete ===");
-    }
-
-    private void seedSkills() {
+    private void seedSkills(JdbcTemplate jdbcTemplate) {
         String[] skills = {
             "Java", "Python", "JavaScript", "TypeScript", "React", "Angular", "Vue.js",
             "Spring Boot", "Node.js", "Django", "FastAPI", "PostgreSQL", "MySQL",
@@ -53,7 +49,7 @@ public class DataSeeder implements CommandLineRunner {
         log.info("DataSeeder: Skills — {} inserted, {} skipped", inserted, skills.length - inserted);
     }
 
-    private void seedPlans() {
+    private void seedPlans(JdbcTemplate jdbcTemplate) {
         Object[][] plans = {
             {"Free", 0.00, 3, 30},
             {"Pro", 20, 20, 30},

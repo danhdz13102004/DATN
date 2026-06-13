@@ -1,11 +1,14 @@
 package com.recruitpro.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.recruitpro.dto.JobAutoFillDto;
+import com.recruitpro.dto.request.JobCreateRequest;
+import com.recruitpro.dto.request.JobUpdateRequest;
 import com.recruitpro.dto.response.ApiResponse;
 import com.recruitpro.dto.response.JobSelectOptionDto;
 import com.recruitpro.dto.response.PaginationMeta;
 import com.recruitpro.exception.BadRequestException;
-import com.recruitpro.model.Industry;
 import com.recruitpro.model.Job;
 import com.recruitpro.model.enums.ExperienceLevel;
 import com.recruitpro.model.enums.JobStatus;
@@ -15,12 +18,14 @@ import com.recruitpro.security.UserPrincipal;
 import com.recruitpro.service.CompanySubscriptionService;
 import com.recruitpro.service.JobAutoFillService;
 import com.recruitpro.service.JobService;
+import com.recruitpro.storage.StorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -46,6 +51,8 @@ public class CompanyJobController {
     private final JobAutoFillService jobAutoFillService;
     private final IndustryRepository industryRepository;
     private final CompanySubscriptionService subscriptionService;
+    private final StorageService storageService;
+    private final ObjectMapper objectMapper;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Object>> listCompanyJobs(
@@ -66,83 +73,69 @@ public class CompanyJobController {
         return ResponseEntity.ok(ApiResponse.ok(page.getContent(), meta));
     }
 
-    @PostMapping
-    public ResponseEntity<ApiResponse<Job>> create(
-            @RequestBody Map<String, Object> body,
+    /** JSON-only request (no file attachment). */
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<Job>> createJson(
+            @RequestBody JobCreateRequest body,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        // Parse status — default to DRAFT if not provided
-        JobStatus status = body.get("status") != null
-                ? JobStatus.valueOf((String) body.get("status"))
-                : JobStatus.DRAFT;
-
-        Industry industry = resolveIndustry(body);
-        Job job = Job.builder()
-                .title((String) body.get("title"))
-                .description((String) body.get("description"))
-                .industry(industry)
-                .responsibilities(getStringArray(body, "responsibilities"))
-                .requirements(getStringArray(body, "requirements"))
-                .niceToHaveSkills(getStringArray(body, "niceToHaveSkills"))
-                .location((String) body.get("location"))
-                .salaryMin(body.get("salaryMin") != null ? (Integer) body.get("salaryMin") : null)
-                .salaryMax(body.get("salaryMax") != null ? (Integer) body.get("salaryMax") : null)
-                .jobType(body.get("jobType") != null ? JobType.valueOf((String) body.get("jobType")) : null)
-                .status(status)
-                .build();
-
-        @SuppressWarnings("unchecked")
-        Set<ExperienceLevel> levels = body.get("levels") != null
-                ? ((List<String>) body.get("levels")).stream()
-                        .map(ExperienceLevel::valueOf)
-                        .collect(java.util.stream.Collectors.toSet())
-                : Set.of();
-        job.setExperienceLevels(levels);
-
-        @SuppressWarnings("unchecked")
-        Set<UUID> skillIds = body.get("skillIds") != null ? Set.copyOf(
-                ((List<String>) body.get("skillIds")).stream().map(UUID::fromString).toList()
-        ) : null;
-
-        Job created = jobService.create(job, skillIds, principal);
+        Job job = mapToJob(body);
+        Job created = jobService.create(job, body.skillIds(), principal, null);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(created));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<Job>> update(
-            @PathVariable UUID id,
-            @RequestBody Map<String, Object> body,
+    /** Multipart request (with optional file attachment). */
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<Job>> createMultipart(
+            @RequestParam("data") String dataJson,
+            @RequestParam(value = "attachment", required = false) MultipartFile attachment,
             @AuthenticationPrincipal UserPrincipal principal
     ) {
-        Industry industry = resolveIndustry(body);
-        Job updates = Job.builder()
-                .title((String) body.get("title"))
-                .description((String) body.get("description"))
-                .industry(industry)
-                .responsibilities(getStringArray(body, "responsibilities"))
-                .requirements(getStringArray(body, "requirements"))
-                .niceToHaveSkills(getStringArray(body, "niceToHaveSkills"))
-                .location((String) body.get("location"))
-                .salaryMin(body.get("salaryMin") != null ? (Integer) body.get("salaryMin") : null)
-                .salaryMax(body.get("salaryMax") != null ? (Integer) body.get("salaryMax") : null)
-                .jobType(body.get("jobType") != null ? JobType.valueOf((String) body.get("jobType")) : null)
-                .status(body.get("status") != null ? JobStatus.valueOf((String) body.get("status")) : null)
-                .build();
+        Map<String, Object> body;
+        try {
+            body = objectMapper.readValue(dataJson, new TypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            throw new BadRequestException("Invalid JSON data");
+        }
 
-        @SuppressWarnings("unchecked")
-        Set<ExperienceLevel> levels = body.get("levels") != null
-                ? ((List<String>) body.get("levels")).stream()
-                        .map(ExperienceLevel::valueOf)
-                        .collect(java.util.stream.Collectors.toSet())
-                : null;
-        if (levels != null) updates.setExperienceLevels(levels);
+        Job job = mapToJob(body);
+        Set<UUID> skillIds = body.get("skillIds") != null ? parseSkillIds(body.get("skillIds")) : null;
+        String attachmentUrl = uploadAttachmentIfPresent(attachment);
+        Job created = jobService.create(job, skillIds, principal, attachmentUrl);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(created));
+    }
 
-        @SuppressWarnings("unchecked")
-        Set<UUID> skillIds = body.get("skillIds") != null ? Set.copyOf(
-                ((List<String>) body.get("skillIds")).stream().map(UUID::fromString).toList()
-        ) : null;
+    /** JSON-only update. */
+    @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<Job>> updateJson(
+            @PathVariable UUID id,
+            @RequestBody JobUpdateRequest body,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        Job updated = jobService.update(id, mapToJob(body), body.skillIds(), principal, null);
+        return ResponseEntity.ok(ApiResponse.ok(updated));
+    }
 
-        return ResponseEntity.ok(ApiResponse.ok(jobService.update(id, updates, skillIds, principal)));
+    /** Multipart update (with optional file attachment). */
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<Job>> updateMultipart(
+            @PathVariable UUID id,
+            @RequestParam("data") String dataJson,
+            @RequestParam(value = "attachment", required = false) MultipartFile attachment,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        Map<String, Object> body;
+        try {
+            body = objectMapper.readValue(dataJson, new TypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            throw new BadRequestException("Invalid JSON data");
+        }
+
+        Job updates = mapToJob(body);
+        Set<UUID> skillIds = body.get("skillIds") != null ? parseSkillIds(body.get("skillIds")) : null;
+        String attachmentUrl = uploadAttachmentIfPresent(attachment);
+        Job updated = jobService.update(id, updates, skillIds, principal, attachmentUrl);
+        return ResponseEntity.ok(ApiResponse.ok(updated));
     }
 
     @PatchMapping("/{id}/status")
@@ -193,10 +186,123 @@ public class CompanyJobController {
 
         JobAutoFillDto dto = jobAutoFillService.autoFill(file);
 
-        // Increment usage counter
         subscriptionService.incrementAutoFillUsage(companyId);
 
         return ResponseEntity.ok(ApiResponse.ok(dto));
+    }
+
+    // ─── Helpers ────────────────────────────────────────────────────────────────
+
+    private Job mapToJob(JobCreateRequest body) {
+        Job job = Job.builder()
+                .title(body.title())
+                .description(body.description())
+                .responsibilities(body.responsibilities())
+                .requirements(body.requirements())
+                .niceToHaveSkills(body.niceToHaveSkills())
+                .location(body.location())
+                .salaryMin(body.salaryMin())
+                .salaryMax(body.salaryMax())
+                .jobType(body.jobType())
+                .status(body.status() != null ? body.status() : JobStatus.DRAFT)
+                .build();
+
+        if (body.industryId() != null && !body.industryId().isBlank()) {
+            industryRepository.findById(UUID.fromString(body.industryId()))
+                    .ifPresent(job::setIndustry);
+        }
+
+        if (body.addressId() != null && !body.addressId().isBlank()) {
+            job.setCompanyAddressId(UUID.fromString(body.addressId()));
+        }
+
+        if (body.levels() != null) {
+            job.setExperienceLevels(body.levels());
+        }
+
+        return job;
+    }
+
+    private Job mapToJob(JobUpdateRequest body) {
+        Job job = Job.builder()
+                .title(body.title())
+                .description(body.description())
+                .responsibilities(body.responsibilities())
+                .requirements(body.requirements())
+                .niceToHaveSkills(body.niceToHaveSkills())
+                .location(body.location())
+                .salaryMin(body.salaryMin())
+                .salaryMax(body.salaryMax())
+                .jobType(body.jobType())
+                .status(body.status())
+                .build();
+
+        if (body.industryId() != null && !body.industryId().isBlank()) {
+            industryRepository.findById(UUID.fromString(body.industryId()))
+                    .ifPresent(job::setIndustry);
+        }
+
+        if (body.addressId() != null && !body.addressId().isBlank()) {
+            job.setCompanyAddressId(UUID.fromString(body.addressId()));
+        }
+
+        if (body.levels() != null) {
+            job.setExperienceLevels(body.levels());
+        }
+
+        return job;
+    }
+
+    /** Maps from a Map (multipart JSON) — used by createMultipart and updateMultipart. */
+    @SuppressWarnings("unchecked")
+    private Job mapToJob(Map<String, Object> body) {
+        JobStatus status = body.get("status") != null
+                ? JobStatus.valueOf((String) body.get("status"))
+                : JobStatus.DRAFT;
+
+        Job job = Job.builder()
+                .title((String) body.get("title"))
+                .description((String) body.get("description"))
+                .responsibilities(getStringArray(body, "responsibilities"))
+                .requirements(getStringArray(body, "requirements"))
+                .niceToHaveSkills(getStringArray(body, "niceToHaveSkills"))
+                .location((String) body.get("location"))
+                .salaryMin(body.get("salaryMin") != null ? ((Number) body.get("salaryMin")).intValue() : null)
+                .salaryMax(body.get("salaryMax") != null ? ((Number) body.get("salaryMax")).intValue() : null)
+                .jobType(body.get("jobType") != null ? JobType.valueOf((String) body.get("jobType")) : null)
+                .status(status)
+                .build();
+
+        Object addressIdRaw = body.get("addressId");
+        if (addressIdRaw != null && !((String) addressIdRaw).isBlank()) {
+            job.setCompanyAddressId(UUID.fromString((String) addressIdRaw));
+        }
+
+        Object industryIdRaw = body.get("industryId");
+        if (industryIdRaw != null && !((String) industryIdRaw).isBlank()) {
+            industryRepository.findById(UUID.fromString((String) industryIdRaw))
+                    .ifPresent(job::setIndustry);
+        }
+
+        Object levelsRaw = body.get("levels");
+        if (levelsRaw != null) {
+            Set<ExperienceLevel> levels = ((List<String>) levelsRaw).stream()
+                    .map(ExperienceLevel::valueOf)
+                    .collect(java.util.stream.Collectors.toSet());
+            job.setExperienceLevels(levels);
+        }
+
+        return job;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Set<UUID> parseSkillIds(Object raw) {
+        if (raw == null) return null;
+        return Set.copyOf(
+                ((List<String>) raw).stream()
+                        .map(UUID::fromString)
+                        .toList()
+        );
     }
 
     @SuppressWarnings("unchecked")
@@ -206,10 +312,27 @@ public class CompanyJobController {
         return ((List<String>) val).toArray(new String[0]);
     }
 
-    private Industry resolveIndustry(Map<String, Object> body) {
-        Object raw = body.get("industryId");
-        if (raw == null) return null;
-        UUID industryId = UUID.fromString((String) raw);
-        return industryRepository.findById(industryId).orElse(null);
+    /**
+     * Upload the attachment file to storage and return the public URL.
+     * Returns null if no file is present.
+     */
+    private String uploadAttachmentIfPresent(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return null;
+        }
+        try {
+            String key = storageService.upload(
+                    "job-attachments",
+                    file.getOriginalFilename(),
+                    file.getInputStream(),
+                    file.getSize(),
+                    file.getContentType()
+            );
+            log.info("[CompanyJob] Attachment uploaded: key={}, size={}", key, file.getSize());
+            return storageService.getPublicUrl(key);
+        } catch (java.io.IOException e) {
+            log.error("[CompanyJob] Failed to upload attachment", e);
+            throw new BadRequestException("Failed to upload attachment file");
+        }
     }
 }
