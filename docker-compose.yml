@@ -1,5 +1,8 @@
 # RecruitPro — Base Docker Compose
-# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# Usage:
+#   Development:  docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile dev up --build
+#   Production:    docker compose --env-file .env.localprod -f docker-compose.yml -f docker-compose.prod.yml up --build
+#   AWS Production: docker compose --env-file .env.aws -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 
 networks:
   app-network:
@@ -21,8 +24,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -60,9 +61,6 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    ports:
-      - "${MINIO_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
       - minio_data:/data
     networks:
@@ -100,9 +98,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: recruitpro-backend
-    ports:
-      - "${BACKEND_PORT:-8080}:8080"
     environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-dev}
       SPRING_DATASOURCE_URL: ${BACKEND_DB_URL}
       SPRING_DATASOURCE_USERNAME: ${BACKEND_DB_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${BACKEND_DB_PASSWORD}
@@ -161,6 +158,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       REDIS_HOST: ${REDIS_HOST}
       REDIS_PORT: ${REDIS_PORT}
+      TRANSFORMERS_CACHE: /home/appuser/.cache/huggingface
+      HF_HOME: /home/appuser/.cache/huggingface
     volumes:
       - ai_models:/app/models
     depends_on:
@@ -178,6 +177,8 @@ services:
       start_period: 30s
 
   # ── Frontend — Job Seeker ────────────────────
+  # Only started in development (profile: dev).
+  # In production, served by the central nginx service.
   frontend-jobseeker:
     build:
       context: ./frontend-jobseeker
@@ -185,8 +186,8 @@ services:
       args:
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     container_name: recruitpro-frontend-jobseeker
-    ports:
-      - "${FRONTEND_JOBSEEKER_PORT:-3000}:3000"
+    profiles:
+      - dev
     networks:
       - app-network
     healthcheck:
@@ -195,14 +196,16 @@ services:
       timeout: 5s
       retries: 3
 
-  # ── Frontend — Company ──────────────────────
+  # ── Frontend — Company ───────────────────────
+  # Only started in development (profile: dev).
+  # In production, served by the central nginx service.
   frontend-company:
     build:
       context: ./frontend-company
       dockerfile: Dockerfile
     container_name: recruitpro-frontend-company
-    ports:
-      - "${FRONTEND_COMPANY_PORT:-3001}:3000"
+    profiles:
+      - dev
     networks:
       - app-network
     healthcheck:
@@ -211,14 +214,16 @@ services:
       timeout: 5s
       retries: 3
 
-  # ── Frontend — Admin ────────────────────────
+  # ── Frontend — Admin ───────────────────────
+  # Only started in development (profile: dev).
+  # In production, served by the central nginx service.
   frontend-admin:
     build:
       context: ./frontend-admin
       dockerfile: Dockerfile
     container_name: recruitpro-frontend-admin
-    ports:
-      - "${FRONTEND_ADMIN_PORT:-3002}:3000"
+    profiles:
+      - dev
     networks:
       - app-network
     healthcheck:

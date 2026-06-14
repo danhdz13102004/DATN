@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sơ đồ hoạt động đăng ký tài khoản ứng viên</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --panel: #ffffff;
+      --text: #172033;
+      --muted: #64748b;
+      --line: #8aa0bb;
+      --candidate: #dff7ec;
+      --candidate-border: #22a06b;
+      --frontend: #e6f0ff;
+      --frontend-border: #3578e5;
+      --backend: #fff2d8;
+      --backend-border: #d9822b;
+      --database: #f1e8ff;
+      --database-border: #8f5bd7;
+      --decision: #fff7c7;
+      --decision-border: #c79a00;
+      --error: #ffe4e6;
+      --error-border: #e11d48;
+      --success: #dcfce7;
+      --success-border: #16a34a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 18px;
+      line-height: 1.45;
+    }
+
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 28px 22px 44px;
+    }
+
+    h1 {
+      margin: 0 0 22px;
+      text-align: center;
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    .diagram {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(210px, 1fr));
+      gap: 0;
+      overflow-x: auto;
+      border: 1px solid #d7dee8;
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 14px 38px rgba(15, 23, 42, 0.08);
+    }
+
+    .lane {
+      min-width: 220px;
+      padding: 0 14px 24px;
+      border-right: 1px solid #d7dee8;
+      position: relative;
+    }
+
+    .lane:last-child {
+      border-right: 0;
+    }
+
+    .lane-title {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      margin: 0 -14px 18px;
+      padding: 14px 12px;
+      text-align: center;
+      font-weight: 700;
+      border-bottom: 1px solid #d7dee8;
+      background: #eef3f9;
+    }
+
+    .lane-title.candidate {
+      background: var(--candidate);
+      color: #126344;
+    }
+
+    .lane-title.frontend {
+      background: var(--frontend);
+      color: #2459a9;
+    }
+
+    .lane-title.backend {
+      background: var(--backend);
+      color: #96581b;
+    }
+
+    .lane-title.database {
+      background: var(--database);
+      color: #6738a6;
+    }
+
+    .node {
+      position: relative;
+      min-height: 58px;
+      margin: 14px auto;
+      padding: 14px 16px;
+      border: 2px solid #cbd5e1;
+      border-radius: 8px;
+      background: #fff;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+    }
+
+    .node::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: -18px;
+      width: 2px;
+      height: 18px;
+      background: var(--line);
+      transform: translateX(-50%);
+    }
+
+    .node.no-down::after,
+    .node.end::after {
+      display: none;
+    }
+
+    .candidate-node {
+      border-color: var(--candidate-border);
+      background: var(--candidate);
+    }
+
+    .frontend-node {
+      border-color: var(--frontend-border);
+      background: var(--frontend);
+    }
+
+    .backend-node {
+      border-color: var(--backend-border);
+      background: var(--backend);
+    }
+
+    .database-node {
+      border-color: var(--database-border);
+      background: var(--database);
+    }
+
+    .success {
+      border-color: var(--success-border);
+      background: var(--success);
+    }
+
+    .error {
+      border-color: var(--error-border);
+      background: var(--error);
+    }
+
+    .start,
+    .end {
+      width: 42px;
+      height: 42px;
+      min-height: 42px;
+      padding: 0;
+      border-radius: 50%;
+      background: #111827;
+      border-color: #111827;
+      color: #fff;
+      font-size: 0;
+    }
+
+    .end {
+      border: 8px double #111827;
+      background: #fff;
+    }
+
+    .decision {
+      width: 168px;
+      min-height: 168px;
+      margin-top: 28px;
+      margin-bottom: 28px;
+      padding: 20px;
+      border-color: var(--decision-border);
+      border-radius: 4px;
+      background: var(--decision);
+      transform: rotate(45deg);
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+    }
+
+    .decision span {
+      display: block;
+      transform: rotate(-45deg);
+      font-weight: 700;
+    }
+
+    .placeholder {
+      min-height: 86px;
+      margin: 14px 0;
+    }
+
+    .placeholder.small {
+      min-height: 58px;
+    }
+
+    .placeholder.decision-space {
+      min-height: 224px;
+    }
+
+    .connector {
+      position: relative;
+      min-height: 34px;
+      color: var(--muted);
+      font-size: 15px;
+      text-align: center;
+    }
+
+    .connector::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: -14px;
+      right: -14px;
+      border-top: 2px dashed var(--line);
+    }
+
+    .connector span {
+      position: relative;
+      z-index: 1;
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: var(--panel);
+      border: 1px solid #d7dee8;
+    }
+
+    .branch-label {
+      margin: 8px 0 -4px;
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .swatch {
+      width: 18px;
+      height: 18px;
+      border: 2px solid;
+      border-radius: 4px;
+    }
+
+    @media (max-width: 900px) {
+      body {
+        font-size: 16px;
+      }
+
+      .page {
+        padding: 18px 12px 32px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      .diagram {
+        grid-template-columns: repeat(4, 220px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>Sơ đồ hoạt động chức năng đăng ký tài khoản ứng viên</h1>
+
+    <section class="diagram" aria-label="Sơ đồ hoạt động đăng ký tài khoản ứng viên">
+      <div class="lane">
+        <div class="lane-title candidate">Ứng viên</div>
+        <div class="node start" aria-label="Bắt đầu"></div>
+        <div class="node candidate-node">Mở trang đăng ký</div>
+        <div class="placeholder small"></div>
+        <div class="node candidate-node">Nhập thông tin đăng ký</div>
+        <div class="node candidate-node">Nhấn nút đăng ký</div>
+        <div class="placeholder decision-space"></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="node candidate-node success">Nhận thông báo đăng ký thành công</div>
+        <div class="branch-label">Luồng lỗi từ Backend</div>
+        <div class="node candidate-node error">Nhận thông báo lỗi</div>
+        <div class="branch-label">Luồng lỗi dữ liệu nhập</div>
+        <div class="node candidate-node error">Nhận thông báo lỗi</div>
+        <div class="node end" aria-label="Kết thúc"></div>
+      </div>
+
+      <div class="lane">
+        <div class="lane-title frontend">Frontend</div>
+        <div class="placeholder small"></div>
+        <div class="connector"><span>chuyển sang Frontend</span></div>
+        <div class="node frontend-node">Hiển thị form đăng ký</div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="node frontend-node">Kiểm tra dữ liệu nhập</div>
+        <div class="node decision"><span>Thông tin hợp lệ?</span></div>
+        <div class="branch-label">Có</div>
+        <div class="node frontend-node">Gửi yêu cầu đăng ký</div>
+        <div class="connector"><span>gửi sang Backend</span></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="node frontend-node success">Hiển thị thông báo đăng ký thành công</div>
+        <div class="connector"><span>thông báo cho ứng viên</span></div>
+        <div class="node frontend-node error">Hiển thị thông báo lỗi</div>
+        <div class="connector"><span>thông báo cho ứng viên</span></div>
+        <div class="branch-label">Không</div>
+        <div class="node frontend-node error">Hiển thị thông báo lỗi</div>
+      </div>
+
+      <div class="lane">
+        <div class="lane-title backend">Backend</div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder decision-space"></div>
+        <div class="placeholder small"></div>
+        <div class="node backend-node">Nhận yêu cầu đăng ký</div>
+        <div class="node backend-node">Kiểm tra thông tin đăng ký</div>
+        <div class="node decision"><span>Có thể tạo tài khoản?</span></div>
+        <div class="branch-label">Có</div>
+        <div class="connector"><span>lưu vào Database</span></div>
+        <div class="node backend-node success">Trả kết quả đăng ký thành công</div>
+        <div class="connector"><span>trả về Frontend</span></div>
+        <div class="branch-label">Không</div>
+        <div class="node backend-node error">Trả thông báo lỗi</div>
+        <div class="connector"><span>trả về Frontend</span></div>
+      </div>
+
+      <div class="lane">
+        <div class="lane-title database">Database</div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder decision-space"></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder small"></div>
+        <div class="placeholder decision-space"></div>
+        <div class="node database-node">Lưu thông tin tài khoản</div>
+        <div class="connector"><span>kết quả lưu</span></div>
+      </div>
+    </section>
+
+    <div class="legend" aria-label="Chú giải">
+      <span class="legend-item"><span class="swatch" style="background: var(--candidate); border-color: var(--candidate-border);"></span>Ứng viên</span>
+      <span class="legend-item"><span class="swatch" style="background: var(--frontend); border-color: var(--frontend-border);"></span>Frontend</span>
+      <span class="legend-item"><span class="swatch" style="background: var(--backend); border-color: var(--backend-border);"></span>Backend</span>
+      <span class="legend-item"><span class="swatch" style="background: var(--database); border-color: var(--database-border);"></span>Database</span>
+      <span class="legend-item"><span class="swatch" style="background: var(--decision); border-color: var(--decision-border); transform: rotate(45deg);"></span>Điều kiện</span>
+    </div>
+  </main>
+</body>
+</html>

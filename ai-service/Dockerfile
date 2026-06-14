@@ -7,6 +7,8 @@ RUN echo 'Acquire::Retries "5";' > /etc/apt/apt.conf.d/99retries && \
         tesseract-ocr-eng \
     && rm -rf /var/lib/apt/lists/*
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+ENV TRANSFORMERS_CACHE=/home/appuser/.cache/huggingface
+ENV HF_HOME=/home/appuser/.cache/huggingface
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt

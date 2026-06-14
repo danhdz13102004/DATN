@@ -38,8 +38,9 @@ interface ItemFormModalProps<T extends { name: string; id?: string }> {
 }
 
 function ItemFormModal<T extends { name: string; id?: string }>({
-  item, onClose, onSubmit, isPending, title, itemType,
+  item, onClose, onSubmit, isPending, itemType,
 }: ItemFormModalProps<T>) {
+  void itemType; // used in JSX rendering via prop
   const [name, setName] = useState(item?.name ?? '');
 
   useEffect(() => {
@@ -128,6 +129,7 @@ interface DataTableProps<T extends { id: string; name: string; jobUsageCount: nu
 function DataTable<T extends { id: string; name: string; jobUsageCount: number }>({
   items, isLoading, itemType, onEdit, onDelete, deletePending, deletingId, emptyIcon, emptyMsg,
 }: DataTableProps<T>) {
+  void itemType; // used in generic table column headers
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="overflow-x-auto">

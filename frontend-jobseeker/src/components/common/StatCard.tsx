@@ -21,6 +21,7 @@ const COLOR_MAP: Record<string, { background: string; color: string; iconBg: str
 };
 
 export default function StatCard({ label, value, icon, color, change, changeType, helperText }: StatCardProps) {
+  void change; void changeType; void helperText;
   const c = COLOR_MAP[color] || COLOR_MAP.blue;
 
   return (

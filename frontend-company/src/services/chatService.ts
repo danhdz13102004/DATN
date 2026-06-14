@@ -1,5 +1,5 @@
 import api from './api';
-import type { Conversation, Message, Notification, SendMessagePayload } from '../types/chat';
+import type { Conversation, Message, Notification } from '../types/chat';
 
 const BASE = '/chat';
 const NOTIF = '/notifications';

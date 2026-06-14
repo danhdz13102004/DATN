@@ -1,0 +1,13 @@
+# AWS-only override: use a prebuilt DockerHub image for ai-service.
+#
+# The image should already contain model files at AI_SERVICE_MODEL_PATH
+# (default: /opt/recruitpro/models). This override removes the normal
+# /app/models volume so it cannot hide baked model files.
+
+services:
+  ai-service:
+    image: ${AI_SERVICE_IMAGE}
+    build: !reset null
+    volumes: !reset []
+    environment:
+      AI_SERVICE_MODEL_PATH: ${AI_SERVICE_MODEL_PATH:-/opt/recruitpro/models}

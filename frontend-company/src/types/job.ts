@@ -70,4 +70,7 @@ export interface JobAutoFillDto {
   requirements?: string[];
   niceToHaveSkills?: string[];
   description?: string;
+  mustHaveSkills?: string[];
 }
+
+export type JobAutoFillApiResponse = JobAutoFillDto;

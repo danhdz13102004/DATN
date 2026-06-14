@@ -24,6 +24,7 @@ const STATUS_BAR_COLOR: Record<string, { bar: string; width: string }> = {
   REJECTED:   { bar: 'bg-red-400', width: 'w-full opacity-40' },
   APPLIED:    { bar: 'bg-slate-300', width: 'w-1/5' },
 };
+void STATUS_BAR_COLOR; // reserved for future use
 
 export default function ApplicationsPage() {
   const { onMenuToggle } = useOutletContext<{ onMenuToggle: () => void }>();
@@ -226,7 +227,6 @@ export default function ApplicationsPage() {
           <div className="space-y-3">
             {apps.map((app, index) => {
               const recent = isRecent(app.appliedAt);
-              const barStyle = STATUS_BAR_COLOR[app.status] ?? STATUS_BAR_COLOR['APPLIED'];
 
               return (
                 <div

@@ -1,0 +1,57 @@
+# RecruitPro — Production Docker Compose
+# Serves all three frontends from one central Nginx container.
+# Backend, ai-service, db, redis, and minio are internal only.
+#
+# Usage:
+#   Local production test:
+#     docker compose --env-file .env.localprod -f docker-compose.yml -f docker-compose.prod.yml up --build
+#
+#   AWS production:
+#     docker compose --env-file .env.aws -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+
+services:
+
+  # ── Central Nginx — serves all three frontends ────────────────────────────
+  nginx:
+    build:
+      context: .
+      dockerfile: ./nginx/Dockerfile
+      args:
+        VITE_API_URL: /api
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
+    ports:
+      - "${JOBSEEKER_PORT:-80}:80"
+      - "${COMPANY_PORT:-8081}:8081"
+      - "${ADMIN_PORT:-8082}:8082"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # ── Backend ───────────────────────────────────────────────────────────────
+  backend:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+    restart: unless-stopped
+
+  # ── AI Service ───────────────────────────────────────────────────────────
+  ai-service:
+    restart: unless-stopped
+
+  # ── Database ─────────────────────────────────────────────────────────────
+  db:
+    restart: unless-stopped
+
+  # ── Redis ────────────────────────────────────────────────────────────────
+  redis:
+    restart: unless-stopped
+
+  # ── MinIO ────────────────────────────────────────────────────────────────
+  minio:
+    restart: unless-stopped
+
+  # ── MinIO Init ────────────────────────────────────────────────────────────
+  minio-init:
+    restart: on-failure

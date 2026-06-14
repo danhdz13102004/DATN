@@ -54,6 +54,7 @@ export default function CompanyDetailPage() {
 
   const handleUnverify = () => {
     // unverify is not yet an API action — placeholder
+    void handleUnverify; // keep function for future use
     toast.error('Unverify is not supported yet');
   };
 

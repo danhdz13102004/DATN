@@ -5,7 +5,12 @@ import type { ChatEvent, NotificationEvent, SendMessagePayload, ReadReceiptPaylo
 
 // Derive WebSocket URL from the REST API URL (http→ws, https→wss)
 function getWsUrl(): string {
-  const apiBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8080';
+  const raw = import.meta.env.VITE_API_URL ?? '';
+  if (raw.startsWith('/')) {
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${proto}//${window.location.host}/ws-native`;
+  }
+  const apiBase = raw || 'http://127.0.0.1:8080';
   return apiBase.replace(/^http/, 'ws') + '/ws-native';
 }
 

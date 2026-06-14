@@ -27,6 +27,7 @@ function timelineColor(type: string): string {
     default:                     return 'bg-gray-300';
   }
 }
+void timelineColor; // reserved for future use in timeline rendering
 
 /** Format ISO timestamp to a readable date */
 function formatDate(iso: string): string {
@@ -35,6 +36,7 @@ function formatDate(iso: string): string {
     hour: '2-digit', minute: '2-digit',
   });
 }
+void formatDate; // reserved for future use
 
 /** Detect file type from URL */
 function getFileType(url: string): 'pdf' | 'docx' | 'image' | 'other' {

@@ -167,37 +167,6 @@ def softmax(similarities: List[float], temperature: float = 1.0) -> List[float]:
     return probabilities.tolist()
 
 
-def compute_confidence(probabilities: List[float]) -> float:
-    """Compute confidence as the maximum probability.
-
-    Confidence indicates how strongly the most likely resume
-    matches the job compared to other resumes.
-    """
-    if not probabilities:
-        return 0.0
-    return float(max(probabilities))
-
-
-def get_confidence_level(confidence: float) -> str:
-    """Map confidence value to level category."""
-    if confidence >= CONFIDENCE_HIGH:
-        return "high"
-    elif confidence >= CONFIDENCE_MEDIUM:
-        return "medium" 
-    else:
-        return "low"
-
-
-def get_weight_multiplier(confidence: float) -> float:
-    """Get weight multiplier based on confidence level."""
-    if confidence >= CONFIDENCE_HIGH:
-        return WEIGHT_MULTIPLIER_HIGH
-    elif confidence >= CONFIDENCE_MEDIUM:
-        return WEIGHT_MULTIPLIER_MEDIUM
-    else:
-        return WEIGHT_MULTIPLIER_LOW
-
-
 def add_node(node_id: str, text: str, node_type: str, nlp_model, device, user_id: Optional[str] = None) -> dict:
     """Encode text and register a resume or job node.
 

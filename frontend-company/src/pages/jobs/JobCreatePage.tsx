@@ -209,7 +209,7 @@ export default function JobCreatePage() {
 
     try {
       const { data: response } = await autoFillFromFile.mutateAsync(file);
-      const raw = response?.data;
+      const raw = response?.data as any;
 
       if (!raw) {
         toast.error('Could not extract job information from this file. Please fill in manually.');

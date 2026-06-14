@@ -1,10 +1,16 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8080';
+const raw = import.meta.env.VITE_API_URL ?? '';
+const API_BASE_URL = (raw.startsWith('/') ? raw : (raw || 'http://127.0.0.1:8080')).replace(/\/$/, '');
+const API_V1_BASE_URL = API_BASE_URL.endsWith('/api/v1')
+  ? API_BASE_URL
+  : API_BASE_URL.endsWith('/api')
+    ? `${API_BASE_URL}/v1`
+    : `${API_BASE_URL}/api/v1`;
 
 const api = axios.create({
-  baseURL: `${API_BASE_URL}/api/v1`,
+  baseURL: API_V1_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 15000,
 });
@@ -58,7 +64,7 @@ api.interceptors.response.use(
         const refreshToken = useAuthStore.getState().refreshToken;
         if (!refreshToken) throw new Error('No refresh token');
 
-        const { data } = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh`, {
+        const { data } = await axios.post(`${API_V1_BASE_URL}/auth/refresh`, {
           refreshToken,
         });
 

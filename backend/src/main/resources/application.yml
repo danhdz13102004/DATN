@@ -101,6 +101,10 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+      probes:
+        enabled: false
+      health-contributors:
+        exclude: mail
 
 # ── Logging ──────────────────────────────────
 logging:

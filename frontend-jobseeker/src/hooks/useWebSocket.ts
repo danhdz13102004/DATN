@@ -4,7 +4,12 @@ import { useAuthStore } from '../store/authStore';
 import type { ChatEvent, NotificationEvent, SendMessagePayload, ReadReceiptPayload } from '../types/chat';
 
 function getWsUrl(): string {
-  const apiBase = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8080';
+  const raw = import.meta.env.VITE_API_URL ?? '';
+  if (raw.startsWith('/')) {
+    const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${proto}//${window.location.host}/ws-native`;
+  }
+  const apiBase = raw || 'http://127.0.0.1:8080';
   return apiBase.replace(/^http/, 'ws') + '/ws-native';
 }
 

@@ -37,9 +37,6 @@ const ChatListPage = lazy(() => import('./pages/chat/ChatListPage'));
 const NotificationsPage = lazy(() => import('./pages/notifications/NotificationsPage'));
 
 /* Placeholders */
-const ComingSoonPage = lazy(() => import('./pages/ComingSoonPage'));
-
-/* Subscription */
 const SubscriptionPage = lazy(() => import('./pages/subscription/SubscriptionPage'));
 
 const AuthFallback = () => (

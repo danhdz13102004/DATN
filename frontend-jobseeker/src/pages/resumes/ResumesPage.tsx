@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from 'react';
-import PageHeader from '../../components/common/PageHeader';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import { resumeService } from '../../services/resumeService';

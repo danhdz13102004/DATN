@@ -1,5 +1,5 @@
 # RecruitPro — Development Overrides (Hot Reload)
-# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile dev up --build
 
 volumes:
   backend_target:
@@ -7,7 +7,6 @@ volumes:
   frontend_js_node_modules:
   frontend_co_node_modules:
   frontend_ad_node_modules:
-  # ai_models named volume removed in dev — using bind mount instead
 
 services:
 
@@ -43,8 +42,19 @@ services:
       - "${AI_SERVICE_PORT:-8000}:8000"
     volumes:
       - ./ai-service/app:/app/app
-      - ./ai-service/tests:/app/tests   # test suite (host → container)
-      - ./ai-service/models:/app/models   # bind-mount: drop model files here to load them
+      - ./ai-service/tests:/app/tests
+      - ./ai-service/models:/app/models
+
+  # ── Database (Dev Port) ──────────────────────
+  db:
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  # ── MinIO (Dev Ports) ────────────────────────
+  minio:
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
 
   # ── Frontend — Job Seeker (Hot Reload) ───────
   frontend-jobseeker:
@@ -55,6 +65,7 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
+      VITE_API_URL: "http://localhost:8080"
       VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     volumes:
       - ./frontend-jobseeker/src:/app/src
@@ -65,6 +76,8 @@ services:
       - ./frontend-jobseeker/tailwind.config.js:/app/tailwind.config.js
       - ./frontend-jobseeker/postcss.config.js:/app/postcss.config.js
       - frontend_js_node_modules:/app/node_modules
+    ports:
+      - "${FRONTEND_JOBSEEKER_PORT:-3000}:3000"
 
   # ── Frontend — Company (Hot Reload) ──────────
   frontend-company:
@@ -75,6 +88,7 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
+      VITE_API_URL: "http://localhost:8080"
       VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     volumes:
       - ./frontend-company/src:/app/src
@@ -85,8 +99,10 @@ services:
       - ./frontend-company/tailwind.config.js:/app/tailwind.config.js
       - ./frontend-company/postcss.config.js:/app/postcss.config.js
       - frontend_co_node_modules:/app/node_modules
+    ports:
+      - "${FRONTEND_COMPANY_PORT:-3001}:3000"
 
-  # ── Frontend — Admin (Hot Reload) ────────────
+  # ── Frontend — Admin (Hot Reload) ───────────
   frontend-admin:
     build:
       context: ./frontend-admin
@@ -95,6 +111,7 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
+      VITE_API_URL: "http://localhost:8080"
       VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     volumes:
       - ./frontend-admin/src:/app/src
@@ -105,3 +122,5 @@ services:
       - ./frontend-admin/tailwind.config.js:/app/tailwind.config.js
       - ./frontend-admin/postcss.config.js:/app/postcss.config.js
       - frontend_ad_node_modules:/app/node_modules
+    ports:
+      - "${FRONTEND_ADMIN_PORT:-3002}:3000"

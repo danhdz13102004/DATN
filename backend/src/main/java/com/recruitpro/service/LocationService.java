@@ -9,7 +9,7 @@ import com.recruitpro.repository.CountryRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -22,8 +22,10 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "app.seed.enabled", havingValue = "true")
 public class LocationService {
+
+    @Value("${app.seed.enabled:false}")
+    private boolean seedEnabled;
 
     private static final String COUNTRIES_API_URL = "https://countriesnow.space/api/v0.1/countries";
     private static final String IP_API_URL = "https://ipapi.co/%s/json/";
@@ -35,7 +37,9 @@ public class LocationService {
 
     @PostConstruct
     public void init() {
-        fetchAndSeedCountriesAndCities();
+        if (seedEnabled) {
+            fetchAndSeedCountriesAndCities();
+        }
     }
 
     @Transactional
