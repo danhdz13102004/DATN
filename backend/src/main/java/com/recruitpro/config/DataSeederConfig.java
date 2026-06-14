@@ -12,7 +12,7 @@ import java.util.UUID;
 
 @Slf4j
 @Configuration
-@Profile({"dev", "test"})
+@Profile({"dev", "test","prod"})
 public class DataSeederConfig {
 
     @Bean
