@@ -2,7 +2,8 @@
 
 COMPOSE_DEV = docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile dev
 COMPOSE_LOCAL_PROD = docker compose --env-file .env.localprod -f docker-compose.yml -f docker-compose.prod.yml
-COMPOSE_AWS_PROD = docker compose --env-file .env.aws -f docker-compose.yml -f docker-compose.prod.yml
+COMPOSE_AWS_SOURCE = docker compose --env-file .env.aws -f docker-compose.yml -f docker-compose.prod.yml
+COMPOSE_AWS_PROD = docker compose --env-file .env.aws -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.aws-ai-image.yml
 COMPOSE_AWS_AI_IMAGE = docker compose --env-file .env.aws -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.aws-ai-image.yml
 
 AI_SERVICE_IMAGE ?= yourdockerhub/recruitpro-ai-service:latest
@@ -135,6 +136,7 @@ prod-isolated-clean:
 # -----------------------------------------------------------------------------
 
 .PHONY: aws-config aws-build aws-up aws-down aws-logs aws-restart
+.PHONY: aws-source-config aws-source-build aws-source-up
 .PHONY: ai-image-build ai-image-push aws-ai-config aws-ai-pull aws-ai-up aws-ai-logs aws-ai-restart
 
 aws-config:
@@ -155,6 +157,15 @@ aws-logs:
 aws-restart:
 	$(COMPOSE_AWS_PROD) down
 	$(COMPOSE_AWS_PROD) up -d --build
+
+aws-source-config:
+	$(COMPOSE_AWS_SOURCE) config
+
+aws-source-build:
+	$(COMPOSE_AWS_SOURCE) build
+
+aws-source-up:
+	$(COMPOSE_AWS_SOURCE) up -d --build
 
 # -----------------------------------------------------------------------------
 # AWS production with DockerHub AI image (.env.aws + docker-compose.aws-ai-image.yml)
