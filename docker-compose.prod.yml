@@ -52,6 +52,9 @@ services:
 
   # ── MinIO ────────────────────────────────────────────────────────────────
   minio:
+    ports:
+      - "${MINIO_API_BIND_HOST:-0.0.0.0}:${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_BIND_HOST:-127.0.0.1}:${MINIO_CONSOLE_PORT:-9001}:9001"
     restart: unless-stopped
 
   # ── MinIO Init ────────────────────────────────────────────────────────────
