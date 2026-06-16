@@ -10,14 +10,19 @@ import com.recruitpro.model.Application;
 import com.recruitpro.model.Company;
 import com.recruitpro.model.Interview;
 import com.recruitpro.model.Job;
+import com.recruitpro.model.JobSeeker;
 import com.recruitpro.model.Resume;
+import com.recruitpro.model.User;
 import com.recruitpro.model.enums.ApplicationStatus;
 import com.recruitpro.model.enums.InteractionEventType;
+import com.recruitpro.model.enums.NotificationType;
 import com.recruitpro.repository.ApplicationRepository;
 import com.recruitpro.repository.CompanyRepository;
 import com.recruitpro.repository.InterviewRepository;
+import com.recruitpro.repository.JobSeekerRepository;
 import com.recruitpro.repository.JobRepository;
 import com.recruitpro.repository.ResumeRepository;
+import com.recruitpro.repository.StaffRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -39,8 +44,11 @@ public class JobSeekerApplicationService {
     private final ResumeRepository resumeRepository;
     private final CompanyRepository companyRepository;
     private final InterviewRepository interviewRepository;
+    private final JobSeekerRepository jobSeekerRepository;
+    private final StaffRepository staffRepository;
     private final AiServiceClient aiServiceClient;
     private final JobInteractionService jobInteractionService;
+    private final NotificationService notificationService;
 
     public Page<JobSeekerApplicationListItemDto> listForSeeker(
             UUID seekerId, ApplicationStatus status, String search, Pageable pageable) {
@@ -205,6 +213,8 @@ public class JobSeekerApplicationService {
         Application saved = applicationRepository.save(application);
         log.info("Job seeker {} applied to job {} with resume {}", seekerId, jobId, resumeId);
 
+        notifyCompanyStaff(saved, job, seekerId);
+
         // Log apply interaction for behavioral tracking + AI sync
         // Apply events use explicit single resume with weight = 1.0 (ground truth)
         jobInteractionService.logWithSingleResume(seekerId, jobId, InteractionEventType.apply, resumeId, null);
@@ -242,5 +252,35 @@ public class JobSeekerApplicationService {
 
     public List<UUID> findAppliedJobIds(UUID seekerId) {
         return applicationRepository.findAppliedJobIdsByJobSeekerId(seekerId);
+    }
+
+    private void notifyCompanyStaff(Application application, Job job, UUID seekerId) {
+        JobSeeker jobSeeker = jobSeekerRepository.findById(seekerId).orElse(null);
+        User user = jobSeeker != null ? jobSeeker.getUser() : null;
+        String applicantName = getApplicantName(user);
+        String applicantEmail = user != null && user.getEmail() != null ? user.getEmail() : "Unknown";
+
+        staffRepository.findAllByCompanyId(job.getCompanyId()).forEach(staff -> {
+            if (staff.getUser() != null && staff.getUser().getId() != null) {
+                notificationService.createAndPublish(
+                        staff.getUser().getId(),
+                        NotificationType.JOB_APPLIED,
+                        "New job application",
+                        applicantName + " (" + applicantEmail + ") applied for \"" + job.getTitle() + "\".",
+                        application.getId(),
+                        "APPLICATION"
+                );
+            }
+        });
+    }
+
+    private String getApplicantName(User user) {
+        if (user == null) {
+            return "Unknown";
+        }
+        if (user.getFullName() != null && !user.getFullName().isBlank()) {
+            return user.getFullName();
+        }
+        return user.getEmail() != null ? user.getEmail() : "Unknown";
     }
 }

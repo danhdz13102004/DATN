@@ -179,13 +179,13 @@ function PlanFormModal({ plan, onClose }: PlanFormModalProps) {
             </label>
             <input
               type="number"
-              min={0}
+              min={1}
               className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary"
               placeholder="e.g. 50"
               value={form.jobPostLimit}
-              onChange={(e) => set('jobPostLimit', parseInt(e.target.value) || 0)}
+              onChange={(e) => set('jobPostLimit', parseInt(e.target.value) || 1)}
             />
-            <p className="text-xs text-gray-400 mt-1">Set to 0 for unlimited job posts</p>
+            <p className="text-xs text-gray-400 mt-1">Maximum number of jobs the company can post per subscription period.</p>
           </div>
 
           <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-100">
@@ -220,7 +220,7 @@ function PlanFormModal({ plan, onClose }: PlanFormModalProps) {
               value={form.autoFillLimit}
               onChange={(e) => set('autoFillLimit', parseInt(e.target.value) || 0)}
             />
-            <p className="text-xs text-gray-400 mt-1">Set to 0 for unlimited auto-fill uses. Only applies if AI Matching is enabled.</p>
+            <p className="text-xs text-gray-400 mt-1">Set to 0 to disable auto-fill for this plan. Only applies if AI Matching is enabled.</p>
           </div>
         </div>
 
@@ -283,7 +283,7 @@ function PlanCard({ plan, onEdit }: { plan: AdminPlan; onEdit: (p: AdminPlan) =>
       <ul className="space-y-1.5 text-sm text-gray-600">
         <li className="flex items-center gap-2">
           <i className="fas fa-check text-emerald-500 text-xs w-3" />
-          {plan.jobPostLimit === 0 ? 'Unlimited job posts' : `${plan.jobPostLimit} job posts`}
+          {`${plan.jobPostLimit} job posts`}
         </li>
         <li className="flex items-center gap-2">
           <i className="fas fa-check text-emerald-500 text-xs w-3" />
@@ -309,7 +309,7 @@ function PlanCard({ plan, onEdit }: { plan: AdminPlan; onEdit: (p: AdminPlan) =>
             <i className="fas fa-times text-gray-300 text-xs w-3" />
           )}
           <span className={plan.autoFillLimit > 0 ? '' : 'text-gray-400'}>
-            {plan.autoFillLimit === 0 ? 'Auto-fill (unlimited)' : `Auto-fill (${plan.autoFillLimit} uses)`}
+            {plan.autoFillLimit > 0 ? `Auto-fill (${plan.autoFillLimit} uses)` : 'Auto-fill (not included)'}
           </span>
         </li>
       </ul>

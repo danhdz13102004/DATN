@@ -241,7 +241,7 @@ export default function ApplicationsPage() {
                     <div className="absolute -top-px left-6 right-6 h-0.5 bg-gradient-to-r from-transparent via-primary/40 to-transparent rounded-full" />
                   )}
 
-                  <div className="flex items-center gap-4 p-4">
+                  <div className="grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto] items-center gap-4 p-4 min-h-[88px]">
                     {/* Avatar */}
                     <div className="relative flex-shrink-0">
                       <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 text-emerald-600 flex items-center justify-center text-sm font-bold shadow-sm border border-emerald-100">
@@ -255,56 +255,58 @@ export default function ApplicationsPage() {
                     </div>
 
                     {/* Candidate Info */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-bold text-gray-900">{app.candidateName}</span>
+                    <div className="min-w-0 max-w-[220px] self-stretch flex flex-col justify-center">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-sm font-bold text-gray-900 truncate min-w-0 flex-1">{app.candidateName}</span>
                         {recent && (
-                          <span className="px-1.5 py-0.5 text-[10px] font-bold text-primary bg-primary/10 rounded-md">NEW</span>
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold text-primary bg-primary/10 rounded-md flex-shrink-0">NEW</span>
                         )}
                         {app.status === 'OFFER' && (
-                          <span className="px-1.5 py-0.5 text-[10px] font-bold text-amber-600 bg-amber-50 rounded-md">
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold text-amber-600 bg-amber-50 rounded-md flex-shrink-0 whitespace-nowrap">
                             <i className="fas fa-star text-[8px] mr-0.5" />OFFER SENT
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-gray-400 mt-0.5">{app.candidateEmail}</div>
+                      <div className="text-xs text-gray-400 mt-0.5 truncate">{app.candidateEmail}</div>
                     </div>
 
                     {/* Job */}
-                    <div className="hidden sm:block min-w-0 px-3 border-l border-gray-100">
-                      <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Position</div>
-                      <div className="text-sm font-medium text-gray-700 truncate max-w-[180px]">{app.jobTitle}</div>
+                    <div className="hidden sm:flex min-w-0 flex-col justify-center self-stretch px-3 border-l border-gray-100">
+                      <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Position</div>
+                      <div className="text-sm font-medium text-gray-700 truncate w-[180px]">{app.jobTitle}</div>
                     </div>
 
                     {/* AI Score */}
-                    <div className="hidden md:flex items-center gap-3 px-3 border-l border-gray-100">
-                      <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">AI Match</div>
-                      {app.aiScore != null ? (
-                        <CircularScore score={app.aiScore} />
-                      ) : (
-                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-gray-100">
-                          <i className="fas fa-lock text-[10px] text-gray-400" />
-                          <span className="text-xs text-gray-400 font-medium">Upgrade</span>
-                        </div>
-                      )}
+                    <div className="hidden md:flex min-w-[70px] flex-col justify-center self-stretch px-3 border-l border-gray-100">
+                      <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">AI Match</div>
+                      <div className="flex items-center">
+                        {app.aiScore != null ? (
+                          <CircularScore score={app.aiScore} />
+                        ) : (
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-gray-100">
+                            <i className="fas fa-lock text-[10px] text-gray-400" />
+                            <span className="text-xs text-gray-400 font-medium">Upgrade</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {/* Status */}
-                    <div className="hidden sm:block px-3 border-l border-gray-100">
-                      <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Status</div>
+                    <div className="hidden sm:flex min-w-[110px] flex-col justify-center self-stretch px-3 border-l border-gray-100">
+                      <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Status</div>
                       <StatusBadge status={app.status} showRing />
                     </div>
 
                     {/* Date */}
-                    <div className="hidden lg:block px-3 border-l border-gray-100">
-                      <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-0.5">Applied</div>
+                    <div className="hidden lg:flex min-w-[70px] flex-col justify-center self-stretch px-3 border-l border-gray-100">
+                      <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Applied</div>
                       <div className="text-xs font-medium text-gray-500">
                         {new Date(app.appliedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </div>
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-1.5 ml-auto">
+                    <div className="flex items-center gap-1.5 self-stretch justify-center">
                       <Link
                         to={`/applications/${app.id}`}
                         className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-50 text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-all duration-150 shadow-sm hover:scale-105"

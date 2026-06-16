@@ -25,10 +25,6 @@ function formatDate(iso: string): string {
   });
 }
 
-function jobLimitText(limit: number): string {
-  return limit === 0 ? 'Unlimited job posts' : `${limit} job posts`;
-}
-
 interface AlertBannerProps {
   type: 'success' | 'cancel' | 'error';
   message: string;
@@ -69,7 +65,7 @@ interface PlanCardProps {
 
 function PlanCard({ plan, isCurrent, isHigher, isLower, loading, onSelect }: PlanCardProps) {
   const features = [
-    { label: jobLimitText(plan.jobPostLimit), icon: 'fa-briefcase' },
+    { label: `${plan.jobPostLimit} job posts`, icon: 'fa-briefcase' },
     { label: `${plan.durationDays} days duration`, icon: 'fa-calendar-alt' },
     {
       label: plan.allowUseAiMatching ? 'AI-powered matching' : 'Standard matching',
@@ -78,7 +74,7 @@ function PlanCard({ plan, isCurrent, isHigher, isLower, loading, onSelect }: Pla
     {
       label: plan.autoFillLimit > 0
         ? `Auto-fill (${plan.autoFillLimit} uses)`
-        : 'Auto-fill (not available)',
+        : 'Auto-fill (not included)',
       icon: 'fa-wand-magic-sparkles',
     },
   ];
@@ -255,7 +251,7 @@ export default function SubscriptionPage() {
   };
 
   const usagePct = currentSub
-    ? currentSub.jobPostLimit === 0 ? 0 : Math.min(100, Math.round((currentSub.jobsPostedCount / currentSub.jobPostLimit) * 100))
+    ? Math.min(100, Math.round((currentSub.jobsPostedCount / currentSub.jobPostLimit) * 100))
     : 0;
 
   const autoFillUsagePct = currentSub && currentSub.autoFillLimit > 0
@@ -304,14 +300,12 @@ export default function SubscriptionPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-1">
-                    {currentSub.jobPostLimit === 0 ? 'Unlimited posts' : 'Job Posts Used'}
+                    Job Posts Used
                   </p>
-                  {currentSub.jobPostLimit > 0 && (
-                    <p className="text-3xl font-black text-primary tracking-tight">
-                      {currentSub.jobsPostedCount}
-                      <span className="text-base font-normal text-gray-400"> / {currentSub.jobPostLimit}</span>
-                    </p>
-                  )}
+                  <p className="text-3xl font-black text-primary tracking-tight">
+                    {currentSub.jobsPostedCount}
+                    <span className="text-base font-normal text-gray-400"> / {currentSub.jobPostLimit}</span>
+                  </p>
                 </div>
               </div>
               {currentSub.jobPostLimit > 0 && (

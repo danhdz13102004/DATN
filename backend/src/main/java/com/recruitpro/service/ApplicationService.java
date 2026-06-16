@@ -6,6 +6,7 @@ import com.recruitpro.exception.ForbiddenException;
 import com.recruitpro.exception.ResourceNotFoundException;
 import com.recruitpro.model.Application;
 import com.recruitpro.model.Resume;
+import com.recruitpro.model.User;
 import com.recruitpro.model.enums.ApplicationStatus;
 import com.recruitpro.repository.ApplicationRepository;
 import com.recruitpro.repository.ResumeRepository;
@@ -46,8 +47,8 @@ public class ApplicationService {
 
         return page.map(app -> ApplicationListItemDto.builder()
                 .id(app.getId().toString())
-                .candidateName(app.getJobSeeker().getUser().getEmail())
-                .candidateEmail(app.getJobSeeker().getUser().getEmail())
+                .candidateName(getCandidateName(app))
+                .candidateEmail(getCandidateEmail(app))
                 .candidateAvatar(app.getJobSeeker().getAvatarUrl())
                 .jobId(app.getJobId().toString())
                 .jobTitle(app.getJob().getTitle())
@@ -102,8 +103,8 @@ public class ApplicationService {
 
         return ApplicationDetailResponseDto.builder()
                 .id(app.getId().toString())
-                .candidateName(app.getJobSeeker().getUser().getEmail())
-                .candidateEmail(app.getJobSeeker().getUser().getEmail())
+                .candidateName(getCandidateName(app))
+                .candidateEmail(getCandidateEmail(app))
                 .candidateAvatar(app.getJobSeeker().getAvatarUrl())
                 .candidateLocation(app.getJobSeeker().getLocation())
                 .candidateExperienceYears(app.getJobSeeker().getExperienceYears())
@@ -164,9 +165,26 @@ public class ApplicationService {
         List<Application> apps = applicationRepository.findSelectOptionsByCompanyId(companyId);
         return apps.stream().map(app -> ApplicationListItemDto.builder()
                 .id(app.getId().toString())
-                .candidateName(app.getJobSeeker() != null ? app.getJobSeeker().getUser().getEmail() : "Unknown")
+                .candidateName(getCandidateName(app))
+                .candidateEmail(getCandidateEmail(app))
                 .jobTitle(app.getJob() != null ? app.getJob().getTitle() : "Unknown")
                 .build()
         ).toList();
+    }
+
+    private String getCandidateName(Application app) {
+        User user = app.getJobSeeker() != null ? app.getJobSeeker().getUser() : null;
+        if (user == null) {
+            return "Unknown";
+        }
+        if (user.getFullName() != null && !user.getFullName().isBlank()) {
+            return user.getFullName();
+        }
+        return user.getEmail() != null ? user.getEmail() : "Unknown";
+    }
+
+    private String getCandidateEmail(Application app) {
+        User user = app.getJobSeeker() != null ? app.getJobSeeker().getUser() : null;
+        return user != null && user.getEmail() != null ? user.getEmail() : "Unknown";
     }
 }

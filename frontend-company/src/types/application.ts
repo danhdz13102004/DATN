@@ -61,6 +61,7 @@ export interface ApplicationStats {
 
 export interface ApplicationSelectOption {
   id: string;
-  applicantName: string;
+  candidateName: string;
+  candidateEmail: string;
   jobTitle: string;
 }

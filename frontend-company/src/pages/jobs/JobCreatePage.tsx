@@ -46,7 +46,7 @@ export default function JobCreatePage() {
   const autoFillDepleted = autoFillLimit > 0 && autoFillRemaining <= 0;
   const autoFillLocked = !canUseAutoFill; // true when disabled: not in plan OR exhausted
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<FormValues>();
+  const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormValues>();
   const [locationMode, setLocationMode] = useState<'saved' | 'custom'>(isEdit ? 'custom' : 'saved');
   const [selectedLevels, setSelectedLevels] = useState<ExperienceLevel[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
@@ -88,6 +88,19 @@ export default function JobCreatePage() {
       if (job.attachmentUrl) setAttachmentPreview(job.attachmentUrl);
     }
   }, [isEdit, job, reset]);
+
+  // Auto-select the primary (default) address when creating a new job
+  // and the user hasn't picked one yet.
+  const currentAddressId = watch('addressId');
+  useEffect(() => {
+    if (isEdit) return;
+    if (!addresses || addresses.length === 0) return;
+    if (locationMode !== 'saved') return;
+    if (currentAddressId) return;
+    const defaultAddress = addresses.find((a) => a.isDefault);
+    if (!defaultAddress) return;
+    setValue('addressId', defaultAddress.id, { shouldDirty: false, shouldValidate: false });
+  }, [addresses, isEdit, locationMode, currentAddressId, setValue]);
 
   const toggleLevel = (level: ExperienceLevel) => {
     setSelectedLevels((prev) =>

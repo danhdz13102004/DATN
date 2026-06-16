@@ -89,7 +89,7 @@ export default function InterviewSchedulePage() {
                 <option value="">Select an application...</option>
                 {appOptions?.map((opt) => (
                   <option key={opt.id} value={opt.id}>
-                    {opt.applicantName} — {opt.jobTitle}
+                    {opt.jobTitle} - {opt.candidateName} - {opt.candidateEmail}
                   </option>
                 ))}
               </select>

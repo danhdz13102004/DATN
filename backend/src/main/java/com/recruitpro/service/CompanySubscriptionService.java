@@ -103,9 +103,7 @@ public class CompanySubscriptionService {
                 .multiply(BigDecimal.valueOf(100))
                 .longValue();
 
-        String jobLimitText = plan.getJobPostLimit() == 0
-                ? "Unlimited job posts"
-                : plan.getJobPostLimit() + " job posts";
+        String jobLimitText = plan.getJobPostLimit() + " job posts";
 
         String description = plan.getName() + " Plan – " + plan.getDurationDays()
                 + " days · " + jobLimitText;

@@ -37,7 +37,7 @@ public class Plan {
 
     /**
      * Max AI auto-fill uses per subscription period.
-     * 0 means unlimited.
+     * 0 means the feature is not enabled for this plan.
      */
     @Column(name = "auto_fill_limit", nullable = false)
     private int autoFillLimit;

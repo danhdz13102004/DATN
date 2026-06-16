@@ -65,7 +65,7 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
-      VITE_API_URL: "http://localhost:8080"
+      VITE_API_URL: "http://127.0.0.1:8080"
       VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     volumes:
       - ./frontend-jobseeker/src:/app/src
@@ -88,7 +88,7 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
-      VITE_API_URL: "http://localhost:8080"
+      VITE_API_URL: "http://127.0.0.1:8080"
       VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     volumes:
       - ./frontend-company/src:/app/src
@@ -111,7 +111,7 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
-      VITE_API_URL: "http://localhost:8080"
+      VITE_API_URL: "http://127.0.0.1:8080"
       VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     volumes:
       - ./frontend-admin/src:/app/src

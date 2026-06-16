@@ -2,10 +2,10 @@ export interface Plan {
   id: string;
   name: string;
   price: number;
-  jobPostLimit: number;  // 0 = unlimited
+  jobPostLimit: number;
   durationDays: number;
   allowUseAiMatching: boolean;
-  autoFillLimit: number; // 0 = unlimited
+  autoFillLimit: number;
   createdAt: string;
   activeSubscriptions: number;
 }
@@ -18,8 +18,8 @@ export interface ActiveSubscription {
   jobPostLimit: number;
   durationDays: number;
   allowUseAiMatching: boolean;
-  autoFillLimit: number;        // 0 = unlimited
-  autoFillUsageCount: number;    // current usage
+  autoFillLimit: number;
+  autoFillUsageCount: number;
   startDate: string;
   endDate: string;
   status: 'ACTIVE' | 'EXPIRED' | 'CANCELLED';

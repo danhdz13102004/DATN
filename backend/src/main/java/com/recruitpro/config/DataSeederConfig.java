@@ -51,9 +51,9 @@ public class DataSeederConfig {
 
     private void seedPlans(JdbcTemplate jdbcTemplate) {
         Object[][] plans = {
-            {"Free", 0.00, 3, 30},
-            {"Pro", 20, 20, 30},
-            {"Premium", 100, 0, 30},
+            {"Free", 3, 3, 0, 30},
+            {"Pro", 20, 20, 20, 30},
+            {"Premium", 100, 100, 100, 30},
         };
 
         int inserted = 0;
@@ -65,8 +65,8 @@ public class DataSeederConfig {
             );
             if (count == 0) {
                 jdbcTemplate.update(
-                    "INSERT INTO plans (id, name, price, job_post_limit, duration_days, created_at) VALUES (?, ?, ?, ?, ?, NOW() AT TIME ZONE 'UTC')",
-                    UUID.randomUUID(), plan[0], plan[1], plan[2], plan[3]
+                    "INSERT INTO plans (id, name, price, job_post_limit, auto_fill_limit, duration_days, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW() AT TIME ZONE 'UTC')",
+                    UUID.randomUUID(), plan[0], plan[1], plan[2], plan[3], plan[4]
                 );
                 inserted++;
             }

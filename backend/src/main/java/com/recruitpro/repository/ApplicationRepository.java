@@ -71,7 +71,9 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
 
     @Query("""
         SELECT a FROM Application a
-        JOIN a.job j
+        JOIN FETCH a.job j
+        JOIN FETCH a.jobSeeker js
+        JOIN FETCH js.user u
         WHERE j.companyId = :companyId AND a.deletedAt IS NULL
         ORDER BY a.createdAt DESC
     """)

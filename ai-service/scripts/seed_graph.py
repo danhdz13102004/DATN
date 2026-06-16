@@ -945,6 +945,153 @@ DEFAULT_JOBS_PER_TITLE = 4  # 54 base titles × 4 variants = 216 jobs by default
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+SKILL_ALIASES = {
+    "ReactJS": "React",
+    "VueJS": "Vue.js",
+    "NextJS": "Next.js",
+    "NuxtJS": "Nuxt.js",
+    "TailwindCSS": "Tailwind CSS",
+    "RESTful API": "REST API",
+    "GIT": "Git",
+    "DOCKER": "Docker",
+    "DOCKER COMPOSE": "Docker Compose",
+    "ORM": "Hibernate",
+    "OOP": "Object-Oriented Programming",
+    "SVN": "SVN",
+}
+
+CV_PROFILES = [
+    {
+        "full_name": "Ngo Van Danh",
+        "email": "ngo.van.danh.fullstack@seed.local",
+        "role": "Fullstack Developer",
+        "skills": [
+            "Java", "Spring Boot", "Spring MVC", "Hibernate", "Object-Oriented Programming",
+            "SQL", "MySQL", "MongoDB", "Git", "SVN", "Docker", "Docker Compose",
+        ],
+        "summary": (
+            "Ngo Van Danh is a final year IT student eager to start a full-time career and apply "
+            "practical experience gained in real-world projects. He is quick to adapt, a creative "
+            "problem-solver, and confident in handling challenges efficiently."
+        ),
+        "industry": "Technology & IT",
+        "seniority": "INTERN",
+        "years_experience": 1,
+        "experience_bullets": [
+            "Worked as a Fullstack Developer at HTPLUS SOFTWARE JSC COMPANY, gaining experience in teamwork and collaboration",
+            "Optimized databases and organized code effectively for large-scale real estate projects",
+            "Completed an internship as a Fullstack Developer at DIGITAL FOR LIFE COMPANY, maintaining and upgrading systems",
+            "Developed a recruitment platform with real-time chat and AI features",
+            "Created a web chat application allowing real-time messaging and media sharing",
+            "Contributed to an e-commerce book store platform focusing on user experience and security",
+        ],
+    },
+    {
+        "full_name": "Ngo Van Danh Frontend",
+        "email": "ngo.van.danh.frontend@seed.local",
+        "role": "Frontend Developer",
+        "skills": [
+            "HTML", "CSS", "JavaScript", "React", "Vue.js", "Tailwind CSS", "Next.js", "Nuxt.js",
+            "REST API", "Authentication Flow", "WebSocket", "Git", "SVN", "Docker", "Docker Compose",
+            "Postman", "VS Code", "SQL Server", "MySQL", "MongoDB",
+        ],
+        "summary": (
+            "Ngo Van Danh is a final-year Information Technology student with practical experience "
+            "building web applications using modern frontend technologies, responsive UI development, "
+            "API integration, and real-time chat functionalities."
+        ),
+        "industry": "Technology & IT",
+        "seniority": "JUNIOR",
+        "years_experience": 1,
+        "experience_bullets": [
+            "Developed and maintained frontend features for real-world web systems",
+            "Built responsive user interfaces based on business requirements and UI designs",
+            "Integrated frontend screens with backend APIs and handled data rendering, validation, and interactions",
+            "Implemented UI updates, fixed frontend bugs, and improved user experience",
+            "Built Admin, Company, and Job Seeker portals in a recruitment platform",
+            "Developed pages for job listing, job detail, CV submission, application tracking, and user management",
+        ],
+    },
+]
+
+TARGETED_JOB_SPECS = [
+    {
+        "title": "Intern Java Spring Fullstack Developer",
+        "matching_roles": ["Fullstack Developer", "Java Developer", "Spring Boot Developer"],
+        "must_skills": ["Java", "Spring Boot", "Spring MVC", "Hibernate", "SQL", "MySQL", "Git"],
+        "nice_skills": ["MongoDB", "Docker", "Docker Compose", "Object-Oriented Programming", "SVN"],
+        "levels": ["INTERN", "FRESHER", "JUNIOR"],
+        "responsibilities": [
+            "Build and maintain Spring Boot APIs for recruitment and business management modules",
+            "Implement server-side validation, ORM mappings, and SQL queries for production features",
+            "Collaborate with frontend developers to deliver fullstack user flows",
+            "Use Git, Docker, and Docker Compose in a team development workflow",
+        ],
+        "requirements": [
+            "Practical Java, Spring Boot, and Spring MVC project experience",
+            "Understanding of OOP, ORM, SQL, MySQL, and MongoDB",
+            "Ability to maintain existing systems, optimize database queries, and organize code clearly",
+            "Git experience and basic Docker or Docker Compose knowledge",
+        ],
+    },
+    {
+        "title": "Fresher Java Backend Developer - Recruitment Platform",
+        "matching_roles": ["Fullstack Developer", "Java Developer", "Backend Developer"],
+        "must_skills": ["Java", "Spring Boot", "Hibernate", "REST API", "SQL", "MySQL", "Git"],
+        "nice_skills": ["MongoDB", "Docker", "WebSocket", "Spring Security"],
+        "levels": ["FRESHER", "JUNIOR"],
+        "responsibilities": [
+            "Develop REST APIs for jobs, applications, chat, and notification workflows",
+            "Optimize SQL queries and persistence logic for high-volume recruitment data",
+            "Maintain backend modules and improve reliability of existing Java services",
+            "Work with product and frontend teams to ship practical user-facing features",
+        ],
+        "requirements": [
+            "1+ year of hands-on Java or Spring Boot project experience",
+            "Good foundation in OOP, ORM, SQL, MySQL, and API development",
+            "Experience with Git and debugging backend issues in a team environment",
+        ],
+    },
+    {
+        "title": "Junior Frontend Developer - React Vue Portal",
+        "matching_roles": ["Frontend Developer", "Frontend Engineer", "Full Stack Developer"],
+        "must_skills": ["HTML", "CSS", "JavaScript", "React", "Vue.js", "REST API", "Git"],
+        "nice_skills": ["Tailwind CSS", "Next.js", "Nuxt.js", "Authentication Flow", "WebSocket", "Postman"],
+        "levels": ["FRESHER", "JUNIOR"],
+        "responsibilities": [
+            "Build responsive Admin, Company, and Job Seeker portal screens",
+            "Integrate frontend pages with REST APIs for jobs, CV submission, and application tracking",
+            "Implement form validation, authentication flows, and real-time chat UI updates",
+            "Fix frontend bugs and improve UX across existing web applications",
+        ],
+        "requirements": [
+            "Practical experience with HTML, CSS, JavaScript, React or Vue.js",
+            "Ability to integrate REST APIs and handle data rendering, validation, and user interactions",
+            "Experience with Git, Postman, and responsive UI implementation",
+            "Tailwind CSS, Next.js, Nuxt.js, WebSocket, or authentication flow experience is a plus",
+        ],
+    },
+    {
+        "title": "Fresher Frontend Developer - Recruitment Web App",
+        "matching_roles": ["Frontend Developer", "Frontend Engineer"],
+        "must_skills": ["HTML", "CSS", "JavaScript", "React", "Tailwind CSS", "REST API"],
+        "nice_skills": ["Vue.js", "Next.js", "WebSocket", "Authentication Flow", "Docker", "MongoDB"],
+        "levels": ["INTERN", "FRESHER", "JUNIOR"],
+        "responsibilities": [
+            "Create job listing, job detail, CV submission, and user management pages",
+            "Translate UI requirements into clean responsive interfaces",
+            "Connect screens to backend APIs and support real-time messaging features",
+            "Maintain frontend code quality while fixing defects in existing screens",
+        ],
+        "requirements": [
+            "Frontend project experience using JavaScript and a modern framework",
+            "Understanding of REST API integration, authentication flows, and responsive layouts",
+            "Familiarity with Git, Docker, browser debugging, and API testing tools",
+        ],
+    },
+]
+
+
 def new_id() -> str:
     return str(uuid.uuid4())
 
@@ -962,6 +1109,78 @@ def ordered_unique(items: list) -> list:
             seen.add(item)
             result.append(item)
     return result
+
+
+def normalize_skill_name(skill: str) -> str:
+    return SKILL_ALIASES.get(skill, skill)
+
+
+def normalize_skills(skills: list) -> list:
+    return ordered_unique([normalize_skill_name(skill.strip()) for skill in skills if skill and skill.strip()])
+
+
+def role_tokens(text: str) -> set:
+    normalized = text.lower().replace(".", " ").replace("-", " ")
+    aliases = {
+        "fullstack": "full stack",
+        "front end": "frontend",
+        "back end": "backend",
+        "js": "javascript",
+    }
+    for src, dest in aliases.items():
+        normalized = normalized.replace(src, dest)
+    return {token for token in normalized.split() if len(token) > 2}
+
+
+def seniority_match_score(seeker_seniority: str, years_exp: int, job_levels: list) -> float:
+    if not job_levels:
+        return 0.5
+
+    seeker_seniority = seeker_seniority.upper()
+    if seeker_seniority in job_levels:
+        return 1.0
+
+    seeker_index = SENIORITY_ORDER.index(seeker_seniority) if seeker_seniority in SENIORITY_ORDER else 2
+    level_indexes = [SENIORITY_ORDER.index(level) for level in job_levels if level in SENIORITY_ORDER]
+    if not level_indexes:
+        return 0.5
+
+    nearest_gap = min(abs(seeker_index - level_index) for level_index in level_indexes)
+    if nearest_gap == 1:
+        return 0.7
+
+    min_years = min(SENIORITY_YEARS.get(level, (0, 0))[0] for level in job_levels)
+    if years_exp >= min_years:
+        return 0.6
+
+    return 0.2
+
+
+def job_match_score(seeker: dict, job: dict) -> float:
+    seeker_skills = set(normalize_skills(seeker.get("skills", [])))
+    must_skills = set(normalize_skills(job.get("must_skills", [])))
+    nice_skills = set(normalize_skills(job.get("nice_skills", [])))
+
+    must_coverage = len(seeker_skills & must_skills) / len(must_skills) if must_skills else 0
+    nice_coverage = len(seeker_skills & nice_skills) / len(nice_skills) if nice_skills else 0
+
+    seeker_role_tokens = role_tokens(seeker.get("role", ""))
+    matching_roles_text = " ".join(job.get("matching_roles", []))
+    job_title_tokens = role_tokens(job.get("title", "") + " " + job.get("base_title", "") + " " + matching_roles_text)
+    role_overlap = len(seeker_role_tokens & job_title_tokens) / max(1, len(seeker_role_tokens))
+
+    seniority_score = seniority_match_score(
+        seeker.get("seniority", "JUNIOR"),
+        int(seeker.get("years_experience", 0) or 0),
+        job.get("levels", []),
+    )
+
+    return (
+        (must_coverage * 70.0)
+        + (nice_coverage * 15.0)
+        + (role_overlap * 10.0)
+        + (seniority_score * 5.0)
+    )
 
 
 def get_clusters_skills(clusters: list) -> set:
@@ -993,7 +1212,7 @@ def get_title_skill_profile(title: str) -> tuple[list, list]:
     if "angular" in t:
         return ["Angular", "TypeScript", "RxJS", "NgRx", "Angular Material"], ["Jest", "REST API", "GraphQL"]
     if "frontend" in t:
-        return ["JavaScript", "TypeScript", "HTML", "CSS", "React"], ["Vue.js", "Angular", "Tailwind CSS"]
+        return ["HTML", "CSS", "JavaScript", "React", "REST API"], ["Vue.js", "Tailwind CSS", "Next.js", "WebSocket"]
 
     if "nestjs" in t:
         return ["NestJS", "Node.js", "TypeScript", "PostgreSQL", "REST API"], ["GraphQL", "Prisma", "Docker"]
@@ -1032,6 +1251,8 @@ def get_title_skill_profile(title: str) -> tuple[list, list]:
 
     if "full stack" in t:
         return ["React", "Node.js", "TypeScript", "PostgreSQL", "REST API"], ["Docker", "GraphQL", "AWS"]
+    if "fullstack" in t:
+        return ["Java", "Spring Boot", "Spring MVC", "Hibernate", "SQL"], ["MySQL", "MongoDB", "Docker", "Docker Compose"]
     if "software engineer" in t:
         return ["JavaScript", "TypeScript", "Python", "SQL", "Git"], ["Docker", "Unit Testing", "System Design"]
 
@@ -1145,12 +1366,15 @@ def build_resume_skills_for_role(role: str, max_skills: int = 8) -> list:
     return pick(fallback_skills, max_skills)
 
 
-def make_job_text(title: str, industry: str, skills: list, levels: list, responsibilities: list) -> str:
+def make_job_text(title: str, industry: str, skills: list, levels: list,
+                  responsibilities: list, requirements: list | None = None) -> str:
+    requirements = requirements or []
     return (
         f"Title: {title} | Industry: {industry} | "
         f"Skills: {', '.join(skills)} | "
         f"Seniority: {', '.join(levels)} | "
-        f"Responsibilities: {'. '.join(responsibilities[:3])}"
+        f"Responsibilities: {'. '.join(responsibilities[:3])} | "
+        f"Requirements: {'. '.join(requirements[:3])}"
     )
 
 
@@ -1188,6 +1412,11 @@ def phase_db(conn, jobs_per_title: int = DEFAULT_JOBS_PER_TITLE) -> tuple:
             must_skills, nice_skills = get_title_skill_profile(role)
             all_skills.update(must_skills)
             all_skills.update(nice_skills)
+    for profile in CV_PROFILES:
+        all_skills.update(normalize_skills(profile["skills"]))
+    for spec in TARGETED_JOB_SPECS:
+        all_skills.update(normalize_skills(spec["must_skills"]))
+        all_skills.update(normalize_skills(spec["nice_skills"]))
 
     skill_map: dict = {}
     for name in sorted(all_skills):
@@ -1325,10 +1554,82 @@ def phase_db(conn, jobs_per_title: int = DEFAULT_JOBS_PER_TITLE) -> tuple:
                     "nice_skills":      nice_skills,
                     "levels":           levels,
                     "responsibilities": responsibilities,
+                    "requirements":     requirements,
                 })
                 stats["jobs"] += 1
 
         conn.commit()
+
+    targeted_company = COMPANIES_DATA[0]
+    targeted_industry = targeted_company["industry"]
+    targeted_industry_id = industry_map.get(targeted_industry)
+    if targeted_industry_id:
+        company_id = company_ids[targeted_company["name"]]
+        address_id = address_ids[targeted_company["name"]]
+        targeted_variants = max(2, min(4, jobs_per_title))
+
+        for spec in TARGETED_JOB_SPECS:
+            for variant_idx in range(targeted_variants):
+                job_id = new_id()
+                display_title = make_variant_title(spec["title"], variant_idx)
+                must_skills = normalize_skills(spec["must_skills"])
+                nice_skills = [skill for skill in normalize_skills(spec["nice_skills"]) if skill not in set(must_skills)]
+                responsibilities = list(spec["responsibilities"])
+                requirements = list(spec["requirements"])
+                levels = list(spec["levels"])
+
+                salary_min = random.choice([500, 700, 900, 1000, 1200])
+                salary_max = salary_min + random.choice([300, 500, 700])
+                job_type = random.choice(["FULLTIME", "REMOTE", "HYBRID"])
+
+                cur.execute(
+                    """INSERT INTO jobs
+                       (id, company_id, company_address_id, industry_id,
+                        title, description, location, salary_min, salary_max,
+                        job_type, status, responsibilities, requirements, nice_to_have_skills,
+                        created_at)
+                       VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s::job_type,'PUBLISHED',%s,%s,%s,NOW())""",
+                    (
+                        job_id, company_id, address_id, targeted_industry_id,
+                        display_title,
+                        f"{display_title} at {targeted_company['name']} for candidates with "
+                        f"{', '.join(must_skills[:5])}.",
+                        targeted_company["city"], salary_min, salary_max, job_type,
+                        responsibilities, requirements, nice_skills,
+                    ),
+                )
+
+                for level in levels:
+                    cur.execute(
+                        "INSERT INTO job_experience_levels (job_id, level) VALUES (%s, %s::experience_level) ON CONFLICT DO NOTHING",
+                        (job_id, level),
+                    )
+
+                for skill_name in must_skills:
+                    skill_id = skill_map.get(skill_name)
+                    if skill_id:
+                        cur.execute(
+                            "INSERT INTO job_skills (job_id, skill_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                            (job_id, skill_id),
+                        )
+
+                job_records.append({
+                    "job_id":           job_id,
+                    "title":            display_title,
+                    "base_title":       spec["title"],
+                    "industry":         targeted_industry,
+                    "must_skills":      must_skills,
+                    "nice_skills":      nice_skills,
+                    "levels":           levels,
+                    "responsibilities": responsibilities,
+                    "requirements":     requirements,
+                    "matching_roles":   spec.get("matching_roles", []),
+                })
+                stats["jobs"] += 1
+
+        conn.commit()
+    else:
+        logger.warning("Industry '%s' not found in DB; skipping targeted CV jobs", targeted_industry)
 
     logger.info("Inserted %d jobs", stats["jobs"])
 
@@ -1408,6 +1709,7 @@ def phase_db(conn, jobs_per_title: int = DEFAULT_JOBS_PER_TITLE) -> tuple:
                 "skills":    skills,
                 "role":      role,
                 "seniority": seniority,
+                "years_experience": years_exp,
                 "summary":   summary,
                 "bullets":   bullets,
             })
@@ -1415,6 +1717,79 @@ def phase_db(conn, jobs_per_title: int = DEFAULT_JOBS_PER_TITLE) -> tuple:
             stats["resumes"]     += 1
 
         conn.commit()
+
+    for profile in CV_PROFILES:
+        user_id = new_id()
+        seeker_id = new_id()
+        resume_id = new_id()
+
+        skills = normalize_skills(profile["skills"])
+        role = profile["role"]
+        seniority = profile["seniority"]
+        years_exp = profile["years_experience"]
+        summary = profile["summary"]
+        bullets = profile["experience_bullets"]
+
+        resume_ds = {
+            "role": role,
+            "seniority": seniority,
+            "yearsExperience": years_exp,
+            "industry": profile["industry"],
+            "skills": skills,
+            "summary": summary,
+            "experienceBullets": bullets,
+        }
+        parsed_text = make_resume_text(role, profile["industry"], seniority, skills, summary, bullets)
+
+        cur.execute(
+            """INSERT INTO users (id, email, password_hash, full_name, role, status, created_at)
+               VALUES (%s, %s, %s, %s, 'JOBSEEKER', 'ACTIVE', NOW())
+               ON CONFLICT DO NOTHING""",
+            (user_id, profile["email"], _BCRYPT_PLACEHOLDER, profile["full_name"]),
+        )
+        cur.execute(
+            """INSERT INTO job_seekers (id, user_id, bio, location, experience_years, created_at)
+               VALUES (%s, %s, %s, 'Vietnam', %s, NOW())""",
+            (seeker_id, user_id, summary[:200], years_exp),
+        )
+        for skill_name in skills:
+            skill_id = skill_map.get(skill_name)
+            if skill_id:
+                cur.execute(
+                    "INSERT INTO job_seeker_skills (job_seeker_id, skill_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                    (seeker_id, skill_id),
+                )
+        cur.execute(
+            """INSERT INTO resumes
+               (id, job_seeker_id, file_url, label, file_size, is_primary,
+                parsed_text, resume_data_structure, created_at)
+               VALUES (%s,%s,%s,%s,%s,true,%s,%s::jsonb,NOW())""",
+            (
+                resume_id, seeker_id,
+                f"https://storage.example.com/resumes/{resume_id}.pdf",
+                f"{role} CV - Ngo Van Danh",
+                random.randint(50_000, 500_000),
+                parsed_text,
+                json.dumps(resume_ds),
+            ),
+        )
+
+        seeker_records.append({
+            "resume_id": resume_id,
+            "seeker_id": seeker_id,
+            "industry": profile["industry"],
+            "skills": skills,
+            "role": role,
+            "seniority": seniority,
+            "years_experience": years_exp,
+            "summary": summary,
+            "bullets": bullets,
+            "is_cv_profile": True,
+        })
+        stats["job_seekers"] += 1
+        stats["resumes"] += 1
+
+    conn.commit()
 
     logger.info("Inserted %d job seekers + %d resumes", stats["job_seekers"], stats["resumes"])
 
@@ -1424,22 +1799,21 @@ def phase_db(conn, jobs_per_title: int = DEFAULT_JOBS_PER_TITLE) -> tuple:
         jobs_by_industry.setdefault(jr["industry"], []).append(jr)
 
     for sr in seeker_records:
-        seeker_skills  = set(sr["skills"])
         candidate_jobs = jobs_by_industry.get(sr["industry"], [])
         if not candidate_jobs:
             continue
 
         ranked = sorted(
             candidate_jobs,
-            key=lambda j: len(set(j["must_skills"]) & seeker_skills),
+            key=lambda j: job_match_score(sr, j),
             reverse=True,
         )
 
         applied_jobs: set = set()
 
         for rank, jr in enumerate(ranked):
-            overlap = len(set(jr["must_skills"]) & seeker_skills)
-            if overlap < 1:
+            score = job_match_score(sr, jr)
+            if score < 25:
                 continue
             if rank < 3:
                 event_type = "apply"
@@ -1498,7 +1872,7 @@ def phase_sync(job_records: list, seeker_records: list, ai_url: str, delay: floa
         # while DB matching still keeps required skills separate in job_skills.
         graph_skills = ordered_unique(jr["must_skills"] + jr["nice_skills"])
         text = make_job_text(jr["title"], jr["industry"], graph_skills,
-                             jr["levels"], jr["responsibilities"])
+                             jr["levels"], jr["responsibilities"], jr.get("requirements", []))
         try:
             r = session.post(f"{base}/api/v1/add_node",
                              json={"node_id": jr["job_id"], "text": text, "node_type": "job"},
@@ -1533,16 +1907,15 @@ def phase_sync(job_records: list, seeker_records: list, ai_url: str, delay: floa
         jobs_by_industry.setdefault(jr["industry"], []).append(jr)
 
     for sr in seeker_records:
-        seeker_skills  = set(sr["skills"])
         candidate_jobs = jobs_by_industry.get(sr["industry"], [])
         ranked = sorted(
             candidate_jobs,
-            key=lambda j: len(set(j["must_skills"]) & seeker_skills),
+            key=lambda j: job_match_score(sr, j),
             reverse=True,
         )
         for rank, jr in enumerate(ranked):
-            overlap = len(set(jr["must_skills"]) & seeker_skills)
-            if overlap < 1:
+            score = job_match_score(sr, jr)
+            if score < 25:
                 continue
             if rank < 3:
                 action_type = "apply"

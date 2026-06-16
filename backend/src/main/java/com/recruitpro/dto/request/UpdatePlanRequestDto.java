@@ -20,13 +20,12 @@ public class UpdatePlanRequestDto {
     @Min(1)
     private Integer durationDays;
 
-    /** 0 means unlimited */
     @NotNull
-    @Min(0)
+    @Min(1)
     private Integer jobPostLimit;
 
     private boolean allowUseAiMatching;
 
-    /** 0 means unlimited */
+    @Min(0)
     private Integer autoFillLimit;
 }

@@ -336,74 +336,88 @@ export default function CompanyProfilePage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {addresses.map((addr, idx) => (
+                  {addresses.map((addr) => (
                     <div
                       key={addr.id}
-                      className={`group/addr relative border rounded-2xl p-5 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden ${
+                      className={`group/addr relative rounded-2xl p-5 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 overflow-hidden ${
                         addr.isDefault
-                          ? 'border-emerald-300 bg-gradient-to-br from-emerald-50/80 via-emerald-50/40 to-white'
-                          : 'border-gray-100 hover:border-emerald-200 bg-white'
+                          ? 'bg-gradient-to-br from-emerald-500 via-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/20'
+                          : 'border border-gray-100 bg-white hover:border-emerald-200'
                       }`}
                     >
-                      {/* Top accent for default */}
-                      {addr.isDefault && (
-                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-400 via-primary to-emerald-400" />
-                      )}
-
-                      {/* Subtle number decoration */}
-                      <div className={`absolute top-3 right-4 text-5xl font-black leading-none select-none ${
-                        addr.isDefault ? 'text-emerald-100' : 'text-gray-50'
-                      }`}>
-                        {idx + 1}
-                      </div>
-
-                      {/* Default badge */}
-                      {addr.isDefault && (
-                        <span className="absolute -top-2.5 left-4 px-2.5 py-1 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-[10px] font-bold rounded-full shadow-md z-10">
-                          <i className="fas fa-star text-[9px] mr-0.5" />
-                          Default
-                        </span>
+                      {/* Decorative gradient orbs */}
+                      {addr.isDefault ? (
+                        <>
+                          <div className="absolute -top-12 -right-12 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+                          <div className="absolute -bottom-8 -left-8 w-32 h-32 bg-emerald-300/20 rounded-full blur-xl" />
+                        </>
+                      ) : (
+                        <div className="absolute -top-12 -right-12 w-40 h-40 bg-emerald-100/40 rounded-full blur-2xl opacity-0 group-hover/addr:opacity-100 transition-opacity duration-500" />
                       )}
 
                       {/* Header */}
-                      <div className="flex items-start justify-between mb-3 mt-1">
-                        <div className="flex items-center gap-2.5">
-                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shadow-sm ${
+                      <div className="relative flex items-start justify-between gap-3 mb-4">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${
                             addr.isDefault
-                              ? 'bg-gradient-to-br from-emerald-400 to-emerald-600'
-                              : 'bg-gradient-to-br from-primary/10 to-emerald-50 text-primary'
+                              ? 'bg-white/20 backdrop-blur-sm border border-white/30'
+                              : 'bg-gradient-to-br from-primary/10 to-emerald-50 border border-emerald-100'
                           }`}>
-                            <i className={`fas fa-building text-xs ${addr.isDefault ? 'text-white' : ''}`} />
+                            <i className={`fas fa-building text-sm ${addr.isDefault ? 'text-white' : 'text-primary'}`} />
                           </div>
-                          <div>
-                            <h4 className="text-sm font-bold text-gray-900 leading-tight">{addr.label}</h4>
-                            <p className="text-[11px] text-gray-400 mt-0.5">
+                          <div className="min-w-0">
+                            <h4 className={`text-sm font-bold leading-tight truncate ${addr.isDefault ? 'text-white' : 'text-gray-900'}`}>
+                              {addr.label}
+                            </h4>
+                            <p className={`text-[11px] mt-0.5 font-medium ${addr.isDefault ? 'text-emerald-50' : 'text-gray-400'}`}>
                               {addr.isDefault ? 'Primary location' : 'Office location'}
                             </p>
                           </div>
                         </div>
+
+                        {/* Default pill */}
+                        {addr.isDefault && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-white/20 backdrop-blur-sm border border-white/30 text-white text-[10px] font-bold rounded-full shrink-0">
+                            <i className="fas fa-star text-[9px]" />
+                            Default
+                          </span>
+                        )}
                       </div>
 
                       {/* Address details */}
-                      <div className="space-y-2 mb-4 pl-0.5">
-                        <div className="flex items-start gap-2 text-sm text-gray-600">
-                          <div className="w-6 h-6 rounded-lg bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
-                            <i className="fas fa-map-pin text-[10px] text-gray-400" />
+                      <div className="relative space-y-2.5 mb-5">
+                        <div className="flex items-start gap-2.5">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                            addr.isDefault ? 'bg-white/15' : 'bg-gray-100'
+                          }`}>
+                            <i className={`fas fa-map-pin text-[10px] ${addr.isDefault ? 'text-white' : 'text-gray-400'}`} />
                           </div>
-                          <span className="leading-snug">{addr.addressLine}</span>
+                          <span className={`text-sm leading-snug ${addr.isDefault ? 'text-white' : 'text-gray-600'}`}>
+                            {addr.addressLine}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-500">
-                          <div className="w-6 h-6 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                            <i className="fas fa-city text-[10px] text-gray-400" />
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                            addr.isDefault ? 'bg-white/15' : 'bg-gray-100'
+                          }`}>
+                            <i className={`fas fa-city text-[10px] ${addr.isDefault ? 'text-white' : 'text-gray-400'}`} />
                           </div>
-                          <span>{addr.city}, {addr.country}</span>
+                          <span className={`text-sm ${addr.isDefault ? 'text-emerald-50' : 'text-gray-500'}`}>
+                            {addr.city}, {addr.country}
+                          </span>
                         </div>
                       </div>
 
                       {/* Actions */}
-                      <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
+                      <div className={`relative flex items-center gap-2 pt-3.5 ${
+                        addr.isDefault ? 'border-t border-white/20' : 'border-t border-gray-100'
+                      }`}>
                         <button
-                          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary to-emerald-500 text-white rounded-xl text-xs font-bold hover:from-primary-hover hover:to-emerald-600 hover:shadow-md hover:-translate-y-px transition-all duration-200"
+                          className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold hover:-translate-y-px hover:shadow-md transition-all duration-200 ${
+                            addr.isDefault
+                              ? 'bg-white text-emerald-600 hover:bg-emerald-50'
+                              : 'bg-gradient-to-r from-primary to-emerald-500 text-white hover:from-primary-hover hover:to-emerald-600'
+                          }`}
                           onClick={() => {
                             setAddrModal({ open: true, editing: addr.id });
                             setSelectedCountryId(addr.countryId ?? null);
@@ -415,7 +429,7 @@ export default function CompanyProfilePage() {
                         </button>
                         {!addr.isDefault && (
                           <button
-                            className="group inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-red-400 bg-red-50 border border-red-100 hover:bg-gradient-to-r hover:from-red-500 hover:to-rose-500 hover:text-white hover:border-transparent hover:shadow-md hover:-translate-y-px transition-all duration-200"
+                            className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-red-400 bg-red-50 border border-red-100 hover:bg-gradient-to-r hover:from-red-500 hover:to-rose-500 hover:text-white hover:border-transparent hover:shadow-md hover:-translate-y-px transition-all duration-200"
                             onClick={() => handleAddrDelete(addr.id)}
                           >
                             <i className="fas fa-trash-can text-[11px]" />

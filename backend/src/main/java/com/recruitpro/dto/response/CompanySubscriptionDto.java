@@ -15,11 +15,11 @@ public class CompanySubscriptionDto {
     private UUID planId;
     private String planName;
     private BigDecimal planPrice;
-    private int jobPostLimit;       // 0 = unlimited
+    private int jobPostLimit;
     private int durationDays;
     private boolean allowUseAiMatching;
-    private int autoFillLimit;       // 0 = unlimited
-    private int autoFillUsageCount;  // current usage
+    private int autoFillLimit;
+    private int autoFillUsageCount;
     private Instant startDate;
     private Instant endDate;
     private String status;
