@@ -229,10 +229,6 @@ def match_resume_job(resume: dict, job: dict, model) -> dict:
     weights = DEFAULT_WEIGHTS.copy()
     scores: Dict[str, float] = {}
 
-    print("Matching resume against job:")
-    print("Resume:", resume)
-    print("Job:", job)
-
     # ── Normalise resume side ────────────────────────────────────────────────
     resume_skills_list = normalize_skills(resume.get("skills"))
     resume_skills_text = " ".join(resume_skills_list)
@@ -342,7 +338,9 @@ def match_resume_job(resume: dict, job: dict, model) -> dict:
             "seniority", "industry", "nice_to_have_skills"
         )}
 
-    overall = sum(scores.get(k, 0.0) * weights[k] for k in weights)
+    # Rebalance weights across dimensions that were actually scored.
+    # Otherwise missing optional fields would drag the final score down.
+    overall = sum(scores[k] * weights[k] for k in scores) / total_weight
 
     return {
         "overall_score":      round(overall, 4),
