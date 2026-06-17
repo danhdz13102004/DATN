@@ -2,13 +2,11 @@ import { Link } from 'react-router-dom';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import Topbar from '../../components/layout/Topbar';
 import { useJobDetail, useChangeJobStatus, useDeleteJob } from '../../hooks/useJobs';
-import { useApplications } from '../../hooks/useApplications';
 import { ROUTES } from '../../constants';
 import { formatDate, formatRelativeDate } from '../../utils/date';
 import { useToast } from '../../contexts/ToastContext';
 import StatusBadge from '../../components/common/StatusBadge';
 import InfoGrid from '../../components/common/InfoGrid';
-import MatchScoreBadge from '../../components/common/MatchScoreBadge';
 import EmptyState from '../../components/common/EmptyState';
 
 const JOB_TYPE_LABELS: Record<string, string> = {
@@ -23,12 +21,9 @@ export default function JobDetailPage() {
   const navigate = useNavigate();
   const { onMenuToggle } = useOutletContext<{ onMenuToggle: () => void }>();
   const { data: job, isLoading } = useJobDetail(id || '');
-  const { data: appsData } = useApplications(id ? { jobId: id } : undefined);
   const changeStatus = useChangeJobStatus();
   const deleteJob = useDeleteJob();
   const toast = useToast();
-
-  const apps = appsData?.data || [];
 
   const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this job? This cannot be undone.')) {
