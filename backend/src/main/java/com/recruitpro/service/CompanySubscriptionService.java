@@ -281,6 +281,42 @@ public class CompanySubscriptionService {
     }
 
     /**
+     * Checks whether the company can publish another job in the current subscription period.
+     */
+    public boolean canPostJob(UUID companyId) {
+        return subscriptionRepository
+                .findFirstByCompanyIdAndStatusOrderByCreatedAtDesc(companyId, SubscriptionStatus.ACTIVE)
+                .map(sub -> sub.getJobsPostedCount() < sub.getPlan().getJobPostLimit())
+                .orElse(false);
+    }
+
+    /**
+     * Throws a clear error when the company has no active subscription or has reached its job post limit.
+     */
+    public void ensureCanPostJob(UUID companyId) {
+        Subscription sub = subscriptionRepository
+                .findFirstByCompanyIdAndStatusOrderByCreatedAtDesc(companyId, SubscriptionStatus.ACTIVE)
+                .orElseThrow(() -> new BadRequestException("No active subscription found. Please subscribe to a plan before publishing jobs."));
+
+        if (sub.getJobsPostedCount() >= sub.getPlan().getJobPostLimit()) {
+            throw new BadRequestException("Job post limit reached. Please upgrade your plan to publish more jobs.");
+        }
+    }
+
+    /**
+     * Increments the job post usage counter for the company's active subscription.
+     */
+    @Transactional
+    public void incrementJobPostUsage(UUID companyId) {
+        subscriptionRepository
+                .findFirstByCompanyIdAndStatusOrderByCreatedAtDesc(companyId, SubscriptionStatus.ACTIVE)
+                .ifPresent(sub -> {
+                    sub.setJobsPostedCount(sub.getJobsPostedCount() + 1);
+                    subscriptionRepository.save(sub);
+                });
+    }
+
+    /**
      * Increments the auto-fill usage counter for the company's active subscription.
      */
     @Transactional

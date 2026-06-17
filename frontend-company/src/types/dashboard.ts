@@ -11,10 +11,10 @@ export interface DashboardStats {
 
 export interface RecentApplication {
   id: string;
-  applicantName: string;
-  applicantInitials: string;
+  candidateName: string;
+  candidateEmail: string;
   jobTitle: string;
-  aiScore: number;
+  aiScore: number | null;
   status: string;
-  appliedDate: string;
+  appliedAt: string;
 }

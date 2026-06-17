@@ -30,6 +30,7 @@ export function useCreateJob() {
       jobService.createJob(data, attachmentFile),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['company', 'jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['company', 'subscription', 'current'] });
     },
   });
 }
@@ -42,6 +43,7 @@ export function useUpdateJob() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['company', 'jobs'] });
       queryClient.invalidateQueries({ queryKey: ['jobs', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['company', 'subscription', 'current'] });
     },
   });
 }
@@ -64,6 +66,7 @@ export function useChangeJobStatus() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['company', 'jobs'] });
       queryClient.invalidateQueries({ queryKey: ['jobs', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['company', 'subscription', 'current'] });
     },
   });
 }

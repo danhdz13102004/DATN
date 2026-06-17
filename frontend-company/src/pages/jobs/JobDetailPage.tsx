@@ -314,7 +314,7 @@ export default function JobDetailPage() {
         )}
 
         {/* ── Recent Applications ────────────────────────────── */}
-        <div className="bg-white rounded-2xl shadow-card border border-gray-100 overflow-hidden">
+        {/* <div className="bg-white rounded-2xl shadow-card border border-gray-100 overflow-hidden">
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-5 bg-primary rounded-full" />
@@ -394,7 +394,7 @@ export default function JobDetailPage() {
               </table>
             </div>
           )}
-        </div>
+        </div> */}
       </div>
     </>
   );

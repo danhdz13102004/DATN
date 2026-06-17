@@ -8,6 +8,29 @@ import MatchScoreBadge from '../../components/common/MatchScoreBadge';
 import EmptyState from '../../components/common/EmptyState';
 import { StatCardSkeleton, TableSkeleton } from '../../components/common/LoadingSkeleton';
 
+function getInitials(name?: string, email?: string) {
+  const displayName = name || email || '?';
+  return displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('') || '?';
+}
+
+function formatAppliedDate(value?: string) {
+  if (!value) return '-';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}
+
 export default function DashboardPage() {
   const { onMenuToggle } = useOutletContext<{ onMenuToggle: () => void }>();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
@@ -238,11 +261,18 @@ export default function DashboardPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 text-emerald-600 flex items-center justify-center text-xs font-bold shadow-sm shrink-0">
-                            {app.applicantInitials}
+                            {getInitials(app.candidateName, app.candidateEmail)}
                           </div>
-                          <span className="text-sm font-semibold text-gray-900 whitespace-nowrap">
-                            {app.applicantName}
-                          </span>
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-gray-900 whitespace-nowrap truncate max-w-[220px]">
+                              {app.candidateName || app.candidateEmail}
+                            </div>
+                            {app.candidateEmail && app.candidateEmail !== app.candidateName && (
+                              <div className="text-xs text-gray-400 whitespace-nowrap truncate max-w-[220px]">
+                                {app.candidateEmail}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </td>
 
@@ -255,7 +285,7 @@ export default function DashboardPage() {
 
                       {/* AI Score */}
                       <td className="px-6 py-4">
-                        <MatchScoreBadge score={app.aiScore * 100} size="sm" />
+                        <MatchScoreBadge score={(app.aiScore ?? 0) * 100} size="sm" />
                       </td>
 
                       {/* Status */}
@@ -266,7 +296,7 @@ export default function DashboardPage() {
                       {/* Date */}
                       <td className="px-6 py-4 hidden md:table-cell">
                         <span className="text-sm text-gray-400 whitespace-nowrap">
-                          {app.appliedDate}
+                          {formatAppliedDate(app.appliedAt)}
                         </span>
                       </td>
 

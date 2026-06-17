@@ -49,6 +49,7 @@ public class JobService {
     private final StaffRepository staffRepository;
     private final StorageService storageService;
     private final NotificationService notificationService;
+    private final CompanySubscriptionService subscriptionService;
 
     /**
      * Public job listing — only shows PUBLISHED jobs.
@@ -297,6 +298,9 @@ public class JobService {
         if (job.getStatus() == null) {
             job.setStatus(JobStatus.DRAFT);
         }
+        if (job.getStatus() == JobStatus.PUBLISHED) {
+            subscriptionService.ensureCanPostJob(companyId);
+        }
         normalizeAddressLocation(job, companyId);
 
         if (skillIds != null && !skillIds.isEmpty()) {
@@ -314,6 +318,7 @@ public class JobService {
 
         // Async: register job node in AI graph if already published at creation time
         if (saved.getStatus() == JobStatus.PUBLISHED) {
+            subscriptionService.incrementJobPostUsage(companyId);
             aiServiceClient.addJobNode(saved.getId(), jobText);
         }
 
@@ -327,6 +332,12 @@ public class JobService {
     public Job update(UUID id, Job updates, Set<UUID> skillIds, UserPrincipal principal, String attachmentUrl) {
         Job job = findById(id);
         verifyCompanyOwnership(job, principal);
+        JobStatus oldStatus = job.getStatus();
+        boolean publishesJob = oldStatus != JobStatus.PUBLISHED && updates.getStatus() == JobStatus.PUBLISHED;
+
+        if (publishesJob) {
+            subscriptionService.ensureCanPostJob(job.getCompanyId());
+        }
 
         if (updates.getTitle() != null) job.setTitle(updates.getTitle());
         if (updates.getDescription() != null) job.setDescription(updates.getDescription());
@@ -359,7 +370,12 @@ public class JobService {
         }
 
         buildJobText(job);  // refresh job_data_structure with latest field values
-        return jobRepository.save(job);
+        Job saved = jobRepository.save(job);
+        if (publishesJob) {
+            subscriptionService.incrementJobPostUsage(job.getCompanyId());
+            aiServiceClient.addJobNode(saved.getId(), buildJobText(saved));
+        }
+        return saved;
     }
 
     /**
@@ -369,13 +385,19 @@ public class JobService {
     public Job changeStatus(UUID id, JobStatus newStatus, UserPrincipal principal) {
         Job job = findById(id);
         verifyCompanyOwnership(job, principal);
+        JobStatus oldStatus = job.getStatus();
+
+        if (oldStatus != JobStatus.PUBLISHED && newStatus == JobStatus.PUBLISHED) {
+            subscriptionService.ensureCanPostJob(job.getCompanyId());
+        }
 
         job.setStatus(newStatus);
-        log.info("Job status changed: {} → {} (id={})", job.getStatus(), newStatus, id);
+        log.info("Job status changed: {} -> {} (id={})", oldStatus, newStatus, id);
         Job saved = jobRepository.save(job);
 
         // Async: register job node in AI graph when first published
-        if (newStatus == JobStatus.PUBLISHED) {
+        if (oldStatus != JobStatus.PUBLISHED && newStatus == JobStatus.PUBLISHED) {
+            subscriptionService.incrementJobPostUsage(job.getCompanyId());
             aiServiceClient.addJobNode(saved.getId(), buildJobText(saved));
         }
 
