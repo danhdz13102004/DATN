@@ -17,6 +17,7 @@ import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +36,7 @@ public class AdminSubscriptionService {
     // ── Plans ──────────────────────────────────────────────────────────────────
 
     public List<PlanResponseDto> listPlans() {
-        return planRepository.findAll().stream()
+        return planRepository.findAll(Sort.by(Sort.Direction.ASC, "price")).stream()
                 .map(this::toPlanDto)
                 .collect(Collectors.toList());
     }

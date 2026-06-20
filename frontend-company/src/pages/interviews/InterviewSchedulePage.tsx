@@ -7,6 +7,18 @@ import { useApplicationSelectOptions } from '../../hooks/useApplications';
 import { ROUTES } from '../../constants';
 import type { InterviewFormData } from '../../types/interview';
 
+function formatLocalDate(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+function getScheduledDateTime(date: string, time: string): Date | null {
+  if (!date || !time) return null;
+
+  const scheduledDateTime = new Date(`${date}T${time}`);
+  return Number.isNaN(scheduledDateTime.getTime()) ? null : scheduledDateTime;
+}
+
 export default function InterviewSchedulePage() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -21,8 +33,9 @@ export default function InterviewSchedulePage() {
   const { data: appOptions } = useApplicationSelectOptions();
   const createInterview = useCreateInterview();
   const updateInterview = useUpdateInterview();
+  const today = formatLocalDate(new Date());
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<InterviewFormData>({
+  const { register, handleSubmit, reset, getValues, trigger, formState: { errors } } = useForm<InterviewFormData>({
     defaultValues: {
       applicationId: prefilledAppId,
       meetingType: 'ONLINE',
@@ -49,6 +62,17 @@ export default function InterviewSchedulePage() {
     }
   }, [isEdit, interview, reset]);
 
+  const validateScheduledDate = (value: string) => (
+    value >= formatLocalDate(new Date()) || 'Date cannot be in the past'
+  );
+
+  const validateScheduledTime = (value: string) => {
+    const selectedDateTime = getScheduledDateTime(getValues('scheduledDate'), value);
+    if (!selectedDateTime) return true;
+
+    return selectedDateTime > new Date() || 'Interview time must be in the future';
+  };
+
   const onSubmit = async (data: InterviewFormData) => {
     try {
       if (isEdit) {
@@ -71,9 +95,6 @@ export default function InterviewSchedulePage() {
       />
       <div className="p-6">
         <div className="bg-white rounded-2xl shadow-sm border border-gray-50 max-w-[80%] mx-auto">
-          <div className="p-5 border-b border-gray-50">
-            <h3 className="text-lg font-bold text-gray-900">Interview Details</h3>
-          </div>
           <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-5">
 
             {/* Application */}
@@ -106,8 +127,15 @@ export default function InterviewSchedulePage() {
                 </label>
                 <input
                   type="date"
-                  className="w-full px-3.5 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary"
-                  {...register('scheduledDate', { required: 'Date is required' })}
+                  min={today}
+                  className={`w-full px-3.5 py-2.5 border-[1.5px] rounded-xl text-sm focus:outline-none focus:border-primary ${errors.scheduledDate ? 'border-red-500' : 'border-gray-200'}`}
+                  {...register('scheduledDate', {
+                    required: 'Date is required',
+                    validate: validateScheduledDate,
+                    onChange: () => {
+                      if (getValues('scheduledTime')) void trigger('scheduledTime');
+                    },
+                  })}
                 />
                 {errors.scheduledDate && (
                   <span className="text-red-500 text-xs mt-1 block">{errors.scheduledDate.message}</span>
@@ -119,8 +147,11 @@ export default function InterviewSchedulePage() {
                 </label>
                 <input
                   type="time"
-                  className="w-full px-3.5 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary"
-                  {...register('scheduledTime', { required: 'Time is required' })}
+                  className={`w-full px-3.5 py-2.5 border-[1.5px] rounded-xl text-sm focus:outline-none focus:border-primary ${errors.scheduledTime ? 'border-red-500' : 'border-gray-200'}`}
+                  {...register('scheduledTime', {
+                    required: 'Time is required',
+                    validate: validateScheduledTime,
+                  })}
                 />
                 {errors.scheduledTime && (
                   <span className="text-red-500 text-xs mt-1 block">{errors.scheduledTime.message}</span>

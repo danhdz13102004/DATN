@@ -50,6 +50,11 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
 
+  # ── Elasticsearch (Dev Port) ─────────────────
+  elasticsearch:
+    ports:
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
+
   # ── MinIO (Dev Ports) ────────────────────────
   minio:
     ports:

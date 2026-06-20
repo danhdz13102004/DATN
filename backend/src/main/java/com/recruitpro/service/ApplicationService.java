@@ -6,6 +6,7 @@ import com.recruitpro.exception.ForbiddenException;
 import com.recruitpro.exception.ResourceNotFoundException;
 import com.recruitpro.model.Application;
 import com.recruitpro.model.Resume;
+import com.recruitpro.model.Skill;
 import com.recruitpro.model.User;
 import com.recruitpro.model.enums.ApplicationStatus;
 import com.recruitpro.repository.ApplicationRepository;
@@ -109,6 +110,7 @@ public class ApplicationService {
                 .candidateLocation(app.getJobSeeker().getLocation())
                 .candidateExperienceYears(app.getJobSeeker().getExperienceYears())
                 .candidateBio(app.getJobSeeker().getBio())
+                .candidateSkills(getCandidateSkills(app))
                 .jobId(app.getJobId().toString())
                 .jobTitle(app.getJob().getTitle())
                 .aiScore(subscriptionService.canUseAiMatching(companyId) ? app.getAiScore() : null)
@@ -186,5 +188,16 @@ public class ApplicationService {
     private String getCandidateEmail(Application app) {
         User user = app.getJobSeeker() != null ? app.getJobSeeker().getUser() : null;
         return user != null && user.getEmail() != null ? user.getEmail() : "Unknown";
+    }
+
+    private List<String> getCandidateSkills(Application app) {
+        if (app.getJobSeeker() == null || app.getJobSeeker().getSkills() == null) {
+            return List.of();
+        }
+        return app.getJobSeeker().getSkills().stream()
+                .map(Skill::getName)
+                .filter(name -> name != null && !name.isBlank())
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
     }
 }

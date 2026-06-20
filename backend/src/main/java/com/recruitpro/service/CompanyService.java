@@ -6,10 +6,12 @@ import com.recruitpro.model.Company;
 import com.recruitpro.model.CompanyAddress;
 import com.recruitpro.repository.CompanyAddressRepository;
 import com.recruitpro.repository.CompanyRepository;
+import com.recruitpro.search.CompanyJobSearchSyncEvent;
 import com.recruitpro.security.UserPrincipal;
 import com.recruitpro.storage.StorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,7 @@ public class CompanyService {
     private final CompanyRepository companyRepository;
     private final CompanyAddressRepository addressRepository;
     private final StorageService storageService;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ── Public ───────────────────────────────────
 
@@ -77,7 +80,9 @@ public class CompanyService {
         Company company = findById(id);
         company.setBlocked(blocked);
         log.info("Company {}: {} (id={})", blocked ? "blocked" : "unblocked", company.getName(), id);
-        return companyRepository.save(company);
+        Company saved = companyRepository.save(company);
+        eventPublisher.publishEvent(new CompanyJobSearchSyncEvent(saved.getId(), blocked));
+        return saved;
     }
 
     // ── Addresses ────────────────────────────────

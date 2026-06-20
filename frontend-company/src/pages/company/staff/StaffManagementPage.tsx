@@ -306,7 +306,7 @@ export default function StaffManagementPage() {
                     <i className="fas fa-id-card" />
                     HR
                   </span>
-                  <span>HR Manager · new members always added as HR</span>
+                  <span>HR Manager</span>
                 </div>
               </div>
 
@@ -321,7 +321,7 @@ export default function StaffManagementPage() {
                   placeholder="Leave blank for default: 12345678"
                   {...inviteRegister('password')}
                 />
-                <p className="text-xs text-gray-400">If blank, default is <strong>12345678</strong></p>
+                <p className="text-xs text-gray-400">Default is <strong>12345678</strong></p>
               </div>
 
               {/* Actions */}

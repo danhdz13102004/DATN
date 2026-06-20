@@ -15,6 +15,9 @@ import com.recruitpro.model.enums.JobStatus;
 import com.recruitpro.model.enums.JobType;
 import com.recruitpro.model.enums.NotificationType;
 import com.recruitpro.repository.*;
+import com.recruitpro.search.JobSearchResult;
+import com.recruitpro.search.JobSearchService;
+import com.recruitpro.search.JobSearchSyncEvent;
 import com.recruitpro.security.UserPrincipal;
 import com.recruitpro.storage.StorageService;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -24,6 +27,7 @@ import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Root;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -50,6 +54,8 @@ public class JobService {
     private final StorageService storageService;
     private final NotificationService notificationService;
     private final CompanySubscriptionService subscriptionService;
+    private final JobSearchService jobSearchService;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Public job listing — only shows PUBLISHED jobs.
@@ -74,6 +80,19 @@ public class JobService {
                                               String location, Double salaryMin, Double salaryMax,
                                               Long cityId, Long countryId,
                                               UUID seekerId, Pageable pageable) {
+        if (keyword != null && !keyword.isBlank()) {
+            JobSearchResult searchResult = jobSearchService.searchPublishedJobs(
+                    keyword, jobType, experienceLevels, location, salaryMin, salaryMax, cityId, countryId, pageable);
+            if (!searchResult.isFallbackRequired()) {
+                log.debug("Elasticsearch job search keyword='{}' returned {} ids, total={}",
+                        keyword,
+                        searchResult.getJobIds() != null ? searchResult.getJobIds().size() : 0,
+                        searchResult.getTotal());
+                return toOrderedJobDtoPage(searchResult, seekerId, pageable);
+            }
+            log.debug("Elasticsearch job search fallback for keyword='{}'", keyword);
+        }
+
         Page<Job> page = findPublishedJobs(keyword, jobType, experienceLevels, location, salaryMin, salaryMax, cityId, countryId, pageable);
         Set<UUID> savedIds = seekerId != null
                 ? savedJobRepository.findJobIdsByJobSeekerId(seekerId)
@@ -82,6 +101,26 @@ public class JobService {
                 .map(j -> toJobDto(j, savedIds.contains(j.getId())))
                 .collect(Collectors.toList());
         return new PageImpl<>(dtos, pageable, page.getTotalElements());
+    }
+
+    private Page<JobDto> toOrderedJobDtoPage(JobSearchResult searchResult, UUID seekerId, Pageable pageable) {
+        List<UUID> jobIds = searchResult.getJobIds();
+        if (jobIds == null || jobIds.isEmpty()) {
+            return new PageImpl<>(List.of(), pageable, searchResult.getTotal());
+        }
+
+        List<Job> jobs = jobRepository.findAllPublicByIdIn(jobIds);
+        Set<UUID> savedIds = seekerId != null
+                ? savedJobRepository.findJobIdsByJobSeekerId(seekerId)
+                : Collections.emptySet();
+        Map<UUID, JobDto> dtoMap = jobs.stream()
+                .collect(Collectors.toMap(Job::getId, job -> toJobDto(job, savedIds.contains(job.getId()))));
+        List<JobDto> ordered = jobIds.stream()
+                .filter(dtoMap::containsKey)
+                .map(dtoMap::get)
+                .toList();
+
+        return new PageImpl<>(ordered, pageable, searchResult.getTotal());
     }
 
     /**
@@ -321,6 +360,7 @@ public class JobService {
             subscriptionService.incrementJobPostUsage(companyId);
             aiServiceClient.addJobNode(saved.getId(), jobText);
         }
+        eventPublisher.publishEvent(new JobSearchSyncEvent(saved.getId()));
 
         return saved;
     }
@@ -375,6 +415,7 @@ public class JobService {
             subscriptionService.incrementJobPostUsage(job.getCompanyId());
             aiServiceClient.addJobNode(saved.getId(), buildJobText(saved));
         }
+        eventPublisher.publishEvent(new JobSearchSyncEvent(saved.getId()));
         return saved;
     }
 
@@ -400,6 +441,7 @@ public class JobService {
             subscriptionService.incrementJobPostUsage(job.getCompanyId());
             aiServiceClient.addJobNode(saved.getId(), buildJobText(saved));
         }
+        eventPublisher.publishEvent(new JobSearchSyncEvent(saved.getId()));
 
         return saved;
     }
@@ -414,6 +456,7 @@ public class JobService {
 
         job.setDeletedAt(Instant.now());
         jobRepository.save(job);
+        eventPublisher.publishEvent(new JobSearchSyncEvent(job.getId()));
         log.info("Job soft-deleted: {} (id={})", job.getTitle(), id);
     }
 
@@ -425,6 +468,7 @@ public class JobService {
         Job job = findById(id);
         job.setDeletedAt(Instant.now());
         jobRepository.save(job);
+        eventPublisher.publishEvent(new JobSearchSyncEvent(job.getId()));
 
         staffRepository.findAllByCompanyId(job.getCompanyId()).forEach(staff -> {
             if (staff.getUser() != null && staff.getUser().getId() != null) {

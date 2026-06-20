@@ -39,6 +39,9 @@ public interface JobRepository extends JpaRepository<Job, UUID>, JpaSpecificatio
 
     List<Job> findTop10ByCompanyIdAndStatusOrderByCreatedAtDesc(UUID companyId, JobStatus status);
 
+    @Query("SELECT j.id FROM Job j WHERE j.companyId = :companyId")
+    List<UUID> findIdsByCompanyId(@Param("companyId") UUID companyId);
+
     @Query("SELECT j FROM Job j WHERE j.status = 'PUBLISHED' AND j.id IN :ids AND " +
            "EXISTS (SELECT 1 FROM Company c WHERE c.id = j.companyId AND c.blocked = false)")
     List<Job> findAllPublicByIdIn(@Param("ids") List<UUID> ids);
@@ -46,6 +49,18 @@ public interface JobRepository extends JpaRepository<Job, UUID>, JpaSpecificatio
     @Query("SELECT j FROM Job j WHERE j.status = 'PUBLISHED' AND j.id = :id AND " +
            "EXISTS (SELECT 1 FROM Company c WHERE c.id = j.companyId AND c.blocked = false)")
     Optional<Job> findPublicById(@Param("id") UUID id);
+
+    @Query("SELECT j FROM Job j WHERE j.status = 'PUBLISHED' AND j.id = :id AND " +
+           "EXISTS (SELECT 1 FROM Company c WHERE c.id = j.companyId AND c.blocked = false)")
+    Optional<Job> findSearchablePublishedJobForIndex(@Param("id") UUID id);
+
+    @Query("SELECT j FROM Job j WHERE j.status = 'PUBLISHED' AND " +
+           "EXISTS (SELECT 1 FROM Company c WHERE c.id = j.companyId AND c.blocked = false)")
+    Page<Job> findSearchablePublishedJobsForIndex(Pageable pageable);
+
+    @Query("SELECT j FROM Job j WHERE j.companyId = :companyId AND j.status = 'PUBLISHED' AND " +
+           "EXISTS (SELECT 1 FROM Company c WHERE c.id = j.companyId AND c.blocked = false)")
+    Page<Job> findSearchablePublishedJobsByCompanyId(@Param("companyId") UUID companyId, Pageable pageable);
 
     @Query("SELECT DISTINCT j FROM Job j WHERE j.status = 'PUBLISHED' AND " +
            "EXISTS (SELECT 1 FROM Company c WHERE c.id = j.companyId AND c.blocked = false) AND " +

@@ -49,6 +49,13 @@ spring:
       repositories:
         enabled: false
 
+  elasticsearch:
+    uris: ${SPRING_ELASTICSEARCH_URIS:http://localhost:9200}
+    username: ${SPRING_ELASTICSEARCH_USERNAME:}
+    password: ${SPRING_ELASTICSEARCH_PASSWORD:}
+    repositories:
+      enabled: false
+
   # ── Mail ───────────────────────────────────
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
@@ -98,6 +105,9 @@ app:
     read-timeout-ms: ${OPENAI_READ_TIMEOUT_MS:60000}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_0b4d97785df70e4fb970b0a30fbb6601f3ddb1ee865ddbe75a97666786ccc722}
     currency: ${STRIPE_CURRENCY:usd}
+  elasticsearch:
+    enabled: ${ELASTICSEARCH_ENABLED:false}
+    jobs-index: ${ELASTICSEARCH_JOBS_INDEX:jobs_search}
 
 # ── Actuator ─────────────────────────────────
 management:
@@ -112,6 +122,9 @@ management:
         enabled: false
       health-contributors:
         exclude: mail
+  health:
+    elasticsearch:
+      enabled: false
 
 # ── Logging ──────────────────────────────────
 logging:

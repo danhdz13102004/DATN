@@ -59,7 +59,7 @@ export default function LoginPage() {
               <input
                 type="email"
                 className={`w-full py-3 pl-[42px] pr-3.5 border-[1.5px] rounded-[10px] text-sm font-inter transition-all bg-white text-text focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10 ${errors.email ? 'border-red-500' : 'border-border'}`}
-                placeholder="admin@recruitpro.com"
+                placeholder="admin@gmail.com"
                 {...register('email', { required: 'Email is required' })}
               />
               <i className="fas fa-envelope absolute left-3.5 top-1/2 -translate-y-1/2 text-text-light text-sm transition-colors peer-focus:text-primary" />

@@ -1,12 +1,12 @@
 package com.recruitpro.config;
 
-import com.recruitpro.service.LocationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.UUID;
 
@@ -16,13 +16,46 @@ import java.util.UUID;
 public class DataSeederConfig {
 
     @Bean
-    public CommandLineRunner dataSeeder(JdbcTemplate jdbcTemplate) {
+    public CommandLineRunner dataSeeder(JdbcTemplate jdbcTemplate, PasswordEncoder passwordEncoder) {
         return args -> {
             log.info("=== DataSeeder: Starting seed operation ===");
+            seedAdminUser(jdbcTemplate, passwordEncoder);
             seedSkills(jdbcTemplate);
             seedPlans(jdbcTemplate);
             log.info("=== DataSeeder: Seed operation complete ===");
         };
+    }
+
+    private void seedAdminUser(JdbcTemplate jdbcTemplate, PasswordEncoder passwordEncoder) {
+        String email = "admin@gmail.com";
+        int count = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM users WHERE email = ? AND deleted_at IS NULL",
+            Integer.class,
+            email
+        );
+
+        if (count > 0) {
+            log.info("DataSeeder: Admin account {} already exists, skipping", email);
+            return;
+        }
+
+        jdbcTemplate.update(
+            """
+            INSERT INTO users (
+                id, email, password_hash, role, full_name, status, email_verified_at, created_at
+            ) VALUES (
+                ?, ?, ?, CAST(? AS user_role), ?, CAST(? AS user_status), NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'
+            )
+            """,
+            UUID.randomUUID(),
+            email,
+            passwordEncoder.encode("12345678"),
+            "ADMIN",
+            "Admin",
+            "ACTIVE"
+        );
+
+        log.info("DataSeeder: Admin account {} inserted", email);
     }
 
     private void seedSkills(JdbcTemplate jdbcTemplate) {
@@ -51,7 +84,7 @@ public class DataSeederConfig {
 
     private void seedPlans(JdbcTemplate jdbcTemplate) {
         Object[][] plans = {
-            {"Free", 3, 3, 0, 30},
+            {"Free", 0, 3, 0, 30},
             {"Pro", 20, 20, 20, 30},
             {"Premium", 100, 100, 100, 30},
         };

@@ -238,8 +238,8 @@ def _build_dashboard_html(focused_node_id: str = "", focused_node_type: str = ""
     back_btn         = (
         '<a href="/api/v1/graph/view" '
         'style="font-size:12px;color:#f7a34f;text-decoration:none;'
-        'border:1px solid #f7a34f;padding:3px 10px;border-radius:4px;'
-        'margin-left:8px;">\u2190 All nodes</a>'
+        'border:1px solid #f7a34f;padding:5px 12px;border-radius:6px;'
+        'margin-left:8px;transition:background 0.2s;">\u2190 View All</a>'
         if focused_node_id else ""
     )
     focused_banner_display = "flex" if focused_node_id else "none"
@@ -262,66 +262,79 @@ def _build_dashboard_html(focused_node_id: str = "", focused_node_type: str = ""
     }}
     #topbar {{
       display: flex; align-items: center; gap: 16px;
-      padding: 8px 20px; background: #16213e;
+      padding: 10px 20px; background: #16213e;
       border-bottom: 1px solid #2a2a5a; flex-shrink: 0; flex-wrap: wrap;
     }}
-    .brand {{ font-size: 15px; font-weight: 700; color: #7b8cff; letter-spacing: .5px; white-space: nowrap; }}
-    .stat  {{ font-size: 13px; color: #a0a0c0; white-space: nowrap; }}
+    .brand {{ font-size: 16px; font-weight: 700; color: #7b8cff; letter-spacing: .5px; white-space: nowrap; }}
+    .stat  {{ font-size: 13px; color: #a0a0c0; white-space: nowrap; background: #1a1a3a; padding: 4px 10px; border-radius: 4px; border: 1px solid #2a2a5a; }}
     .stat b {{ color: #e0e0e0; }}
-    #search-wrap {{ display: flex; align-items: center; gap: 6px; margin-left: auto; }}
+    #search-wrap {{ display: flex; align-items: center; gap: 8px; margin-left: auto; }}
     #search-input {{
       background: #1e1e3e; border: 1px solid #3a3a6a; border-radius: 6px;
-      color: #e0e0e0; font-size: 12px; padding: 5px 10px; width: 260px;
+      color: #e0e0e0; font-size: 13px; padding: 6px 12px; width: 240px;
       outline: none; transition: border-color .2s;
     }}
     #search-input:focus {{ border-color: #7b8cff; }}
     #search-input::placeholder {{ color: #555580; }}
-    #search-btn {{
+    .btn {{
       background: #3a4ab5; border: none; border-radius: 6px;
-      color: #e0e0e0; font-size: 12px; padding: 5px 12px;
-      cursor: pointer; transition: background .2s;
+      color: #ffffff; font-size: 12px; font-weight: 600; padding: 6px 14px;
+      cursor: pointer; transition: background .2s, transform .1s;
+      display: flex; align-items: center; gap: 6px;
     }}
-    #search-btn:hover {{ background: #5a6cd0; }}
-    #status {{ font-size: 12px; color: #555580; display: flex; align-items: center; gap: 6px; white-space: nowrap; }}
+    .btn:hover:not(:disabled) {{ background: #5a6cd0; }}
+    .btn:active:not(:disabled) {{ transform: scale(0.97); }}
+    .btn:disabled {{ background: #2a2a4a; color: #666; cursor: not-allowed; }}
+    .btn-outline {{ background: transparent; border: 1px solid #555580; color: #c0c0e0; }}
+    .btn-outline:hover:not(:disabled) {{ background: #1e1e3e; border-color: #7b8cff; color: #fff; }}
+    .btn-sage {{ background: #b54a3a; }}
+    .btn-sage:hover:not(:disabled) {{ background: #d05c4a; }}
+    
+    #controls-wrap {{ display: flex; align-items: center; gap: 12px; margin-left: 10px; padding-left: 10px; border-left: 1px solid #3a3a6a; }}
+    .toggle-label {{ font-size: 12px; color: #a0a0c0; display: flex; align-items: center; gap: 4px; cursor: pointer; user-select: none; }}
+    .toggle-label input {{ cursor: pointer; accent-color: #7b8cff; }}
+
+    #status {{ font-size: 12px; color: #555580; display: flex; align-items: center; gap: 6px; white-space: nowrap; margin-left: 10px; }}
     #dot {{
       width: 8px; height: 8px; border-radius: 50%;
-      background: #44ff99; animation: pulse 2s infinite;
+      background: #44ff99; transition: background 0.3s;
     }}
+    .pulsing {{ animation: pulse 2s infinite; }}
     @keyframes pulse {{ 0%,100%{{opacity:1}} 50%{{opacity:.3}} }}
     #focused-banner {{
       display: {focused_banner_display}; align-items: center; gap: 10px;
-      padding: 5px 20px; background: #1a1a3a;
-      border-bottom: 1px solid #3a3a7a; font-size: 12px; color: #a0a0d0; flex-shrink: 0;
+      padding: 8px 20px; background: #1a1a3a;
+      border-bottom: 1px solid #3a3a7a; font-size: 13px; color: #a0a0d0; flex-shrink: 0;
     }}
-    #focused-banner b {{ color: #7b8cff; font-family: monospace; }}
+    #focused-banner b {{ color: #7b8cff; font-family: monospace; font-size: 14px; }}
     #click-hint {{
-      padding: 5px 20px; background: #13132a;
-      border-bottom: 1px solid #1e1e3a; font-size: 11px; color: #44556a;
+      padding: 6px 20px; background: #13132a;
+      border-bottom: 1px solid #1e1e3a; font-size: 12px; color: #6a7c9a;
       flex-shrink: 0; display: {click_hint_display}; align-items: center; gap: 8px;
     }}
     #legend {{
-      display: flex; gap: 20px; align-items: center;
-      padding: 5px 20px; background: #13132a;
+      display: flex; gap: 24px; align-items: center;
+      padding: 8px 20px; background: #13132a;
       border-bottom: 1px solid #1e1e3a; flex-shrink: 0;
       font-size: 12px; color: #a0a0c0;
     }}
     .ldot {{
-      display: inline-block; width: 11px; height: 11px;
-      border-radius: 50%; margin-right: 4px; vertical-align: middle;
+      display: inline-block; width: 12px; height: 12px;
+      margin-right: 6px; vertical-align: middle;
     }}
-    #graph {{ flex: 1; width: 100%; min-height: 0; background: #0f0f1a; position: relative; }}
+    #graph {{ flex: 1; width: 100%; min-height: 0; background: #0b0b14; position: relative; }}
     #empty {{
       display: none; position: absolute; top: 50%; left: 50%;
       transform: translate(-50%, -50%); text-align: center;
       color: #555580; pointer-events: none;
     }}
-    #empty p {{ font-size: 13px; line-height: 1.8; }}
-    #empty code {{ color: #7b8cff; background: #1e1e3e; padding: 1px 5px; border-radius: 3px; }}
+    #empty p {{ font-size: 14px; line-height: 1.8; margin-top: 10px; }}
+    #empty code {{ color: #7b8cff; background: #1e1e3e; padding: 2px 6px; border-radius: 4px; }}
     #tip {{
-      position: fixed; background: #1e1e3e; border: 1px solid #3a3a6a;
-      border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #c0c0e0;
-      pointer-events: none; display: none; max-width: 280px; line-height: 1.8;
-      z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,.5);
+      position: fixed; background: rgba(22, 22, 40, 0.95); border: 1px solid #4a4a7a;
+      border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #e0e0e0;
+      pointer-events: none; display: none; max-width: 300px; line-height: 1.6;
+      z-index: 9999; box-shadow: 0 8px 32px rgba(0,0,0,.6); backdrop-filter: blur(4px);
     }}
   </style>
 </head>
@@ -329,41 +342,51 @@ def _build_dashboard_html(focused_node_id: str = "", focused_node_type: str = ""
 
 <div id="topbar">
   <span class="brand">&#x29C6; RecruitPro Graph</span>
-  <span class="stat">&#x1F9D1; Resumes: <b id="s-r">&mdash;</b></span>
+  <span class="stat">&#x1F4C4; Resumes: <b id="s-r">&mdash;</b></span>
   <span class="stat">&#x1F4BC; Jobs: <b id="s-j">&mdash;</b></span>
   <span class="stat">&#x1F517; Edges: <b id="s-e">&mdash;</b></span>
+  
   <div id="search-wrap">
-    <input id="search-input" type="text" placeholder="Paste ID to focus&hellip;" value="{focused_js}" />
-    <button id="search-btn" onclick="goFocused()">Focus</button>
+    <input id="search-input" type="text" placeholder="Paste Node ID to focus&hellip;" value="{focused_js}" />
+    <button class="btn" onclick="goFocused()">&#x1F50D; Focus</button>
     {back_btn}
   </div>
-  <div id="status"><div id="dot"></div><span id="s-t">connecting&hellip;</span></div>
+
+  <div id="controls-wrap">
+    <button id="refresh-btn" class="btn btn-outline" onclick="manualRefresh()">
+      &#x21BB; Refresh UI
+    </button>
+    <button id="sage-btn" class="btn btn-sage" onclick="runGraphSage()">
+      &#x26A1; Sync GraphSAGE
+    </button>
+  </div>
+
+  <div id="status"><div id="dot" class="pulsing"></div><span id="s-t">connecting&hellip;</span></div>
 </div>
 
 <div id="focused-banner">
-  &#x1F50D; Focused on {node_type_banner}
-  &nbsp;|&nbsp; showing this node and its relations
+  &#x1F3AF; Focused on {node_type_banner}
+  &nbsp;|&nbsp; Viewing specialized subgraph
 </div>
 
 <div id="click-hint">
-  &#x1F4A1; Click any node to focus on its relations
+  &#x1F4A1; <b>Tip:</b> Click any node to drill down into its specific relations. Drag canvas to pan, scroll to zoom.
 </div>
 
 <div id="legend">
-  <span><span class="ldot" style="background:#7b8cff"></span>Resume node</span>
-  <span><span class="ldot" style="background:#f7a34f;border-radius:2px"></span>Job node</span>
-  <span><span class="ldot" style="background:#2a2a5a;border:2px dashed #ff9944"></span>Pending embedding</span>
-  <span style="margin-left:auto;font-size:11px;color:#666;">Auto-refresh: 4s</span>
+  <span><span class="ldot" style="background:#4a5ab5;border-radius:50%"></span>Resume Node</span>
+  <span><span class="ldot" style="background:#b55520;border-radius:2px"></span>Job Node</span>
+  <span><span class="ldot" style="background:transparent;border:2px dashed #ff9944"></span>Pending NLP Embedding</span>
 </div>
 
 <div id="graph">
   <div id="empty">
-    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#7b8cff" stroke-width="1.4">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#7b8cff" stroke-width="1.5">
       <circle cx="5" cy="12" r="3"/><circle cx="19" cy="5" r="3"/><circle cx="19" cy="19" r="3"/>
       <line x1="7.5" y1="11" x2="16.5" y2="6.5"/>
       <line x1="7.5" y1="13" x2="16.5" y2="17.5"/>
     </svg>
-    <p id="empty-msg">Graph is empty.<br>Add nodes via <code>POST /api/v1/add_node</code></p>
+    <p id="empty-msg">Graph is empty.<br>Ingest nodes via <code>POST /api/v1/add_node</code></p>
   </div>
 </div>
 
@@ -376,6 +399,51 @@ const tip        = document.getElementById("tip");
 const empty      = document.getElementById("empty");
 let d = {{}};  // Global data snapshot
 
+let autoRefreshTimer = null;
+
+// Control Logic
+function toggleAutoRefresh() {{
+  const isChecked = document.getElementById("auto-refresh-chk").checked;
+  if (isChecked) {{
+    document.getElementById("dot").classList.add("pulsing");
+    autoRefreshTimer = setInterval(poll, POLL_MS);
+  }} else {{
+    document.getElementById("dot").classList.remove("pulsing");
+    clearInterval(autoRefreshTimer);
+  }}
+}}
+
+function manualRefresh() {{
+  const btn = document.getElementById("refresh-btn");
+  btn.disabled = true;
+  btn.innerHTML = "&#x231B; Refreshing...";
+  poll().finally(() => {{
+    btn.disabled = false;
+    btn.innerHTML = "&#x21BB; Refresh UI";
+  }});
+}}
+
+async function runGraphSage() {{
+  const btn = document.getElementById("sage-btn");
+  btn.disabled = true;
+  btn.innerHTML = "&#x231B; Syncing Models...";
+  try {{
+    const res = await fetch("/api/v1/graph/refresh", {{ method: "POST" }});
+    const data = await res.json();
+    if (data.success) {{
+      alert("✅ GraphSAGE successfully generated embeddings for " + data.data.updated_nodes + " nodes.");
+      poll(); 
+    }} else {{
+      alert("❌ Error syncing GraphSAGE: " + (data.error?.message || "Unknown error"));
+    }}
+  }} catch (err) {{
+    alert("❌ Network error while syncing GraphSAGE.");
+  }} finally {{
+    btn.disabled = false;
+    btn.innerHTML = "&#x26A1; Sync GraphSAGE";
+  }}
+}}
+
 function goFocused() {{
   const val = document.getElementById("search-input").value.trim();
   if (!val) {{ window.location.href = "/api/v1/graph/view"; return; }}
@@ -385,6 +453,7 @@ document.getElementById("search-input").addEventListener("keydown", e => {{
   if (e.key === "Enter") goFocused();
 }});
 
+// Graph Setup
 const nodes = new vis.DataSet();
 const edges = new vis.DataSet();
 
@@ -394,24 +463,39 @@ const net = new vis.Network(
   {{
     physics: {{
       enabled: true,
-      barnesHut: {{ gravitationalConstant: -6000, centralGravity: 0.25,
-                   springLength: 160, springConstant: 0.04, damping: 0.09 }},
-      minVelocity: 0.5,
+      solver: "forceAtlas2Based",
+      forceAtlas2Based: {{
+        gravitationalConstant: -120,
+        centralGravity: 0.015,
+        springLength: 150,
+        springConstant: 0.06,
+        damping: 0.15
+      }},
+      minVelocity: 0.75,
+    }},
+    layout: {{
+      improvedLayout: true
     }},
     edges: {{
-      arrows: {{ to: {{ enabled: true, scaleFactor: 0.6 }} }},
-      color:  {{ color: "#3a3a6a", highlight: "#7b8cff", hover: "#9a8cff" }},
-      smooth: {{ type: \"continuous\" }},
-      font:   {{ size: 10, align: \"middle\", color: \"#e0e0e0\" }},
+      arrows: {{ to: {{ enabled: true, scaleFactor: 0.8, type: "arrow" }} }},
+      color:  {{ color: "#4a4a7a", highlight: "#7b8cff", hover: "#9a8cff", opacity: 0.75 }},
+      smooth: {{ type: "dynamic" }},
+      width: 1.5,
+      selectionWidth: 3,
+      hoverWidth: 2,
+      font:   {{ size: 10, align: "middle", color: "#a0a0c0", strokeWidth: 0 }},
     }},
     nodes: {{
-      font:    {{ color: "#e0e0e0", size: 11 }},
-      shadow:  {{ enabled: true, color: "rgba(0,0,0,.6)", x: 2, y: 2, size: 8 }},
+      font:    {{ color: "#ffffff", size: 12, face: "Segoe UI", multi: "html" }},
+      shadow:  {{ enabled: true, color: "rgba(0,0,0,0.8)", x: 0, y: 4, size: 10 }},
+      borderWidth: 2,
+      borderWidthSelected: 4
     }},
-    interaction: {{ hover: true, tooltipDelay: 60, hideEdgesOnDrag: false }},
+    interaction: {{ hover: true, tooltipDelay: 50, hideEdgesOnDrag: true }},
   }}
 );
 
+// Event Listeners
 net.on("click", p => {{
   if (!p.nodes.length) return;
   const n = nodes.get(p.nodes[0]);
@@ -423,11 +507,15 @@ net.on("hoverNode", p => {{
   const n = nodes.get(p.node);
   if (!n) return;
   const edgeCount = (d.edges || []).filter(e => (n.nodeType === "resume" ? e.resume_id === n.id : e.job_id === n.id)).length;
+  const icon = n.nodeType === "resume" ? "&#x1F4C4;" : "&#x1F4BC;";
+  const label = n.nodeType === "resume" ? "Resume" : "Job";
+  
   tip.innerHTML =
-    "<b style='color:#7b8cff'>" + (n.nodeType === "resume" ? "Resume" : "Job") + " node</b><br>" +
-    "ID: " + n.id.slice(0, 20) + (n.id.length > 20 ? "..." : "") + "<br>" +
-    "<span style='color:#aaa;font-size:11px'>" + edgeCount + " relation" + (edgeCount !== 1 ? "s" : "") + "</span>" +
-    "<br><span style='color:#aaf;font-size:11px'>Click to focus</span>";
+    "<div style='border-bottom:1px solid #4a4a7a; padding-bottom:6px; margin-bottom:6px;'>" +
+    icon + " <b style='color:#7b8cff; font-size:14px;'>" + label + " Node</b></div>" +
+    "<div style='color:#a0a0c0; font-family:monospace; margin-bottom:4px;'>ID: " + n.id + "</div>" +
+    "<div style='color:#44ff99; font-size:12px;'>&#x2194; " + edgeCount + " connected relation" + (edgeCount !== 1 ? "s" : "") + "</div>" +
+    "<div style='margin-top:8px; font-size:11px; color:#f7a34f;'><i>Click node to isolate graph...</i></div>";
   tip.style.display = "block";
 }});
 
@@ -439,48 +527,53 @@ net.on("hoverEdge", p => {{
   if (!fromNode || !toNode) return;
 
   tip.innerHTML =
-    "<b style='color:#44ff99'>Apply</b><br>" +
-    "Resume: " + fromNode.id.slice(0, 12) + "...<br>" +
-    "Job: " + toNode.id.slice(0, 12) + "...";
+    "<div style='border-bottom:1px solid #4a4a7a; padding-bottom:6px; margin-bottom:6px;'>" +
+    "&#x1F517; <b style='color:#44ff99; font-size:14px;'>Application Edge</b></div>" +
+    "<b>From:</b> <span style='font-family:monospace; color:#a0a0c0'>" + fromNode.id.slice(0, 16) + "...</span><br>" +
+    "<b>To:</b> <span style='font-family:monospace; color:#a0a0c0; margin-left:14px;'>" + toNode.id.slice(0, 16) + "...</span>";
   tip.style.display = "block";
 }});
+
 net.on("blurNode", () => {{ tip.style.display = "none"; }});
 net.on("blurEdge", () => {{ tip.style.display = "none"; }});
 document.addEventListener("mousemove", e => {{
-  tip.style.left = (e.clientX + 16) + "px";
-  tip.style.top  = (e.clientY + 14) + "px";
+  tip.style.left = (e.clientX + 20) + "px";
+  tip.style.top  = (e.clientY + 20) + "px";
 }});
 
 function applySnapshot(d) {{
   document.getElementById("s-r").textContent = d.num_resumes ?? (d.nodes || []).filter(n => n.node_type === "resume").length;
   document.getElementById("s-j").textContent = d.num_jobs    ?? (d.nodes || []).filter(n => n.node_type === "job").length;
   document.getElementById("s-e").textContent = d.num_edges   ?? (d.edges || []).length;
-  document.getElementById("s-t").textContent = d.generated_at;
+  document.getElementById("s-t").textContent = "Last sync: " + d.generated_at.split(" ")[1] + " UTC";
   document.getElementById("dot").style.background = "#44ff99";
   empty.style.display = (d.nodes?.length ?? 0) === 0 ? "block" : "none";
 
   const inN = new Set((d.nodes || []).map(n => n.node_id));
   for (const id of nodes.getIds()) {{ if (!inN.has(id)) nodes.remove(id); }}
+  
   for (const n of (d.nodes || [])) {{
     const resume  = n.node_type === "resume";
     const encoded = n.encoded !== false;
+    const shortId = n.node_id.slice(0, 8);
+    
     const item = {{
       id:       n.node_id,
-      label:    (resume ? "R" : "J") + "\\n" + n.node_id.slice(0, 10),
+      label:    (resume ? "<b>R</b>\\n" : "<b>J</b>\\n") + shortId,
       nodeType: n.node_type,
       encoded:  encoded,
-      shape:    resume ? "dot" : "diamond",
-      size:     resume ? 22 : 15,
-      opacity:  encoded ? 1.0 : 0.45,
+      shape:    resume ? "ellipse" : "box",
+      margin:   resume ? undefined : {{ top: 8, right: 12, bottom: 8, left: 12 }},
+      size:     resume ? 24 : undefined,
+      opacity:  encoded ? 1.0 : 0.6,
       color: {{
-        background: encoded ? (resume ? "#3a4ab5" : "#b55520") : (resume ? "#2a2a5a" : "#5a3010"),
-        border:     encoded ? "transparent" : "#ff9944",
-        highlight:  {{ background: resume ? "#7b8cff" : "#f7a34f" }},
-        hover:      {{ background: resume ? "#5a6cd0" : "#d07030" }},
+        background: encoded ? (resume ? "#4a5ab5" : "#b55520") : (resume ? "#2a2a5a" : "#5a3010"),
+        border:     encoded ? (resume ? "#7b8cff" : "#f7a34f") : "#ff9944",
+        highlight:  {{ background: resume ? "#7b8cff" : "#f7a34f", border: "#ffffff" }},
+        hover:      {{ background: resume ? "#5a6cd0" : "#d07030", border: "#ffffff" }},
       }},
-      borderWidth:  encoded ? 0 : 2,
-      borderDashes: encoded ? false : [4, 3],
-      title: (encoded ? "✅ Encoded" : "⏳ Pending") + " | " + (resume ? "Resume" : "Job") + " | " + n.node_id,
+      borderWidth:  encoded ? 1 : 2,
+      borderDashes: encoded ? false : [5, 4],
     }};
     nodes.get(n.node_id) !== null ? nodes.update(item) : nodes.add(item);
   }}
@@ -488,6 +581,7 @@ function applySnapshot(d) {{
   const eKey = e => e.resume_id + "__" + e.job_id;
   const inE  = new Set((d.edges || []).map(eKey));
   for (const id of edges.getIds()) {{ if (!inE.has(id)) edges.remove(id); }}
+  
   for (const e of (d.edges || [])) {{
     const key = eKey(e);
     const item = {{
@@ -519,12 +613,13 @@ async function poll() {{
     const body = await r.json();
     d = body.data;  // Store globally for use in hover handlers
     applySnapshot(d);
+    
     if (_firstLoad) {{
       _firstLoad = false;
-      // Force vis to recalculate canvas size and fit all nodes into view.
-      // This is needed because flex layout may give the container 0 height
-      // at the time vis.Network was constructed.
-      setTimeout(() => {{ net.setSize("100%", "100%"); net.fit({{ animation: {{ duration: 600, easingFunction: "easeInOutQuad" }} }}); }}, 100);
+      setTimeout(() => {{ 
+        net.setSize("100%", "100%"); 
+        net.fit({{ animation: {{ duration: 800, easingFunction: "easeInOutQuart" }} }}); 
+      }}, 100);
     }}
   }} catch (err) {{
     document.getElementById("dot").style.background = "#ff4466";
@@ -532,8 +627,9 @@ async function poll() {{
   }}
 }}
 
+// Initialize
 poll();
-setInterval(poll, POLL_MS);
+toggleAutoRefresh(); // Starts the interval if checked
 </script>
 </body>
 </html>"""

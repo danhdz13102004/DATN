@@ -5,6 +5,7 @@ export const ROUTES = {
   USERS: '/users',
   COMPANIES: '/companies',
   JOBS: '/jobs',
+  JOB_SEARCH_SYNC: '/job-search-sync',
   APPLICATIONS: '/applications',
   SKILLS: '/skills',
   SUBSCRIPTIONS: '/subscriptions',

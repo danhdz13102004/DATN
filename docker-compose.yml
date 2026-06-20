@@ -11,6 +11,7 @@ networks:
 volumes:
   postgres_data:
   redis_data:
+  elasticsearch_data:
   minio_data:
   ai_models:
 
@@ -52,6 +53,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # ── Elasticsearch (keyword job search index) ─────────────────────────────
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.3
+    container_name: recruitpro-elasticsearch
+    environment:
+      discovery.type: single-node
+      ES_JAVA_OPTS: ${ELASTICSEARCH_JAVA_OPTS:--Xms512m -Xmx512m}
+      xpack.security.enabled: ${ELASTICSEARCH_SECURITY_ENABLED:-false}
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
   # ── MinIO (S3-compatible storage) ────────────
   minio:
@@ -129,6 +149,11 @@ services:
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      ELASTICSEARCH_ENABLED: ${ELASTICSEARCH_ENABLED:-false}
+      ELASTICSEARCH_JOBS_INDEX: ${ELASTICSEARCH_JOBS_INDEX:-jobs_search}
+      SPRING_ELASTICSEARCH_URIS: ${SPRING_ELASTICSEARCH_URIS:-http://elasticsearch:9200}
+      SPRING_ELASTICSEARCH_USERNAME: ${SPRING_ELASTICSEARCH_USERNAME:-}
+      SPRING_ELASTICSEARCH_PASSWORD: ${SPRING_ELASTICSEARCH_PASSWORD:-}
     depends_on:
       db:
         condition: service_healthy

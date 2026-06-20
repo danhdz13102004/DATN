@@ -178,6 +178,18 @@ export default function ApplicationDetailPage() {
                     {app.candidateLocation ?? 'Location not specified'}
                     {app.candidateExperienceYears != null && ` · ${app.candidateExperienceYears} yr${app.candidateExperienceYears !== 1 ? 's' : ''} experience`}
                   </p>
+                  {app.candidateSkills?.length ? (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {app.candidateSkills.map((skill) => (
+                        <span
+                          key={skill}
+                          className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </div>
               <div className="text-sm text-gray-600 border-t border-gray-50 pt-4">
@@ -214,7 +226,7 @@ export default function ApplicationDetailPage() {
                 <>
                   {/* PDF inline preview */}
                   {fileType === 'pdf' && (
-                    <div className="rounded-xl overflow-hidden border border-gray-100" style={{ height: 520 }}>
+                    <div className="rounded-xl overflow-hidden border border-gray-100" style={{ height: 600 }}>
                       <iframe
                         src={app.resumeUrl}
                         className="w-full h-full"
@@ -324,24 +336,6 @@ export default function ApplicationDetailPage() {
                     Upgrade Plan
                   </a>
                 </div>
-              )}
-            </div>
-
-            {/* Applied For */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Applied For</h3>
-              <Link to={`/jobs/${app.jobId}`} className="text-sm text-primary font-medium hover:underline no-underline">
-                {app.jobTitle}
-              </Link>
-              <div className="mt-2">
-                <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[app.status]}`}>
-                  {STATUS_LABELS[app.status]}
-                </span>
-              </div>
-              {app.hasScheduledInterview && (
-                <p className="mt-2 text-xs text-emerald-600 font-medium flex items-center gap-1">
-                  <i className="fas fa-calendar-check" /> Interview scheduled
-                </p>
               )}
             </div>
 

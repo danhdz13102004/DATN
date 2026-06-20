@@ -31,6 +31,7 @@ export interface ApplicationDetail {
   candidateLocation: string | null;
   candidateExperienceYears: number | null;
   candidateBio: string | null;
+  candidateSkills: string[];
   // Job info
   jobId: string;
   jobTitle: string;

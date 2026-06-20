@@ -36,10 +36,11 @@ public interface ApplicationRepository extends JpaRepository<Application, UUID> 
     );
 
     @Query("""
-        SELECT a FROM Application a
+        SELECT DISTINCT a FROM Application a
         JOIN FETCH a.job j
         JOIN FETCH a.jobSeeker js
         JOIN FETCH js.user u
+        LEFT JOIN FETCH js.skills
         WHERE a.id = :id AND j.companyId = :companyId AND a.deletedAt IS NULL
     """)
     Optional<Application> findByIdAndCompanyId(

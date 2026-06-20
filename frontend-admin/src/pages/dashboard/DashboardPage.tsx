@@ -90,6 +90,7 @@ export default function DashboardPage() {
               { to: '/companies', icon: 'fa-building', label: 'Verify Companies', color: 'text-emerald-600 bg-emerald-50' },
               { to: '/jobs', icon: 'fa-briefcase', label: 'Review Jobs', color: 'text-blue-600 bg-blue-50' },
               { to: '/applications', icon: 'fa-file-alt', label: 'View Applications', color: 'text-purple-600 bg-purple-50' },
+              { to: '/job-search-sync', icon: 'fa-sync-alt', label: 'Search Sync', color: 'text-cyan-600 bg-cyan-50' },
             ].map((item) => (
               <a
                 key={item.to}

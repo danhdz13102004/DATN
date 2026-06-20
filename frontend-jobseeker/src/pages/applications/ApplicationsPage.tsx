@@ -9,7 +9,7 @@ import StatusBadge from '../../components/common/StatusBadge';
 import { applicationService } from '../../services/applicationService';
 import type { ApplicationListItem, ApplicationStats } from '../../types/application';
 
-function WithdrawButton({ applicationId }: { applicationId: string }) {
+function WithdrawButton({ applicationId, unvisible = false }: { applicationId: string; unvisible?: boolean }) {
   const [hovered, setHovered] = useState(false);
   const [pending, setPending] = useState(false);
 
@@ -27,9 +27,12 @@ function WithdrawButton({ applicationId }: { applicationId: string }) {
 
   return (
     <button
+
       onClick={handleWithdraw}
       disabled={pending}
-      className="inline-flex items-center justify-center rounded-xl transition-all duration-150"
+      className={`inline-flex items-center justify-center rounded-xl transition-all duration-150 ${
+        unvisible ? 'opacity-0 pointer-events-none' : ''
+      }`}
       style={{
         width: 36,
         height: 36,
@@ -38,7 +41,7 @@ function WithdrawButton({ applicationId }: { applicationId: string }) {
         border: 'none',
         cursor: pending ? 'not-allowed' : 'pointer',
         fontSize: '0.8rem',
-        opacity: pending ? 0.6 : 1,
+        opacity: unvisible ? 0 : pending ? 0.6 : 1,
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -266,8 +269,7 @@ export default function ApplicationsPage() {
 
             {/* Status */}
             <td className="px-5 py-4 align-middle">
-              <StatusBadge value={app.status} dot />
-              <ApplicationProgressBar status={app.status} />
+              <StatusBadge className="py-2" value={app.status} dot />
             </td>
 
             {/* Applied */}
@@ -302,9 +304,7 @@ export default function ApplicationsPage() {
                 >
                   <i className="fas fa-expand" />
                 </button>
-                {canWithdraw(app.status) && (
-                  <WithdrawButton applicationId={app.id} />
-                )}
+                <WithdrawButton applicationId={app.id} unvisible={!canWithdraw(app.status)} />
               </div>
             </td>
           </tr>

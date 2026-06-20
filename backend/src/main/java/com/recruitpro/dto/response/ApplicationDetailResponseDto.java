@@ -22,6 +22,7 @@ public class ApplicationDetailResponseDto {
     private String candidateLocation;
     private Integer candidateExperienceYears;
     private String candidateBio;
+    private List<String> candidateSkills;
     private String jobId;
     private String jobTitle;
     private Float aiScore;
