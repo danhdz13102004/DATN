@@ -52,32 +52,6 @@ function WithdrawButton({ applicationId, unvisible = false }: { applicationId: s
   );
 }
 
-function ApplicationProgressBar({ status }: { status: string }) {
-  const steps = ['APPLIED', 'SCREENING', 'INTERVIEW', 'OFFER', 'HIRED'];
-  if (status === 'REJECTED' || status === 'WITHDRAWN') return null;
-
-  const currentIdx = steps.indexOf(status);
-  const pct = currentIdx === -1 ? 10 : Math.round(((currentIdx + 1) / steps.length) * 100);
-
-  const barColor =
-    status === 'HIRED' ? 'bg-emerald-500' :
-    status === 'OFFER' ? 'bg-amber-400' :
-    status === 'INTERVIEW' ? 'bg-violet-400' :
-    status === 'SCREENING' ? 'bg-blue-400' :
-    'bg-slate-300';
-
-  return (
-    <div className="mt-1.5">
-      <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-700 ${barColor}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
 const TABLE_COLUMNS = [
   { key: 'job', label: 'Job Position', className: 'min-w-[200px]' },
   { key: 'company', label: 'Company', className: 'min-w-[160px]' },
