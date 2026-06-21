@@ -47,7 +47,7 @@ export default function StaffManagementPage() {
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; member?: StaffMember }>({ open: false });
 
   const { register: inviteRegister, handleSubmit: inviteSubmit, formState: { errors: inviteErrors }, reset: inviteReset } = useForm<CreateStaffRequest>();
-  const { register: editRegister, handleSubmit: editSubmit, formState: { errors: editErrors }, reset: editReset } = useForm<UpdateStaffRequest>();
+  const { register: editRegister, handleSubmit: editSubmit, formState: { errors: editErrors } } = useForm<UpdateStaffRequest>();
 
   const handleInvite = async (data: CreateStaffRequest) => {
     const payload: CreateStaffRequest = {
