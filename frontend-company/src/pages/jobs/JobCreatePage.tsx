@@ -6,9 +6,10 @@ import Topbar from '../../components/layout/Topbar';
 import { useJobDetail, useCreateJob, useUpdateJob, useSkills, useIndustries, useAutoFillJobFromFile } from '../../hooks/useJobs';
 import { useCompanyAddresses } from '../../hooks/useCompany';
 import { useCurrentSubscription } from '../../hooks/useSubscription';
+import { skillService } from '../../services/jobService';
 import { useToast } from '../../contexts/ToastContext';
 import { ROUTES } from '../../constants';
-import type { ExperienceLevel, JobFormData } from '../../types/job';
+import type { ExperienceLevel, JobFormData, Skill } from '../../types/job';
 import PageHeader from '../../components/common/PageHeader';
 
 const EXPERIENCE_LEVELS: { value: ExperienceLevel; label: string }[] = [
@@ -21,6 +22,26 @@ const EXPERIENCE_LEVELS: { value: ExperienceLevel; label: string }[] = [
 ];
 
 type FormValues = Omit<JobFormData, 'levels' | 'skillIds' | 'responsibilities' | 'requirements' | 'niceToHaveSkills'>;
+
+const normalizeSkillName = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/\bapis\b/g, 'api')
+    .replace(/\bjs\b/g, 'javascript')
+    .replace(/[^a-z0-9]+/g, '');
+
+const buildSkillLookup = (availableSkills: Skill[]) => {
+  const lookup = new Map<string, Skill>();
+
+  for (const skill of availableSkills) {
+    lookup.set(normalizeSkillName(skill.name), skill);
+  }
+
+  return lookup;
+};
+
+const findSkillByName = (lookup: Map<string, Skill>, name: string) =>
+  lookup.get(normalizeSkillName(name));
 
 export default function JobCreatePage() {
   const { id } = useParams();
@@ -272,17 +293,37 @@ export default function JobCreatePage() {
       if (result.responsibilities?.length) setResponsibilities(result.responsibilities);
       if (result.requirements?.length) setRequirements(result.requirements);
 
+      const availableSkills =
+        skills ??
+        (await queryClient.fetchQuery({
+          queryKey: ['skills'],
+          queryFn: async () => {
+            const { data } = await skillService.getSkills();
+            return data.data ?? [];
+          },
+          staleTime: 10 * 60 * 1000,
+        })) ??
+        [];
+
+      const skillLookup = buildSkillLookup(availableSkills);
+
       // Apply must-have skills: map skill NAMES -> known IDs when possible
       const mustHave = result.mustHaveSkills ?? [];
       const niceFromApi = result.niceToHaveSkills ?? [];
 
       const matchedSkillIds: string[] = [];
+      const matchedSkillNames = new Set<string>();
       const unmatchedSkillNames: string[] = [];
 
       for (const name of mustHave) {
-        const matched = skills?.find((s) => s.name.toLowerCase() === name.toLowerCase());
-        if (matched) matchedSkillIds.push(matched.id);
-        else unmatchedSkillNames.push(name);
+        const matched = findSkillByName(skillLookup, name);
+        if (matched) {
+          matchedSkillIds.push(matched.id);
+          matchedSkillNames.add(normalizeSkillName(matched.name));
+          matchedSkillNames.add(normalizeSkillName(name));
+        } else {
+          unmatchedSkillNames.push(name);
+        }
       }
 
       if (matchedSkillIds.length) {
@@ -293,8 +334,10 @@ export default function JobCreatePage() {
         });
       }
 
-      // Nice-to-have is free text; also fallback unmatched must-have here
-      const combinedNiceNames = [...niceFromApi, ...unmatchedSkillNames];
+      // Nice-to-have is free text; also fallback truly unmatched must-have skills here.
+      const combinedNiceNames = [...niceFromApi, ...unmatchedSkillNames].filter(
+        (name) => !matchedSkillNames.has(normalizeSkillName(name))
+      );
       if (combinedNiceNames.length) {
         setNiceToHaveSkills((prev) => {
           const existing = new Set(prev.map((s) => s.toLowerCase()));
@@ -837,8 +880,8 @@ export default function JobCreatePage() {
                 className="w-full px-4 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all bg-white max-w-xs"
                 {...register('status')}
               >
-                <option value="DRAFT">Draft (save for later)</option>
                 <option value="PUBLISHED">Published (make visible immediately)</option>
+                <option value="DRAFT">Draft (save for later)</option>
               </select>
             </div>
 

@@ -144,6 +144,9 @@ export default function ApplicationDetailPage() {
   const scoreBarColor = score >= 80 ? 'bg-emerald-500' : score >= 60 ? 'bg-amber-500' : 'bg-red-500';
   const initials = getInitials(app.candidateName);
   const fileType = app.resumeUrl ? getFileType(app.resumeUrl) : null;
+  const coverLetter = app.coverLetter?.trim() || app.cover_letter?.trim();
+  const candidateAbout = coverLetter || app.candidateBio?.trim();
+  const candidateAboutTitle = coverLetter ? 'Cover Letter' : 'About';
 
   return (
     <>
@@ -193,8 +196,8 @@ export default function ApplicationDetailPage() {
                 </div>
               </div>
               <div className="text-sm text-gray-600 border-t border-gray-50 pt-4">
-                <h4 className="font-semibold text-gray-900 mb-2">About</h4>
-                <p className="leading-relaxed">{app.candidateBio || 'No bio provided.'}</p>
+                <h4 className="font-semibold text-gray-900 mb-2">{candidateAboutTitle}</h4>
+                <p className="leading-relaxed">{candidateAbout || 'No bio provided.'}</p>
               </div>
             </div>
 

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RecruitPro Jobseeker">
+  <defs>
+    <linearGradient id="bg" x1="10" y1="8" x2="54" y2="58" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#14b8a6"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#bg)"/>
+  <path fill="#fff" d="M17 18h17c7 0 12 4 12 10 0 4-2 7-6 9l8 10H37l-7-9h-4v9h-9V18Zm9 8v5h8c2 0 4-1 4-3s-2-2-4-2h-8Z"/>
+  <circle cx="47" cy="45" r="10" fill="#dbeafe"/>
+  <path fill="#2563eb" d="M43 43h8v6h-8v-6Zm2-4h4c2 0 3 1 3 3h-2c0-1-1-1-1-1h-4c-1 0-1 0-1 1h-2c0-2 1-3 3-3Z"/>
+</svg>

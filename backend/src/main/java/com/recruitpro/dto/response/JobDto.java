@@ -43,6 +43,7 @@ public class JobDto {
 
     // Company name for list view (populated from company lookup)
     private String companyName;
+    private String logoUrl;
 
     @JsonProperty("isSaved")
     private boolean isSaved;

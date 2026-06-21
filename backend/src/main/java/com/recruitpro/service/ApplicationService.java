@@ -111,6 +111,7 @@ public class ApplicationService {
                 .candidateExperienceYears(app.getJobSeeker().getExperienceYears())
                 .candidateBio(app.getJobSeeker().getBio())
                 .candidateSkills(getCandidateSkills(app))
+                .coverLetter(app.getCoverLetter())
                 .jobId(app.getJobId().toString())
                 .jobTitle(app.getJob().getTitle())
                 .aiScore(subscriptionService.canUseAiMatching(companyId) ? app.getAiScore() : null)
@@ -170,6 +171,7 @@ public class ApplicationService {
                 .candidateName(getCandidateName(app))
                 .candidateEmail(getCandidateEmail(app))
                 .jobTitle(app.getJob() != null ? app.getJob().getTitle() : "Unknown")
+                .hasScheduledInterview(applicationRepository.hasScheduledInterview(app.getId()))
                 .build()
         ).toList();
     }

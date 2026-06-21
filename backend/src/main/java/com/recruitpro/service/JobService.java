@@ -211,12 +211,16 @@ public class JobService {
     }
 
     private JobDto toJobDto(Job job, boolean isSaved) {
-        // Fetch company name for list view (lightweight lookup)
+        // Fetch company info for list view (lightweight lookup)
         String companyName = null;
+        String logoUrl = null;
         if (job.getCompanyId() != null) {
-            companyName = companyRepository.findById(job.getCompanyId())
-                    .map(Company::getName)
-                    .orElse(null);
+            Optional<Company> companyOpt = companyRepository.findById(job.getCompanyId());
+            if (companyOpt.isPresent()) {
+                Company company = companyOpt.get();
+                companyName = company.getName();
+                logoUrl = storageService.getPublicUrl(company.getLogoUrl());
+            }
         }
 
         return JobDto.builder()
@@ -241,6 +245,7 @@ public class JobService {
                 .updatedAt(job.getUpdatedAt())
                 .attachmentUrl(storageService.getPublicUrl(job.getAttachmentUrl()))
                 .companyName(companyName)
+                .logoUrl(logoUrl)
                 .isSaved(isSaved)
                 .build();
     }

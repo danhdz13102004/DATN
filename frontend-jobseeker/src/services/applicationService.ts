@@ -1,5 +1,11 @@
 import api from './api';
-import type { ApplicationStats, ApplicationDetail, ApplyRequest } from '../types/application';
+import type {
+  ApplicationStats,
+  ApplicationDetail,
+  ApplyRequest,
+  ApplicationCompareRequest,
+  ApplicationCompareResponse,
+} from '../types/application';
 
 export const applicationService = {
   listMyApplications: (params: { status?: string; search?: string; page?: number; size?: number } = {}) => {
@@ -19,6 +25,10 @@ export const applicationService = {
 
   apply: (data: ApplyRequest) =>
     api.post('/jobseeker/applications', data).then(r => r.data),
+
+  compare: (data: ApplicationCompareRequest) =>
+    api.post<{ data: ApplicationCompareResponse }>('/jobseeker/applications/compare', data)
+      .then(r => r.data.data),
 
   withdraw: (id: string) =>
     api.patch(`/jobseeker/applications/${id}/withdraw`).then(r => r.data),

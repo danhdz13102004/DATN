@@ -50,3 +50,19 @@ export interface ApplyRequest {
   resumeId: string;
   coverLetter?: string;
 }
+
+export interface ApplicationCompareRequest {
+  jobId: string;
+  resumeId: string;
+}
+
+export interface ApplicationCompareResponse {
+  overallScore: number;
+  verdict: string;
+  summary: string;
+  strengths: string[];
+  gaps: string[];
+  suggestions: string[];
+  matchedSkills: string[];
+  missingSkills: string[];
+}

@@ -7,6 +7,7 @@ import { applicationService } from '../../services/applicationService';
 import { useAuthStore } from '../../store/authStore';
 import type { Job } from '../../types/job';
 import type { Resume } from '../../types/resume';
+import type { ApplicationCompareResponse } from '../../types/application';
 
 // ============================================================
 // DESIGN TOKENS
@@ -330,6 +331,425 @@ function SectionCard({ icon, title, children }: SectionCardProps) {
   );
 }
 
+function ApplyConfirmModal({
+  job,
+  resume,
+  isSubmitting,
+  onCancel,
+  onConfirm,
+}: {
+  job: Job;
+  resume: Resume;
+  isSubmitting: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="apply-confirm-title"
+      onClick={(e) => e.target === e.currentTarget && !isSubmitting && onCancel()}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 10000,
+        background: 'rgba(15, 23, 42, 0.55)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 20,
+        backdropFilter: 'blur(4px)',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 440,
+          background: c.white,
+          borderRadius: 20,
+          border: `1px solid ${c.border}`,
+          boxShadow: '0 24px 80px rgba(15, 23, 42, 0.24)',
+          overflow: 'hidden',
+          animation: 'modalIn 0.2s ease both',
+        }}
+      >
+        <div style={{ padding: 28, textAlign: 'center' }}>
+          <div
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: '50%',
+              background: c.primaryLight,
+              color: c.primary,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px',
+              border: `1px solid ${c.primaryLighter}`,
+            }}
+          >
+            <Icon name="send" size={26} color={c.primary} />
+          </div>
+          <h3 id="apply-confirm-title" style={{ fontSize: 20, fontWeight: 800, color: c.text, margin: '0 0 8px' }}>
+            Confirm Application
+          </h3>
+          <p style={{ fontSize: 14, color: c.text2, lineHeight: 1.6, margin: 0 }}>
+            Are you sure you want to use this CV to apply for this job?
+          </p>
+
+          <div
+            style={{
+              marginTop: 20,
+              padding: 16,
+              borderRadius: 14,
+              background: c.bg,
+              border: `1px solid ${c.border}`,
+              textAlign: 'left',
+            }}
+          >
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <div
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 10,
+                  background: c.white,
+                  border: `1px solid ${c.border}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Icon name="file" size={18} color={c.primary} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: c.text, marginBottom: 4 }}>
+                  {resume.label || 'Untitled Resume'} {resume.isPrimary ? '(Primary)' : ''}
+                </div>
+                <div style={{ fontSize: 13, color: c.text2, lineHeight: 1.5 }}>
+                  Applying to <strong>{job.title}</strong>
+                  {job.company?.name ? ` at ${job.company.name}` : ''}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{
+          display: 'flex',
+          gap: 12,
+          padding: 18,
+          borderTop: `1px solid ${c.borderLight}`,
+          background: c.bg,
+        }}>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isSubmitting}
+            style={{
+              flex: 1,
+              padding: '12px 16px',
+              borderRadius: 12,
+              border: `1px solid ${c.border}`,
+              background: c.white,
+              color: c.text2,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isSubmitting}
+            style={{
+              flex: 1,
+              padding: '12px 16px',
+              borderRadius: 12,
+              border: 'none',
+              background: c.primary,
+              color: c.white,
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              fontFamily: 'inherit',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+            }}
+          >
+            {isSubmitting ? (
+              <>
+                <div style={{
+                  width: 16,
+                  height: 16,
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  borderTopColor: c.white,
+                  borderRadius: '50%',
+                  animation: 'spin 0.8s linear infinite',
+                }} />
+                Applying...
+              </>
+            ) : (
+              'Confirm Apply'
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function getMatchTone(score: number) {
+  if (score >= 80) {
+    return {
+      label: 'High fit',
+      text: '#065F46',
+      bg: '#ECFDF5',
+      border: '#A7F3D0',
+      accent: c.success,
+      bar: 'linear-gradient(90deg, #10B981, #34D399)',
+    };
+  }
+  if (score >= 60) {
+    return {
+      label: 'Promising fit',
+      text: '#1D4ED8',
+      bg: c.primaryLight,
+      border: '#BFDBFE',
+      accent: c.primary,
+      bar: 'linear-gradient(90deg, #2563EB, #38BDF8)',
+    };
+  }
+  if (score >= 40) {
+    return {
+      label: 'Needs polish',
+      text: '#92400E',
+      bg: '#FFFBEB',
+      border: '#FDE68A',
+      accent: c.warning,
+      bar: 'linear-gradient(90deg, #F59E0B, #FBBF24)',
+    };
+  }
+  return {
+    label: 'Low fit',
+    text: '#991B1B',
+    bg: '#FEF2F2',
+    border: '#FECACA',
+    accent: c.danger,
+    bar: 'linear-gradient(90deg, #EF4444, #FB7185)',
+  };
+}
+
+function MatchList({
+  title,
+  icon,
+  items,
+  color,
+}: {
+  title: string;
+  icon: string;
+  items?: string[];
+  color: string;
+}) {
+  if (!items?.length) return null;
+
+  return (
+    <div style={{
+      padding: 14,
+      borderRadius: 12,
+      background: c.white,
+      border: `1px solid ${c.border}`,
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        fontSize: 13,
+        fontWeight: 800,
+        color,
+        marginBottom: 10,
+      }}>
+        <Icon name={icon} size={15} color={color} />
+        {title}
+      </div>
+      <ul style={{ margin: 0, paddingLeft: 18, color: c.text2, fontSize: 13, lineHeight: 1.65 }}>
+        {items.slice(0, 4).map((item) => <li key={item}>{item}</li>)}
+      </ul>
+    </div>
+  );
+}
+
+function SkillPills({ title, items, tone }: { title: string; items?: string[]; tone: 'match' | 'missing' }) {
+  if (!items?.length) return null;
+
+  const isMatch = tone === 'match';
+  return (
+    <div>
+      <div style={{ fontSize: 12, fontWeight: 800, color: c.text, marginBottom: 8 }}>
+        {title}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {items.slice(0, 10).map((skill) => (
+          <span key={skill} style={{
+            padding: '5px 10px',
+            borderRadius: 50,
+            background: isMatch ? c.successLight : '#FFFBEB',
+            color: isMatch ? '#047857' : '#92400E',
+            border: `1px solid ${isMatch ? '#A7F3D0' : '#FDE68A'}`,
+            fontSize: 12,
+            fontWeight: 700,
+          }}>
+            {skill}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CvMatchResult({ result }: { result: ApplicationCompareResponse }) {
+  const tone = getMatchTone(result.overallScore);
+
+  return (
+    <div style={{
+      marginTop: 16,
+      borderRadius: 16,
+      border: `1px solid ${tone.border}`,
+      background: c.white,
+      overflow: 'hidden',
+      boxShadow: '0 10px 28px rgba(15, 23, 42, 0.08)',
+    }}>
+      <div style={{
+        padding: 16,
+        background: `linear-gradient(135deg, ${tone.bg}, ${c.white})`,
+        borderBottom: `1px solid ${tone.border}`,
+      }}>
+        <p style={{ fontSize: 14, color: c.text2, lineHeight: 1.7, margin: 0 }}>
+          {result.summary}
+        </p>
+      </div>
+
+      <div style={{ padding: 16, display: 'grid', gap: 14 }}>
+        <SkillPills title="Skills you already match" items={result.matchedSkills} tone="match" />
+        <SkillPills title="Skills to strengthen" items={result.missingSkills} tone="missing" />
+
+        <div style={{ display: 'grid', gap: 10 }}>
+          <MatchList title="What works well" icon="check-circle" items={result.strengths} color="#047857" />
+          <MatchList title="Gaps to watch" icon="alert" items={result.gaps} color="#B45309" />
+          <MatchList title="Before you apply" icon="tools" items={result.suggestions} color={c.primary} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CvMatchModal({
+  result,
+  onClose,
+}: {
+  result: ApplicationCompareResponse;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="cv-match-modal-title"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 10000,
+        background: 'rgba(15, 23, 42, 0.58)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 20,
+        backdropFilter: 'blur(4px)',
+      }}
+    >
+      <div style={{
+        width: '100%',
+        maxWidth: 720,
+        maxHeight: '88vh',
+        background: c.white,
+        borderRadius: 22,
+        border: `1px solid ${c.border}`,
+        boxShadow: '0 24px 90px rgba(15, 23, 42, 0.28)',
+        overflow: 'hidden',
+        animation: 'modalIn 0.2s ease both',
+        display: 'flex',
+        flexDirection: 'column',
+      }}>
+        <div style={{
+          padding: '18px 20px',
+          borderBottom: `1px solid ${c.borderLight}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          background: c.white,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{
+              width: 40,
+              height: 40,
+              borderRadius: 12,
+              background: c.primaryLight,
+              border: `1px solid ${c.primaryLighter}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <Icon name="chart" size={18} color={c.primary} />
+            </div>
+            <div>
+              <h3 id="cv-match-modal-title" style={{ fontSize: 18, fontWeight: 800, color: c.text, margin: 0 }}>
+                Your CV Match Analysis
+              </h3>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close CV match analysis"
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 12,
+              border: `1px solid ${c.border}`,
+              background: c.white,
+              color: c.text2,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <Icon name="x" size={16} color={c.text2} />
+          </button>
+        </div>
+
+        <div style={{
+          padding: '0 20px 20px',
+          overflowY: 'auto',
+          background: c.bg,
+        }}>
+          <CvMatchResult result={result} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ============================================================
 // MAIN PAGE
 // ============================================================
@@ -351,6 +771,11 @@ export default function JobDetailPage() {
   const [isApplied, setIsApplied] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [coverFocused, setCoverFocused] = useState(false);
+  const [showApplyConfirm, setShowApplyConfirm] = useState(false);
+  const [compareLoading, setCompareLoading] = useState(false);
+  const [compareResult, setCompareResult] = useState<ApplicationCompareResponse | null>(null);
+  const [compareError, setCompareError] = useState('');
+  const [showCompareModal, setShowCompareModal] = useState(false);
 
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -455,6 +880,7 @@ export default function JobDetailPage() {
   const handleApply = async () => {
     if (!id || !selectedResume) return;
     setApplying(true);
+    setShowApplyConfirm(false);
     setErrorMsg('');
     try {
       await applicationService.apply({
@@ -471,6 +897,27 @@ export default function JobDetailPage() {
       showToast('Failed to submit application', 'error');
     } finally {
       setApplying(false);
+    }
+  };
+
+  const handleCompare = async () => {
+    if (!id || !selectedResume || compareLoading) return;
+    setCompareLoading(true);
+    setCompareError('');
+    try {
+      const result = await applicationService.compare({
+        jobId: id,
+        resumeId: selectedResume,
+      });
+      setCompareResult(result);
+      setShowCompareModal(true);
+      showToast('CV comparison completed', 'success');
+    } catch (err: any) {
+      const message = err.response?.data?.error?.message || 'Failed to compare this CV with the job';
+      setCompareError(message);
+      showToast('Failed to compare CV', 'error');
+    } finally {
+      setCompareLoading(false);
     }
   };
 
@@ -527,9 +974,26 @@ export default function JobDetailPage() {
     );
   }
 
+  const selectedResumeDetails = resumes.find((resume) => resume.id === selectedResume);
+
   return (
     <div style={{ maxWidth: 1400, margin: '0 auto' }}>
       <ToastContainer toasts={toasts} onRemove={removeToast} />
+      {showApplyConfirm && selectedResumeDetails && (
+        <ApplyConfirmModal
+          job={job}
+          resume={selectedResumeDetails}
+          isSubmitting={applying}
+          onCancel={() => setShowApplyConfirm(false)}
+          onConfirm={handleApply}
+        />
+      )}
+      {showCompareModal && compareResult && (
+        <CvMatchModal
+          result={compareResult}
+          onClose={() => setShowCompareModal(false)}
+        />
+      )}
       {/* <Breadcrumb /> */}
 
       {/* Main Grid */}
@@ -896,7 +1360,7 @@ export default function JobDetailPage() {
           position: 'sticky', top: 100,
         }}>
           {/* Apply Card */}
-          <div className="card-lift" style={{
+          <div data-apply-card className="card-lift" style={{
             background: c.white,
             borderRadius: 24,
             border: `1px solid ${c.border}`,
@@ -1087,7 +1551,12 @@ export default function JobDetailPage() {
                   </label>
                   <select
                     value={selectedResume}
-                    onChange={(e) => setSelectedResume(e.target.value)}
+                    onChange={(e) => {
+                      setSelectedResume(e.target.value);
+                      setCompareResult(null);
+                      setCompareError('');
+                      setShowCompareModal(false);
+                    }}
                     style={{
                       width: '100%', padding: '14px 16px',
                       borderRadius: 12,
@@ -1148,6 +1617,140 @@ export default function JobDetailPage() {
                   )}
                 </div>
 
+                {/* CV Match Preview */}
+                {resumes.length > 0 && (
+                  <div style={{
+                    padding: 18,
+                    borderRadius: 18,
+                    background: `linear-gradient(180deg, ${c.bg}, ${c.white})`,
+                    border: `1px solid ${c.border}`,
+                    boxShadow: compareResult ? '0 10px 30px rgba(15, 23, 42, 0.06)' : 'none',
+                  }}>
+                    {/* <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                        <div style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 12,
+                          background: c.primaryLight,
+                          color: c.primary,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: `1px solid ${c.primaryLighter}`,
+                          flexShrink: 0,
+                        }}>
+                          <Icon name="chart" size={18} color={c.primary} />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: c.text, marginTop: 5 }}>
+                            CV Match Preview
+                          </div>
+                        </div>
+                      </div>
+                    </div> */}
+
+                    <button
+                      type="button"
+                      onClick={handleCompare}
+                      disabled={compareLoading || !selectedResume}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        borderRadius: 12,
+                        fontSize: 14,
+                        fontWeight: 700,
+                        background: compareLoading || !selectedResume ? c.text3 : c.white,
+                        color: compareLoading || !selectedResume ? c.white : c.primary,
+                        border: compareLoading || !selectedResume ? 'none' : `1.5px solid ${c.primaryLighter}`,
+                        cursor: compareLoading || !selectedResume ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      {compareLoading ? (
+                        <>
+                          <div style={{
+                            width: 16, height: 16,
+                            border: '2px solid rgba(255,255,255,0.35)',
+                            borderTopColor: c.white,
+                            borderRadius: '50%',
+                            animation: 'spin 0.8s linear infinite',
+                          }} />
+                          Comparing CV...
+                        </>
+                      ) : (
+                        <>
+                          <Icon name="chart" size={16} color={c.primary} />
+                          Analyze My CV
+                        </>
+                      )}
+                    </button>
+
+                    {compareError && (
+                      <div style={{
+                        marginTop: 12,
+                        padding: 12,
+                        borderRadius: 10,
+                        background: c.dangerLight,
+                        color: '#991B1B',
+                        border: '1px solid #FECACA',
+                        fontSize: 13,
+                        display: 'flex',
+                        gap: 8,
+                        alignItems: 'flex-start',
+                      }}>
+                        <Icon name="alert" size={15} color={c.danger} />
+                        <span>{compareError}</span>
+                      </div>
+                    )}
+
+                    {compareResult && (
+                      <div style={{
+                        marginTop: 14,
+                        padding: 14,
+                        borderRadius: 14,
+                        background: c.white,
+                        border: `1px solid ${getMatchTone(compareResult.overallScore).border}`,
+                        boxShadow: '0 8px 20px rgba(15, 23, 42, 0.06)',
+                      }}>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: c.text, marginBottom: 5 }}>
+                          Your analysis is ready
+                        </div>
+                        <div style={{ fontSize: 12, color: c.text3, lineHeight: 1.45, marginBottom: 12 }}>
+                          You can reopen it without running the comparison again.
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setShowCompareModal(true)}
+                          style={{
+                            width: '100%',
+                            padding: '11px 14px',
+                            borderRadius: 12,
+                            border: `1.5px solid ${c.primaryLighter}`,
+                            background: c.primaryLight,
+                            color: c.primary,
+                            cursor: 'pointer',
+                            fontSize: 13,
+                            fontWeight: 800,
+                            fontFamily: 'inherit',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 8,
+                          }}
+                        >
+                          <Icon name="external" size={14} color={c.primary} />
+                          View analysis
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Cover Letter */}
                 <div>
                   <label style={{
@@ -1199,7 +1802,7 @@ export default function JobDetailPage() {
 
                 {/* Submit Button */}
                 <button
-                  onClick={handleApply}
+                  onClick={() => setShowApplyConfirm(true)}
                   disabled={applying || !selectedResume || resumes.length === 0}
                   style={{
                     width: '100%', padding: '15px 20px',
@@ -1431,6 +2034,10 @@ export default function JobDetailPage() {
         @keyframes slideIn {
           from { transform: translateX(100%); opacity: 0; }
           to { transform: translateX(0); opacity: 1; }
+        }
+        @keyframes modalIn {
+          from { transform: translateY(12px) scale(0.98); opacity: 0; }
+          to { transform: translateY(0) scale(1); opacity: 1; }
         }
         @media (max-width: 1024px) {
           .main-grid { grid-template-columns: 1fr !important; }

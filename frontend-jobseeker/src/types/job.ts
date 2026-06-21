@@ -47,6 +47,7 @@ export interface Job {
   companyName?: string;
   company?: CompanyDetail;
   attachmentUrl?: string;
+  logoUrl?: string | null;
 }
 
 export interface CompanyDetail {

@@ -94,9 +94,30 @@ export default function JobCard({ job, isApplied, onClick, onToggleSave, savePen
             boxShadow: '0 4px 12px rgba(37, 99, 235, 0.15)',
             border: '1px solid rgba(37, 99, 235, 0.1)',
             transition: 'transform 0.25s ease, box-shadow 0.25s ease',
+            position: 'relative',
+            overflow: 'hidden',
           }}
         >
           {initial}
+          {job.logoUrl && (
+            <img
+              src={job.logoUrl}
+              alt={`${job.companyName || 'Company'} logo`}
+              loading="lazy"
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                borderRadius: 16,
+                objectFit: 'cover',
+                display: 'block',
+              }}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+          )}
         </div>
 
         {/* Title + Company */}

@@ -99,11 +99,11 @@ export default function StaffManagementPage() {
         />
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-2 gap-16">
           {[
             { label: 'Total Members', value: roleStats.total,       icon: 'fa-users',       bg: 'from-blue-50 to-indigo-50',    border: 'border-blue-100/50',    iconBg: 'bg-blue-100',    iconColor: 'text-blue-600' },
             { label: 'HR Managers',    value: roleStats.hr,          icon: 'fa-id-card',     bg: 'from-amber-50 to-orange-50',    border: 'border-amber-100/50',  iconBg: 'bg-amber-100',  iconColor: 'text-amber-600' },
-            { label: 'Recruiters',     value: roleStats.recruiters,   icon: 'fa-user-tie',    bg: 'from-emerald-50 to-green-50',   border: 'border-emerald-100/50', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
+            // { label: 'Recruiters',     value: roleStats.recruiters,   icon: 'fa-user-tie',    bg: 'from-emerald-50 to-green-50',   border: 'border-emerald-100/50', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
           ].map((s, idx) => (
             <div
               key={s.label}
@@ -211,13 +211,13 @@ export default function StaffManagementPage() {
                           <div className="flex items-center gap-1.5">
                             {member.role !== 'OWNER' && (
                               <>
-                                <button
+                                {/* <button
                                   onClick={() => { setEditModal({ open: true, member }); editReset({ fullName: member.fullName }); }}
                                   className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-all duration-150 hover:scale-105"
                                   title="Edit name"
                                 >
                                   <i className="fas fa-pen text-xs" />
-                                </button>
+                                </button> */}
                                 <button
                                   onClick={() => setDeleteModal({ open: true, member })}
                                   className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-red-50 hover:text-red-500 transition-all duration-150 hover:scale-105"

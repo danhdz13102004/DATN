@@ -4,12 +4,14 @@ import com.recruitpro.dto.request.CreateInterviewRequestDto;
 import com.recruitpro.dto.request.UpdateInterviewRequestDto;
 import com.recruitpro.dto.response.InterviewResponseDto;
 import com.recruitpro.dto.response.InterviewStatsDto;
+import com.recruitpro.exception.BadRequestException;
 import com.recruitpro.exception.ResourceNotFoundException;
 import com.recruitpro.model.Application;
 import com.recruitpro.model.Interview;
 import com.recruitpro.model.enums.ApplicationStatus;
 import com.recruitpro.model.enums.InterviewStatus;
 import com.recruitpro.model.enums.MeetingType;
+import com.recruitpro.model.enums.NotificationType;
 import com.recruitpro.repository.ApplicationRepository;
 import com.recruitpro.repository.CompanyRepository;
 import com.recruitpro.repository.InterviewRepository;
@@ -34,6 +36,7 @@ public class InterviewService {
     private final StaffRepository staffRepository;
     private final CompanyRepository companyRepository;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     // ── List Interviews ───────────────────────────
 
@@ -73,6 +76,10 @@ public class InterviewService {
         Application application = applicationRepository.findByIdAndCompanyId(applicationId, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
 
+        if (applicationRepository.hasScheduledInterview(applicationId)) {
+            throw new BadRequestException("This application already has an interview scheduled");
+        }
+
         // Find the staff record for the current user
         var staff = staffRepository.findByUserId(staffUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff record not found"));
@@ -92,6 +99,7 @@ public class InterviewService {
         // Update application status to INTERVIEW
         application.setStatus(ApplicationStatus.INTERVIEW);
         applicationRepository.save(application);
+        notifyJobSeeker(application, saved);
 
         // Send interview invitation email to the candidate (async — does not block the response)
         try {
@@ -181,5 +189,25 @@ public class InterviewService {
         }
 
         return builder.build();
+    }
+
+    private void notifyJobSeeker(Application application, Interview interview) {
+        try {
+            if (application.getJobSeeker() == null || application.getJobSeeker().getUser() == null) {
+                return;
+            }
+
+            String jobTitle = application.getJob() != null ? application.getJob().getTitle() : "your application";
+            notificationService.createAndPublish(
+                    application.getJobSeeker().getUser().getId(),
+                    NotificationType.INTERVIEW_INVITE,
+                    "Interview scheduled",
+                    "Your interview for \"" + jobTitle + "\" has been scheduled.",
+                    interview.getId(),
+                    "INTERVIEW"
+            );
+        } catch (Exception e) {
+            log.warn("Could not create interview notification: {}", e.getMessage());
+        }
     }
 }

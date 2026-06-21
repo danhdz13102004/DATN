@@ -32,6 +32,8 @@ export interface ApplicationDetail {
   candidateExperienceYears: number | null;
   candidateBio: string | null;
   candidateSkills: string[];
+  cover_letter?: string | null;
+  coverLetter?: string | null;
   // Job info
   jobId: string;
   jobTitle: string;
@@ -65,4 +67,5 @@ export interface ApplicationSelectOption {
   candidateName: string;
   candidateEmail: string;
   jobTitle: string;
+  hasScheduledInterview: boolean;
 }

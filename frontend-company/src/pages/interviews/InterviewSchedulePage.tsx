@@ -1,9 +1,9 @@
-import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useEffect, useMemo } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { useNavigate, useParams, useSearchParams, useOutletContext } from 'react-router-dom';
 import Topbar from '../../components/layout/Topbar';
 import { useInterviewDetail, useCreateInterview, useUpdateInterview, splitScheduledTime } from '../../hooks/useInterviews';
-import { useApplicationSelectOptions } from '../../hooks/useApplications';
+import { useApplicationDetail, useApplicationSelectOptions } from '../../hooks/useApplications';
 import { ROUTES } from '../../constants';
 import type { InterviewFormData } from '../../types/interview';
 
@@ -19,6 +19,11 @@ function getScheduledDateTime(date: string, time: string): Date | null {
   return Number.isNaN(scheduledDateTime.getTime()) ? null : scheduledDateTime;
 }
 
+function getApplicationIdFromQuery(value: string | null): string {
+  const match = value?.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
+  return match?.[0] ?? '';
+}
+
 export default function InterviewSchedulePage() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -27,15 +32,16 @@ export default function InterviewSchedulePage() {
   const isEdit = !!id;
 
   // Pre-filled applicationId from query param (e.g. /interviews/schedule?applicationId=xxx)
-  const prefilledAppId = searchParams.get('applicationId') ?? '';
+  const prefilledAppId = getApplicationIdFromQuery(searchParams.get('applicationId'));
 
   const { data: interview } = useInterviewDetail(id || '');
   const { data: appOptions } = useApplicationSelectOptions();
+  const { data: prefilledApp } = useApplicationDetail(!isEdit ? prefilledAppId : '');
   const createInterview = useCreateInterview();
   const updateInterview = useUpdateInterview();
   const today = formatLocalDate(new Date());
 
-  const { register, handleSubmit, reset, getValues, trigger, formState: { errors } } = useForm<InterviewFormData>({
+  const { control, register, handleSubmit, reset, setValue, getValues, trigger, formState: { errors } } = useForm<InterviewFormData>({
     defaultValues: {
       applicationId: prefilledAppId,
       meetingType: 'ONLINE',
@@ -45,6 +51,18 @@ export default function InterviewSchedulePage() {
       note: '',
     },
   });
+  const selectedApplicationId = useWatch({ control, name: 'applicationId' }) ?? '';
+  const prefilledOption = appOptions?.find((opt) => opt.id === prefilledAppId);
+  const prefilledAlreadyScheduled = !isEdit && !!prefilledAppId && (
+    prefilledOption?.hasScheduledInterview === true ||
+    prefilledApp?.hasScheduledInterview === true
+  );
+  const availableAppOptions = useMemo(
+    () => (isEdit ? appOptions ?? [] : (appOptions ?? []).filter((opt) => !opt.hasScheduledInterview)),
+    [appOptions, isEdit]
+  );
+  const hasAvailablePrefilledOption = availableAppOptions.some((opt) => opt.id === prefilledAppId);
+  const showPrefilledFallback = !isEdit && !!prefilledAppId && !prefilledAlreadyScheduled && !hasAvailablePrefilledOption;
 
   // When editing, pre-fill form from fetched interview data
   useEffect(() => {
@@ -61,6 +79,13 @@ export default function InterviewSchedulePage() {
       });
     }
   }, [isEdit, interview, reset]);
+
+  // Keep the create form in sync when /interviews/schedule?applicationId=... is opened directly.
+  useEffect(() => {
+    if (!isEdit && prefilledAppId) {
+      setValue('applicationId', prefilledAlreadyScheduled ? '' : prefilledAppId, { shouldValidate: true });
+    }
+  }, [isEdit, prefilledAlreadyScheduled, prefilledAppId, setValue]);
 
   const validateScheduledDate = (value: string) => (
     value >= formatLocalDate(new Date()) || 'Date cannot be in the past'
@@ -105,15 +130,28 @@ export default function InterviewSchedulePage() {
               <select
                 className={`w-full px-3.5 py-2.5 border-[1.5px] rounded-xl text-sm focus:outline-none focus:border-primary ${errors.applicationId ? 'border-red-500' : 'border-gray-200'}`}
                 {...register('applicationId', { required: 'Please select an application' })}
+                value={selectedApplicationId}
                 disabled={isEdit}
               >
                 <option value="">Select an application...</option>
-                {appOptions?.map((opt) => (
+                {showPrefilledFallback && (
+                  <option value={prefilledAppId}>
+                    {prefilledApp
+                      ? `${prefilledApp.jobTitle} - ${prefilledApp.candidateName} - ${prefilledApp.candidateEmail}`
+                      : 'Selected application'}
+                  </option>
+                )}
+                {availableAppOptions.map((opt) => (
                   <option key={opt.id} value={opt.id}>
                     {opt.jobTitle} - {opt.candidateName} - {opt.candidateEmail}
                   </option>
                 ))}
               </select>
+              {prefilledAlreadyScheduled && (
+                <span className="text-amber-600 text-xs mt-1 block">
+                  This application already has an interview scheduled. Please reschedule it from the Interviews page.
+                </span>
+              )}
               {errors.applicationId && (
                 <span className="text-red-500 text-xs mt-1 block">{errors.applicationId.message}</span>
               )}
@@ -208,7 +246,7 @@ export default function InterviewSchedulePage() {
               <button
                 type="submit"
                 className="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover transition-colors flex items-center gap-2 disabled:opacity-60"
-                disabled={createInterview.isPending || updateInterview.isPending}
+                disabled={prefilledAlreadyScheduled || createInterview.isPending || updateInterview.isPending}
               >
                 <i className="fas fa-calendar-check" />
                 {isEdit ? 'Update Interview' : 'Schedule Interview'}

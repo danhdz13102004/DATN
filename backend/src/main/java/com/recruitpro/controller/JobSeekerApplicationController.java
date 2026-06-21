@@ -1,11 +1,13 @@
 package com.recruitpro.controller;
 
 import com.recruitpro.dto.request.ApplyRequestDto;
+import com.recruitpro.dto.request.ApplicationCompareRequestDto;
 import com.recruitpro.dto.response.*;
 import com.recruitpro.model.Application;
 import com.recruitpro.model.enums.ApplicationStatus;
 import com.recruitpro.security.UserPrincipal;
 import com.recruitpro.service.AiServiceClient;
+import com.recruitpro.service.ApplicationCompareService;
 import com.recruitpro.service.JobSeekerApplicationService;
 import com.recruitpro.service.JobSeekerService;
 import com.recruitpro.service.JobService;
@@ -35,6 +37,7 @@ public class JobSeekerApplicationController {
     private final JobSeekerService jobSeekerService;
     private final JobService jobService;
     private final AiServiceClient aiServiceClient;
+    private final ApplicationCompareService applicationCompareService;
 
     @GetMapping
     public ResponseEntity<ApiResponse<Object>> list(
@@ -83,6 +86,16 @@ public class JobSeekerApplicationController {
                 seekerId, request.getJobId(), request.getResumeId(), request.getCoverLetter());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok(Map.of("applicationId", app.getId())));
+    }
+
+    @PostMapping("/compare")
+    public ResponseEntity<ApiResponse<ApplicationCompareResponseDto>> compare(
+            @RequestBody @Valid ApplicationCompareRequestDto request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        UUID seekerId = jobSeekerService.findByUserId(UUID.fromString(principal.getId())).getId();
+        ApplicationCompareResponseDto result =
+                applicationCompareService.compare(seekerId, request.getJobId(), request.getResumeId());
+        return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
     @PatchMapping("/{id}/withdraw")
