@@ -376,7 +376,6 @@ def _build_dashboard_html(focused_node_id: str = "", focused_node_type: str = ""
 <div id="legend">
   <span><span class="ldot" style="background:#4a5ab5;border-radius:50%"></span>Resume Node</span>
   <span><span class="ldot" style="background:#b55520;border-radius:2px"></span>Job Node</span>
-  <span><span class="ldot" style="background:transparent;border:2px dashed #ff9944"></span>Pending NLP Embedding</span>
 </div>
 
 <div id="graph">

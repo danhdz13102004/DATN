@@ -149,24 +149,6 @@ function InterviewCard({ iv }: { iv: InterviewListItem }) {
         {iv.meetingType}
       </span>
 
-      {iv.meetingType === 'ONLINE' && (
-        <button
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '8px 16px',
-            background: 'linear-gradient(135deg, #2563EB, #4F46E5)',
-            color: '#FFFFFF', border: 'none', borderRadius: 10,
-            cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
-            fontFamily: 'inherit', flexShrink: 0,
-            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
-            transition: 'all 0.15s',
-          }}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, #1D4ED8, #4338CA)'}
-          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, #2563EB, #4F46E5)'}
-        >
-          <i className="fas fa-video" /> Join
-        </button>
-      )}
     </div>
   );
 }

@@ -181,7 +181,7 @@ export default function ChatRoomPage() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Type a message… (Enter to send)"
-            className="flex-1 bg-transparent text-sm text-gray-800 resize-none outline-none max-h-32 placeholder:text-gray-400 leading-relaxed"
+            className="flex-1 bg-transparent text-sm text-gray-800 resize-none !border-0 !shadow-none outline-none focus:!border-0 focus:!shadow-none focus:!ring-0 max-h-32 placeholder:text-gray-400 leading-relaxed"
           />
           <button
             onClick={handleSend}

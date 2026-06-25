@@ -19,13 +19,6 @@ EMBEDDING_DIM = 768
 
 
 class GraphSAGE_Recommender(nn.Module):
-    """Two-layer homogeneous GraphSAGE on a resume-job bipartite graph.
-
-    - input = MPNet/SentenceTransformer node features
-    - GraphSAGE message passing over candidate-job edges
-    - residual connection keeps pretrained semantic signal
-    """
-
     def __init__(
         self,
         in_channels: int,

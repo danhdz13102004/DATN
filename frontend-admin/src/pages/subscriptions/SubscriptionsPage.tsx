@@ -117,10 +117,7 @@ function PlanFormModal({ plan, onClose }: PlanFormModalProps) {
   };
 
   return createPortal(
-    <div
-      className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 animate-overlay"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
+    <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 animate-overlay">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-modal">
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-lg font-bold text-gray-900">{plan ? 'Edit Plan' : 'Add New Plan'}</h3>
@@ -226,13 +223,7 @@ function PlanFormModal({ plan, onClose }: PlanFormModalProps) {
 
         <div className="flex gap-3 p-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
           <button
-            className="flex-1 px-4 py-2 border border-gray-200 text-sm rounded-xl font-medium hover:bg-gray-100 transition-colors"
-            onClick={onClose}
-          >
-            Cancel
-          </button>
-          <button
-            className="flex-1 px-4 py-2 bg-primary text-white text-sm rounded-xl font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors"
+            className="w-full px-4 py-2 bg-primary text-white text-sm rounded-xl font-medium hover:bg-primary/90 disabled:opacity-60 transition-colors"
             onClick={handleSubmit}
             disabled={isPending}
           >

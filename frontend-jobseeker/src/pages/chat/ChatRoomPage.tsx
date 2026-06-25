@@ -144,7 +144,7 @@ export default function ChatRoomPage() {
             You can reply once the recruiter sends the first message.
           </p>
         ) : (
-          <div className="flex items-end gap-2 bg-gray-50 rounded-xl px-4 py-2">
+          <div className="flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2">
             <textarea
               id="chat-input"
               rows={1}
@@ -152,13 +152,13 @@ export default function ChatRoomPage() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Type a reply… (Enter to send)"
-              className="flex-1 bg-transparent text-sm text-gray-800 resize-none outline-none max-h-32 placeholder:text-gray-400"
+              className="flex-1 bg-transparent text-sm text-gray-800 resize-none !border-0 !shadow-none !p-0 outline-none focus:!border-0 focus:!shadow-none focus:!ring-0 max-h-32 placeholder:text-gray-400"
             />
             <button
               id="send-btn"
               onClick={handleSend}
               disabled={!input.trim()}
-              className="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-colors disabled:opacity-40 flex-shrink-0"
+              className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-colors disabled:opacity-40 flex-shrink-0"
             >
               <i className="fas fa-paper-plane text-sm" />
             </button>

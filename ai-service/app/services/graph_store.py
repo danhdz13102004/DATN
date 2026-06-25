@@ -1,24 +1,3 @@
-"""Redis-backed graph persistence layer.
-
-Responsibilities:
-- Persist every graph mutation (add_node, handle_interaction) to Redis.
-- Restore full graph state into in-memory stores on service startup.
-- Re-encode NLP embeddings after restore using the loaded NLP model.
-- Persist GraphSAGE GNN embeddings so they survive service restarts.
-
-Key schema (all under GRAPH_KEY_PREFIX = "graph:"):
-  graph:node:<node_id>        → Redis Hash  { node_type, text_snippet }
-  graph:edges:<resume_id>     → Redis Hash  { job_id: cumulative_weight, … }
-  graph:edges_ts:<resume_id>  → Redis Hash  { job_id: unix_timestamp, … }
-  graph:job_edges:<job_id>    → Redis Hash  { resume_id: cumulative_weight, … }  (reverse)
-  graph:job_catalog           → Redis List  [job_id, ...]
-  graph:job_users:<job_id>    → Redis Set   {resume_id, ...}
-  graph:gnn:<node_id>         → Redis String  base64-encoded torch.Tensor (GNN embedding)
-
-Edge persistence uses HINCRBYFLOAT so weights accumulate across interactions;
-an edge is created automatically on first write.
-"""
-
 import base64
 import io
 import json

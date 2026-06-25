@@ -155,17 +155,6 @@ def _record_behavioral_signal(user_id: str, job_id: str, action_type: str) -> No
     )
 
 
-def softmax(similarities: List[float], temperature: float = 1.0) -> List[float]:
-    if not similarities:
-        return []
-
-    sim_tensor = torch.tensor(similarities, dtype=torch.float32) / temperature
-    max_val = sim_tensor.max()  # subtract max for numerical stability
-    exp_scores = torch.exp(sim_tensor - max_val)
-    probabilities = exp_scores / exp_scores.sum()
-
-    return probabilities.tolist()
-
 
 def add_node(node_id: str, text: str, node_type: str, nlp_model, device, user_id: Optional[str] = None) -> dict:
     """Encode text and register a resume or job node.

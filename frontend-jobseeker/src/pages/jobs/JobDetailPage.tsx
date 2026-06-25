@@ -891,7 +891,6 @@ export default function JobDetailPage() {
       setSuccessMsg('Application submitted successfully!');
       setIsApplied(true);
       showToast('Application submitted successfully!', 'success');
-      setTimeout(() => navigate('/applications'), 2000);
     } catch (err: any) {
       setErrorMsg(err.response?.data?.error?.message || 'Failed to submit application');
       showToast('Failed to submit application', 'error');

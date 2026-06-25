@@ -307,27 +307,27 @@ export default function MessagesPage() {
           </div>
 
           {/* Input area */}
-          <div className="px-6 py-4 border-t border-gray-100 flex-shrink-0 bg-white">
+          <div className="px-6 py-3 border-t border-gray-100 flex-shrink-0 bg-white">
             {!canReply ? (
               <div className="flex items-center justify-center gap-2 py-3 text-xs text-gray-400 bg-gray-50 rounded-xl border border-gray-100">
                 <i className="fas fa-lock text-[10px]" />
                 You can reply once the recruiter sends the first message.
               </div>
             ) : (
-              <div className="flex items-end gap-3 bg-gray-50/80 border border-gray-100 rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
+              <div className="flex items-center gap-3 bg-gray-50/80 border border-gray-100 rounded-2xl px-4 py-2 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
                 <textarea
                   rows={1}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Write a reply… (Enter to send)"
-                  className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 resize-none outline-none leading-relaxed max-h-28"
+                  className="flex-1 bg-transparent text-sm text-gray-700 placeholder-gray-400 resize-none !border-0 !shadow-none !p-0 outline-none focus:!border-0 focus:!shadow-none focus:!ring-0 leading-relaxed max-h-28"
                   style={{ fontFamily: 'inherit' }}
                 />
                 <button
                   onClick={handleSend}
                   disabled={!input.trim()}
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-150 ${
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-150 ${
                     input.trim()
                       ? 'bg-primary text-white hover:bg-primary-hover shadow-sm cursor-pointer'
                       : 'bg-gray-100 text-gray-300 cursor-not-allowed'
