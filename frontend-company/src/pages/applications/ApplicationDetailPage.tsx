@@ -3,10 +3,19 @@ import { Link, useParams, useOutletContext, useNavigate } from 'react-router-dom
 import Topbar from '../../components/layout/Topbar';
 import { useApplicationDetail, useUpdateApplicationStatus } from '../../hooks/useApplications';
 import { chatService } from '../../services/chatService';
-import { ROUTES, STATUS_LABELS, STATUS_COLORS } from '../../constants';
+import { ROUTES, STATUS_LABELS } from '../../constants';
 import type { ApplicationStatus, AiMatchingResult } from '../../types/application';
 
 const STATUS_FLOW: ApplicationStatus[] = ['APPLIED', 'SCREENING', 'INTERVIEW', 'OFFER', 'HIRED'];
+const STATUS_OPTIONS: ApplicationStatus[] = [...STATUS_FLOW, 'REJECTED'];
+const STATUS_DOT_COLORS: Record<ApplicationStatus, string> = {
+  APPLIED: 'bg-emerald-400',
+  SCREENING: 'bg-sky-400',
+  INTERVIEW: 'bg-amber-300',
+  OFFER: 'bg-emerald-300',
+  HIRED: 'bg-emerald-400',
+  REJECTED: 'bg-red-500',
+};
 
 /** Derive initials from a name or email */
 function getInitials(name: string): string {
@@ -165,7 +174,7 @@ export default function ApplicationDetailPage() {
               <div className="flex items-start gap-4 mb-4">
                 {app.candidateAvatar ? (
                   <img
-                    src={`http://127.0.0.1:9000/recruitpro/${app.candidateAvatar}`}
+                    src={app.candidateAvatar}
                     alt={app.candidateName}
                     className="w-14 h-14 rounded-2xl object-cover"
                   />
@@ -346,28 +355,30 @@ export default function ApplicationDetailPage() {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-6">
               <h3 className="text-sm font-semibold text-gray-900 mb-3">Update Status</h3>
               <div className="space-y-2">
-                {STATUS_FLOW.filter((s) => s !== app.status).map((status) => (
+                {STATUS_OPTIONS.map((status) => {
+                  const isCurrent = status === app.status;
+                  const isRejected = status === 'REJECTED';
+                  return (
                   <button
                     key={status}
                     id={`btn-status-${status.toLowerCase()}`}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 text-left flex items-center gap-2 transition-colors"
-                    onClick={() => handleStatusChange(status)}
-                    disabled={updateStatus.isPending}
+                    className={`w-full px-3 py-2 border rounded-xl text-sm font-medium text-left flex items-center gap-2 transition-colors ${
+                      isCurrent
+                        ? 'border-primary/40 bg-primary/10 text-primary shadow-sm ring-1 ring-primary/10'
+                        : isRejected
+                          ? 'border-red-200 text-red-500 hover:bg-red-50'
+                          : 'border-gray-200 text-gray-700 hover:bg-gray-50'
+                    }`}
+                    onClick={() => !isCurrent && handleStatusChange(status)}
+                    disabled={isCurrent || updateStatus.isPending}
+                    aria-current={isCurrent ? 'true' : undefined}
                   >
-                    <span className={`w-2 h-2 rounded-full ${STATUS_COLORS[status]?.split(' ')[0]}`} />
-                    Move to {STATUS_LABELS[status]}
+                    <span className={`w-2 h-2 rounded-full ${STATUS_DOT_COLORS[status]}`} />
+                    <span>{isCurrent ? STATUS_LABELS[status] : isRejected ? 'Reject' : `Move to ${STATUS_LABELS[status]}`}</span>
+                    {isCurrent && <i className="fas fa-check ml-auto text-xs" />}
                   </button>
-                ))}
-                {app.status !== 'REJECTED' && (
-                  <button
-                    id="btn-status-rejected"
-                    className="w-full px-3 py-2 border border-red-200 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 text-left flex items-center gap-2 transition-colors"
-                    onClick={() => handleStatusChange('REJECTED')}
-                    disabled={updateStatus.isPending}
-                  >
-                    <span className="w-2 h-2 rounded-full bg-red-500" /> Reject
-                  </button>
-                )}
+                  );
+                })}
               </div>
             </div>
 

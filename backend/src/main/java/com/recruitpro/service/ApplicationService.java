@@ -50,7 +50,7 @@ public class ApplicationService {
                 .id(app.getId().toString())
                 .candidateName(getCandidateName(app))
                 .candidateEmail(getCandidateEmail(app))
-                .candidateAvatar(app.getJobSeeker().getAvatarUrl())
+                .candidateAvatar(getCandidateAvatar(app))
                 .jobId(app.getJobId().toString())
                 .jobTitle(app.getJob().getTitle())
                 .aiScore(canViewAiScores ? app.getAiScore() : null)
@@ -106,7 +106,7 @@ public class ApplicationService {
                 .id(app.getId().toString())
                 .candidateName(getCandidateName(app))
                 .candidateEmail(getCandidateEmail(app))
-                .candidateAvatar(app.getJobSeeker().getAvatarUrl())
+                .candidateAvatar(getCandidateAvatar(app))
                 .candidateLocation(app.getJobSeeker().getLocation())
                 .candidateExperienceYears(app.getJobSeeker().getExperienceYears())
                 .candidateBio(app.getJobSeeker().getBio())
@@ -190,6 +190,13 @@ public class ApplicationService {
     private String getCandidateEmail(Application app) {
         User user = app.getJobSeeker() != null ? app.getJobSeeker().getUser() : null;
         return user != null && user.getEmail() != null ? user.getEmail() : "Unknown";
+    }
+
+    private String getCandidateAvatar(Application app) {
+        if (app.getJobSeeker() == null) {
+            return null;
+        }
+        return storageService.getPublicUrl(app.getJobSeeker().getAvatarUrl());
     }
 
     private List<String> getCandidateSkills(Application app) {
