@@ -51,12 +51,14 @@ public class SkillService {
     @Transactional
     public void delete(UUID id) {
         Skill skill = findById(id);
-        long usageCount = skillRepository.countJobsUsingSkill(id);
-        if (usageCount > 0) {
+        long jobUsageCount = skillRepository.countJobsUsingSkill(id);
+        long seekerUsageCount = skillRepository.countJobSeekersUsingSkill(id);
+        if (jobUsageCount > 0 || seekerUsageCount > 0) {
             throw new BadRequestException(
                     "Cannot delete skill \"" + skill.getName() +
-                    "\" because it is currently used by " + usageCount + " job(s). " +
-                    "Please remove those skills from the jobs first.");
+                    "\" because it is currently used by " + jobUsageCount + " job(s) and " +
+                    seekerUsageCount + " job seeker profile(s). " +
+                    "Please remove this skill from those records first.");
         }
         skillRepository.delete(skill);
         log.info("Skill deleted: {}", skill.getName());
@@ -65,5 +67,10 @@ public class SkillService {
     public long getJobUsageCount(UUID id) {
         findById(id);
         return skillRepository.countJobsUsingSkill(id);
+    }
+
+    public long getJobSeekerUsageCount(UUID id) {
+        findById(id);
+        return skillRepository.countJobSeekersUsingSkill(id);
     }
 }

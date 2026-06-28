@@ -114,7 +114,91 @@ function ItemFormModal<T extends { name: string; id?: string }>({
   );
 }
 
-interface DataTableProps<T extends { id: string; name: string; jobUsageCount: number }> {
+interface DeleteConfirmModalProps {
+  itemName: string;
+  itemType: string;
+  isPending: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function DeleteConfirmModal({ itemName, itemType, isPending, onClose, onConfirm }: DeleteConfirmModalProps) {
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (isPending) return;
+    onConfirm();
+  };
+
+  return createPortal(
+    <div
+      className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 animate-overlay"
+      onClick={(event) => event.target === event.currentTarget && !isPending && onClose()}
+    >
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-modal">
+        <div className="p-6 border-b border-gray-100 flex items-start justify-between gap-4">
+          <div>
+            <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-4">
+              <i className="fas fa-trash" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">Delete {itemType}</h3>
+            <p className="text-sm text-gray-500 mt-1">
+              This action cannot be undone.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            onClick={onClose}
+            disabled={isPending}
+            aria-label="Close"
+          >
+            <i className="fas fa-times" />
+          </button>
+        </div>
+
+        <div className="p-6">
+          <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+            <p className="text-sm font-semibold text-red-700 break-words">{itemName}</p>
+          </div>
+        </div>
+
+        <div className="flex gap-3 p-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+          <button
+            type="button"
+            className="flex-1 px-4 py-2.5 border border-gray-200 text-sm rounded-xl font-medium hover:bg-gray-100 transition-colors text-gray-700"
+            onClick={onClose}
+            disabled={isPending}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="flex-1 px-4 py-2.5 bg-red-600 text-white text-sm rounded-xl font-semibold hover:bg-red-700 disabled:opacity-60 transition-colors"
+            disabled={isPending}
+          >
+            {isPending ? 'Deleting...' : 'Confirm Delete'}
+          </button>
+        </div>
+      </form>
+    </div>,
+    document.body
+  );
+}
+
+interface UsageItem {
+  id: string;
+  name: string;
+  jobUsageCount: number;
+  jobSeekerUsageCount?: number;
+}
+
+interface DataTableProps<T extends UsageItem> {
   items: T[] | undefined;
   isLoading: boolean;
   itemType: string;
@@ -126,10 +210,10 @@ interface DataTableProps<T extends { id: string; name: string; jobUsageCount: nu
   emptyMsg: string;
 }
 
-function DataTable<T extends { id: string; name: string; jobUsageCount: number }>({
+function DataTable<T extends UsageItem>({
   items, isLoading, itemType, onEdit, onDelete, deletePending, deletingId, emptyIcon, emptyMsg,
 }: DataTableProps<T>) {
-  void itemType; // used in generic table column headers
+  const showJobSeekerUsage = itemType === 'Skill';
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div className="overflow-x-auto">
@@ -139,6 +223,9 @@ function DataTable<T extends { id: string; name: string; jobUsageCount: number }
               <th className="text-left px-6 py-3.5 font-semibold w-12">#</th>
               <th className="text-left px-6 py-3.5 font-semibold">Name</th>
               <th className="text-center px-6 py-3.5 font-semibold">Jobs Using</th>
+              {showJobSeekerUsage && (
+                <th className="text-center px-6 py-3.5 font-semibold">Job Seekers</th>
+              )}
               <th className="text-right px-6 py-3.5 font-semibold">Actions</th>
             </tr>
           </thead>
@@ -146,7 +233,7 @@ function DataTable<T extends { id: string; name: string; jobUsageCount: number }
             {isLoading ? (
               [...Array(5)].map((_, i) => (
                 <tr key={i}>
-                  {['', '', '', ''].map((_, j) => (
+                  {Array.from({ length: showJobSeekerUsage ? 5 : 4 }).map((_, j) => (
                     <td key={j} className="px-6 py-4">
                       <div className="h-4 bg-gray-100 rounded animate-pulse" />
                     </td>
@@ -155,15 +242,21 @@ function DataTable<T extends { id: string; name: string; jobUsageCount: number }
               ))
             ) : !items || items.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-6 py-16 text-center text-gray-400">
+                <td colSpan={showJobSeekerUsage ? 5 : 4} className="px-6 py-16 text-center text-gray-400">
                   <i className={`fas ${emptyIcon} text-3xl mb-3 block opacity-30`} />
                   <p className="text-sm">{emptyMsg}</p>
                 </td>
               </tr>
             ) : (
               items.map((item, idx) => {
-                const inUse = item.jobUsageCount > 0;
+                const jobSeekerUsageCount = item.jobSeekerUsageCount ?? 0;
+                const inUse = item.jobUsageCount > 0 || jobSeekerUsageCount > 0;
                 const isDeleting = deletingId === item.id;
+                const deleteTitle = inUse
+                  ? showJobSeekerUsage
+                    ? `Cannot delete - used by ${item.jobUsageCount} job(s) and ${jobSeekerUsageCount} job seeker profile(s)`
+                    : `Cannot delete - used by ${item.jobUsageCount} job(s)`
+                  : 'Delete';
                 return (
                   <tr key={item.id} className="hover:bg-gray-50 transition-colors group">
                     <td className="px-6 py-4 text-gray-400 text-xs">{idx + 1}</td>
@@ -171,7 +264,7 @@ function DataTable<T extends { id: string; name: string; jobUsageCount: number }
                       <div className="font-medium text-gray-900">{item.name}</div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      {inUse ? (
+                      {item.jobUsageCount > 0 ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-100">
                           <i className="fas fa-briefcase text-[9px]" />
                           {item.jobUsageCount.toLocaleString()} job{item.jobUsageCount !== 1 ? 's' : ''}
@@ -183,6 +276,21 @@ function DataTable<T extends { id: string; name: string; jobUsageCount: number }
                         </span>
                       )}
                     </td>
+                    {showJobSeekerUsage && (
+                      <td className="px-6 py-4 text-center">
+                        {jobSeekerUsageCount > 0 ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+                            <i className="fas fa-user text-[9px]" />
+                            {jobSeekerUsageCount.toLocaleString()} profile{jobSeekerUsageCount !== 1 ? 's' : ''}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-400 border border-gray-100">
+                            <i className="fas fa-minus text-[9px]" />
+                            Not used
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2">
                         <button
@@ -201,7 +309,7 @@ function DataTable<T extends { id: string; name: string; jobUsageCount: number }
                           }`}
                           onClick={() => !inUse && onDelete(item)}
                           disabled={inUse || isDeleting || deletePending}
-                          title={inUse ? `Cannot delete — used by ${item.jobUsageCount} job(s)` : 'Delete'}
+                          title={deleteTitle}
                         >
                           {isDeleting ? (
                             <span className="w-3 h-3 border-[1.5px] border-red-300/30 border-t-red-400 rounded-full animate-spin" />
@@ -231,6 +339,8 @@ export default function SkillsIndustriesPage() {
   const [showAddIndustry, setShowAddIndustry] = useState(false);
   const [editingSkill, setEditingSkill] = useState<AdminSkill | null>(null);
   const [editingIndustry, setEditingIndustry] = useState<AdminIndustry | null>(null);
+  const [skillToDelete, setSkillToDelete] = useState<AdminSkill | null>(null);
+  const [industryToDelete, setIndustryToDelete] = useState<AdminIndustry | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const { data: skills, isLoading: skillsLoading } = useAdminSkills();
@@ -260,10 +370,9 @@ export default function SkillsIndustriesPage() {
   };
 
   const handleDeleteSkill = (item: AdminSkill) => {
-    if (!confirm(`Delete skill "${item.name}"? This cannot be undone.`)) return;
     setDeletingId(item.id);
     deleteSkill(item.id, {
-      onSuccess: () => { toast.success('Skill deleted'); setDeletingId(null); },
+      onSuccess: () => { toast.success('Skill deleted'); setDeletingId(null); setSkillToDelete(null); },
       onError: (e) => { toast.error(extractErrorMsg(e)); setDeletingId(null); },
     });
   };
@@ -284,10 +393,9 @@ export default function SkillsIndustriesPage() {
   };
 
   const handleDeleteIndustry = (item: AdminIndustry) => {
-    if (!confirm(`Delete industry "${item.name}"? This cannot be undone.`)) return;
     setDeletingId(item.id);
     deleteIndustry(item.id, {
-      onSuccess: () => { toast.success('Industry deleted'); setDeletingId(null); },
+      onSuccess: () => { toast.success('Industry deleted'); setDeletingId(null); setIndustryToDelete(null); },
       onError: (e) => { toast.error(extractErrorMsg(e)); setDeletingId(null); },
     });
   };
@@ -334,6 +442,7 @@ export default function SkillsIndustriesPage() {
             <div>
               <div className="text-2xl font-bold text-gray-900">
                 {(skills?.reduce((acc, s) => acc + s.jobUsageCount, 0) ?? 0) +
+                  (skills?.reduce((acc, s) => acc + s.jobSeekerUsageCount, 0) ?? 0) +
                   (industries?.reduce((acc, i) => acc + i.jobUsageCount, 0) ?? 0)}
               </div>
               <div className="text-sm text-gray-400">Total usages</div>
@@ -399,7 +508,7 @@ export default function SkillsIndustriesPage() {
               isLoading={skillsLoading}
               itemType="Skill"
               onEdit={setEditingSkill}
-              onDelete={handleDeleteSkill}
+              onDelete={setSkillToDelete}
               deletePending={deletingSkill}
               deletingId={deletingId}
               emptyIcon="fa-tools"
@@ -431,7 +540,7 @@ export default function SkillsIndustriesPage() {
               isLoading={industriesLoading}
               itemType="Industry"
               onEdit={setEditingIndustry}
-              onDelete={handleDeleteIndustry}
+              onDelete={setIndustryToDelete}
               deletePending={deletingIndustry}
               deletingId={deletingId}
               emptyIcon="fa-industry"
@@ -461,6 +570,15 @@ export default function SkillsIndustriesPage() {
           isPending={updatingSkill}
         />
       )}
+      {skillToDelete && (
+        <DeleteConfirmModal
+          itemName={skillToDelete.name}
+          itemType="Skill"
+          isPending={deletingSkill}
+          onClose={() => setSkillToDelete(null)}
+          onConfirm={() => handleDeleteSkill(skillToDelete)}
+        />
+      )}
       {showAddIndustry && (
         <ItemFormModal
           itemType="Industry"
@@ -478,6 +596,15 @@ export default function SkillsIndustriesPage() {
           onClose={() => setEditingIndustry(null)}
           onSubmit={handleUpdateIndustry}
           isPending={updatingIndustry}
+        />
+      )}
+      {industryToDelete && (
+        <DeleteConfirmModal
+          itemName={industryToDelete.name}
+          itemType="Industry"
+          isPending={deletingIndustry}
+          onClose={() => setIndustryToDelete(null)}
+          onConfirm={() => handleDeleteIndustry(industryToDelete)}
         />
       )}
     </div>

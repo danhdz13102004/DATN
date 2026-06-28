@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import Topbar from '../../components/layout/Topbar';
 import StatusBadge from '../../components/ui/StatusBadge';
@@ -71,6 +72,82 @@ function ListSection({ title, items }: { title: string; items?: string[] | null 
   );
 }
 
+interface DeleteJobModalProps {
+  jobTitle: string;
+  isPending: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+function DeleteJobModal({ jobTitle, isPending, onClose, onConfirm }: DeleteJobModalProps) {
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
+  }, []);
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (isPending) return;
+    onConfirm();
+  };
+
+  return createPortal(
+    <div
+      className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4 animate-overlay"
+      onClick={(event) => event.target === event.currentTarget && !isPending && onClose()}
+    >
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-2xl w-full max-w-md animate-modal">
+        <div className="p-6 border-b border-gray-100 flex items-start justify-between gap-4">
+          <div>
+            <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-4">
+              <i className="fas fa-trash" />
+            </div>
+            <h3 className="text-lg font-bold text-gray-900">Delete Job</h3>
+            <p className="text-sm text-gray-500 mt-1">
+              This will remove the job from listings and notify the company.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            onClick={onClose}
+            disabled={isPending}
+            aria-label="Close"
+          >
+            <i className="fas fa-times" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3">
+            <p className="text-sm font-semibold text-red-700 break-words">{jobTitle}</p>
+          </div>
+        </div>
+
+        <div className="flex gap-3 p-5 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+          <button
+            type="button"
+            className="flex-1 px-4 py-2.5 border border-gray-200 text-sm rounded-xl font-medium hover:bg-gray-100 transition-colors text-gray-700"
+            onClick={onClose}
+            disabled={isPending}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="flex-1 px-4 py-2.5 bg-red-600 text-white text-sm rounded-xl font-semibold hover:bg-red-700 disabled:opacity-60 transition-colors"
+            disabled={isPending}
+          >
+            {isPending ? 'Deleting...' : 'Confirm Delete'}
+          </button>
+        </div>
+      </form>
+    </div>,
+    document.body
+  );
+}
+
 export default function JobDetailPage() {
   const { id = '' } = useParams<{ id: string }>();
   const { onMenuToggle } = useOutletContext<OutletCtx>();
@@ -78,6 +155,7 @@ export default function JobDetailPage() {
   const toast = useToast();
   const { data: job, isLoading, isError } = useAdminJobDetail(id);
   const deleteJob = useDeleteAdminJob();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const infoItems = useMemo(() => {
     if (!job) return [];
@@ -95,13 +173,10 @@ export default function JobDetailPage() {
 
   const handleDelete = async () => {
     if (!id || !job) return;
-    const confirmed = window.confirm(
-      `Delete "${job.title}"? The company will receive a notification and the job will no longer be visible.`
-    );
-    if (!confirmed) return;
 
     try {
       await deleteJob.mutateAsync(id);
+      setShowDeleteModal(false);
       toast.success('Job deleted and company notified');
       navigate(ROUTES.JOBS);
     } catch (err: unknown) {
@@ -174,7 +249,7 @@ export default function JobDetailPage() {
               </Link>
               <button
                 type="button"
-                onClick={handleDelete}
+                onClick={() => setShowDeleteModal(true)}
                 disabled={deleteJob.isPending}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 disabled:opacity-60"
               >
@@ -257,6 +332,15 @@ export default function JobDetailPage() {
           </aside>
         </div>
       </div>
+
+      {showDeleteModal && (
+        <DeleteJobModal
+          jobTitle={job.title}
+          isPending={deleteJob.isPending}
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={handleDelete}
+        />
+      )}
     </div>
   );
 }

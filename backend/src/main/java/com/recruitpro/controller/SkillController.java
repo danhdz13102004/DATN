@@ -29,6 +29,7 @@ public class SkillController {
                         .id(skill.getId())
                         .name(skill.getName())
                         .jobUsageCount(skillService.getJobUsageCount(skill.getId()))
+                        .jobSeekerUsageCount(skillService.getJobSeekerUsageCount(skill.getId()))
                         .build())
                 .toList();
         return ResponseEntity.ok(ApiResponse.ok(response));
@@ -42,6 +43,7 @@ public class SkillController {
                 .id(skill.getId())
                 .name(skill.getName())
                 .jobUsageCount(0)
+                .jobSeekerUsageCount(0)
                 .build();
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(dto));
     }
@@ -57,6 +59,7 @@ public class SkillController {
                 .id(skill.getId())
                 .name(skill.getName())
                 .jobUsageCount(skillService.getJobUsageCount(skill.getId()))
+                .jobSeekerUsageCount(skillService.getJobSeekerUsageCount(skill.getId()))
                 .build();
         return ResponseEntity.ok(ApiResponse.ok(dto));
     }

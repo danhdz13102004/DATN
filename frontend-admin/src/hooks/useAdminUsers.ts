@@ -7,6 +7,8 @@ interface UseAdminUsersParams {
   size?: number;
   role?: UserRole;
   status?: UserStatus;
+  sortBy?: 'createdAt' | 'updatedAt' | 'email' | 'role' | 'status';
+  sortDir?: 'asc' | 'desc';
 }
 
 export const useAdminUsers = (params: UseAdminUsersParams = {}) => {

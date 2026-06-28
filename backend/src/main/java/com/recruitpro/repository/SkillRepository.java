@@ -20,4 +20,7 @@ public interface SkillRepository extends JpaRepository<Skill, UUID> {
 
     @Query(value = "SELECT COUNT(*) FROM job_skills WHERE skill_id = :skillId", nativeQuery = true)
     long countJobsUsingSkill(@Param("skillId") UUID skillId);
+
+    @Query(value = "SELECT COUNT(*) FROM job_seeker_skills WHERE skill_id = :skillId", nativeQuery = true)
+    long countJobSeekersUsingSkill(@Param("skillId") UUID skillId);
 }

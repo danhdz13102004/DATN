@@ -195,6 +195,7 @@ export interface AdminSkill {
   id: string;
   name: string;
   jobUsageCount: number;
+  jobSeekerUsageCount: number;
 }
 
 // ── Industry ───────────────────────────────────────────────

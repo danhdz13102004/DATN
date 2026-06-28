@@ -6,6 +6,8 @@ interface ListUsersParams {
   size?: number;
   role?: UserRole;
   status?: UserStatus;
+  sortBy?: 'createdAt' | 'updatedAt' | 'email' | 'role' | 'status';
+  sortDir?: 'asc' | 'desc';
 }
 
 interface UsersResponse {
@@ -15,10 +17,11 @@ interface UsersResponse {
 
 export const adminUserService = {
   listUsers: async (params: ListUsersParams = {}): Promise<UsersResponse> => {
-    const { page = 1, size = 20, role, status } = params;
+    const { page = 1, size = 20, role, status, sortBy, sortDir = 'desc' } = params;
     const query = new URLSearchParams({ page: String(page), size: String(size) });
     if (role) query.append('role', role);
     if (status) query.append('status', status);
+    if (sortBy) query.append('sort', `${sortBy},${sortDir}`);
     const res = await api.get<{ data: AdminUser[]; meta: PaginationMeta }>(`/admin/users?${query}`);
     return { data: res.data.data, meta: res.data.meta };
   },

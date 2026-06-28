@@ -11,4 +11,5 @@ public class SkillResponseDto {
     private UUID id;
     private String name;
     private long jobUsageCount;
+    private long jobSeekerUsageCount;
 }

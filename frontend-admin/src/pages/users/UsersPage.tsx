@@ -38,6 +38,8 @@ export default function UsersPage() {
     size: 20,
     role: role || undefined,
     status: status || undefined,
+    sortBy: 'updatedAt',
+    sortDir: 'desc',
   });
 
   const { mutate: updateStatus, isPending } = useUpdateUserStatus();

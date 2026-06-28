@@ -35,6 +35,14 @@ public class DataSeederConfig {
         );
 
         if (count > 0) {
+            jdbcTemplate.update(
+                """
+                UPDATE users
+                SET updated_at = created_at
+                WHERE email = ? AND deleted_at IS NULL AND updated_at IS NULL
+                """,
+                email
+            );
             log.info("DataSeeder: Admin account {} already exists, skipping", email);
             return;
         }
@@ -42,9 +50,10 @@ public class DataSeederConfig {
         jdbcTemplate.update(
             """
             INSERT INTO users (
-                id, email, password_hash, role, full_name, status, email_verified_at, created_at
+                id, email, password_hash, role, full_name, status, email_verified_at, created_at, updated_at
             ) VALUES (
-                ?, ?, ?, CAST(? AS user_role), ?, CAST(? AS user_status), NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'
+                ?, ?, ?, CAST(? AS user_role), ?, CAST(? AS user_status),
+                NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'
             )
             """,
             UUID.randomUUID(),

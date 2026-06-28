@@ -66,6 +66,7 @@ public class User {
     protected void onCreate() {
         if (id == null) id = UUID.randomUUID();
         createdAt = Instant.now();
+        if (updatedAt == null) updatedAt = createdAt;
     }
 
     @PreUpdate
