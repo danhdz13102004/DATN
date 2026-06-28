@@ -21,14 +21,15 @@ const PERSONAL_ITEMS = [
 interface NavItem { label: string; icon: string; path: string; }
 interface SidebarProps {
   isOpen: boolean;
+  isCollapsed: boolean;
   onClose: () => void;
   onChangePassword: () => void;
   onLogout: () => void;
 }
 
-function NavLabel({ text }: { text: string }) {
+function NavLabel({ text, isCollapsed }: { text: string; isCollapsed: boolean }) {
   return (
-    <div className="px-3 pt-5 pb-2">
+    <div className={`px-3 pt-5 pb-2 transition-opacity duration-200 ${isCollapsed ? 'lg:opacity-0' : ''}`}>
       <span className="text-[0.68rem] font-bold uppercase tracking-widest text-gray-400">
         {text}
       </span>
@@ -36,25 +37,30 @@ function NavLabel({ text }: { text: string }) {
   );
 }
 
-function NavItem({ item, active, onClose }: { item: NavItem; active: boolean; onClose: () => void }) {
+function NavItem({ item, active, isCollapsed, onClose }: { item: NavItem; active: boolean; isCollapsed: boolean; onClose: () => void }) {
   return (
     <NavLink
       to={item.path}
       onClick={onClose}
-      className={`sidebar-nav-item mx-2 mb-0.5 flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 group ${active ? 'active' : ''}`}
+      className={`sidebar-nav-item relative mx-2 mb-0.5 flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 group ${isCollapsed ? 'lg:justify-center lg:px-2' : ''} ${active ? 'active' : ''}`}
     >
       <span className="nav-icon-wrap">
         <i className={`fas ${item.icon}`} />
       </span>
-      <span className="font-medium text-sm flex-1">{item.label}</span>
+      <span className={`font-medium text-sm flex-1 whitespace-nowrap transition-all duration-200 ${isCollapsed ? 'lg:w-0 lg:opacity-0 lg:overflow-hidden lg:flex-none' : ''}`}>{item.label}</span>
       {active && (
-        <span className="nav-active-dot w-1.5 h-1.5 rounded-full flex-shrink-0" />
+        <span className={`nav-active-dot w-1.5 h-1.5 rounded-full flex-shrink-0 ${isCollapsed ? 'lg:hidden' : ''}`} />
+      )}
+      {isCollapsed && (
+        <span className="pointer-events-none absolute left-full top-1/2 z-[90] ml-3 hidden -translate-y-1/2 whitespace-nowrap rounded-lg bg-gray-900 px-3 py-2 text-xs font-semibold text-white opacity-0 shadow-lg transition-opacity duration-150 lg:group-hover:block lg:group-hover:opacity-100">
+          {item.label}
+        </span>
       )}
     </NavLink>
   );
 }
 
-export default function Sidebar({ isOpen, onClose, onChangePassword, onLogout }: SidebarProps) {
+export default function Sidebar({ isOpen, isCollapsed, onClose, onChangePassword, onLogout }: SidebarProps) {
   const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -96,29 +102,35 @@ export default function Sidebar({ isOpen, onClose, onChangePassword, onLogout }:
       )}
 
       <aside
-        className={`fixed top-0 left-0 bottom-0 w-[272px] bg-white flex flex-col z-50 transition-transform duration-300 ease-out shadow-xl lg:shadow-none ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+        className={`fixed top-0 left-0 bottom-0 w-[272px] bg-white flex flex-col z-50 transition-all duration-300 ease-out shadow-xl lg:shadow-none ${isCollapsed ? 'lg:w-[84px]' : 'lg:w-[272px]'} ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
         style={{ borderRight: '1px solid #E8EDF5' }}
       >
         {/* Brand Header */}
-        <div className="h-[68px] flex items-center gap-3 px-5 border-b border-gray-100/80 flex-shrink-0">
+        <div className={`h-[68px] flex items-center gap-3 px-5 border-b border-gray-100/80 flex-shrink-0 transition-all duration-300 ${isCollapsed ? 'lg:justify-center lg:px-3' : ''}`}>
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-blue-500 flex items-center justify-center flex-shrink-0 shadow-md"
             style={{ boxShadow: '0 4px 12px rgba(37,99,235,0.35)' }}>
             <svg width="18" height="18" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" fill="none">
               <path d="M39.6 18.2c1.1.5 2 1.1 2.7 2c.6.7 1.1 1.5 1.5 2.4c.4.9.5 1.9.5 3.1c0 1.4-.3 2.7-1 4.1s-1.8 2.3-3.4 2.8c1.3.5 2.3 1.3 2.8 2.3c.6 1 .8 2.5.8 4.5v1.9c0 1.3.1 2.2.2 2.7c.2.7.5 1.3 1.1 1.7v.7h-6.7c-.2-.6-.3-1.2-.4-1.6c-.2-.8-.2-1.6-.3-2.5v-2.7c0-1.8-.3-3.1-1-3.7c-.6-.6-1.8-.9-3.5-.9H27v11.4h-5.9v-29H35c2 .1 3.6.4 4.6.8m-12.5 4.3v7.8h6.5c1.3 0 2.3-.2 2.9-.5c1.1-.6 1.7-1.6 1.7-3.3c0-1.8-.6-2.9-1.7-3.5c-.6-.3-1.6-.5-2.8-.5h-6.6" fill="#ffffff"/>
             </svg>
           </div>
-          <span className="text-[1.1rem] font-bold text-gray-900 tracking-tight">
+          <span className={`text-[1.1rem] font-bold text-gray-900 tracking-tight whitespace-nowrap transition-all duration-200 ${isCollapsed ? 'lg:w-0 lg:opacity-0 lg:overflow-hidden' : ''}`}>
             RecruitPro
           </span>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-3 px-2 scrollbar-thin">
+        <nav className={`flex-1 py-3 px-2 scrollbar-thin ${isCollapsed ? 'lg:overflow-visible overflow-y-auto' : 'overflow-y-auto'}`}>
           {allGroups.map(({ label, items }) => (
             <div key={label}>
-              <NavLabel text={label} />
+              <NavLabel text={label} isCollapsed={isCollapsed} />
               {items.map((item) => (
-                <NavItem key={item.path} item={item} active={isActive(item.path)} onClose={onClose} />
+                <NavItem
+                  key={item.path}
+                  item={item}
+                  active={isActive(item.path)}
+                  isCollapsed={isCollapsed}
+                  onClose={onClose}
+                />
               ))}
             </div>
           ))}
@@ -151,7 +163,8 @@ export default function Sidebar({ isOpen, onClose, onChangePassword, onLogout }:
 
           {/* User Card */}
           <button
-            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-150 text-left ${
+            title={isCollapsed ? `${namePart || 'User'} - Job Seeker` : undefined}
+            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-150 text-left ${isCollapsed ? 'lg:justify-center lg:px-2' : ''} ${
               showUserMenu
                 ? 'bg-blue-50 ring-2 ring-primary/20'
                 : 'hover:bg-gray-50'
@@ -164,7 +177,7 @@ export default function Sidebar({ isOpen, onClose, onChangePassword, onLogout }:
             >
               {initials || <i className="fas fa-user text-sm" />}
             </div>
-            <div className="flex-1 min-w-0">
+            <div className={`flex-1 min-w-0 transition-all duration-200 ${isCollapsed ? 'lg:w-0 lg:opacity-0 lg:overflow-hidden lg:flex-none' : ''}`}>
               <div className="text-sm font-semibold text-gray-900 truncate leading-tight">
                 {namePart || 'User'}
               </div>
@@ -174,7 +187,7 @@ export default function Sidebar({ isOpen, onClose, onChangePassword, onLogout }:
               </div>
             </div>
             <i
-              className={`fas fa-chevron-up text-[10px] text-gray-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`}
+              className={`fas fa-chevron-up text-[10px] text-gray-400 transition-transform duration-200 ${isCollapsed ? 'lg:hidden' : ''} ${showUserMenu ? 'rotate-180' : ''}`}
             />
           </button>
         </div>

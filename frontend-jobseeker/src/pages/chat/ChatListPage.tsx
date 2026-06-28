@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { chatService } from '../../services/chatService';
@@ -18,6 +18,14 @@ function formatTime(iso?: string) {
   if (d.toDateString() === now.toDateString())
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   return d.toLocaleDateString();
+}
+
+function sortByLastMessageAt(list: Conversation[]) {
+  return [...list].sort((a, b) => {
+    const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+    const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+    return bTime - aTime;
+  });
 }
 
 const COLORS = [
@@ -45,6 +53,8 @@ export default function MessagesPage() {
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const lastReadSyncRef = useRef<string | null>(null);
+  const conversationIds = useMemo(() => conversations.map((c) => c.id), [conversations]);
 
   useEffect(() => {
     chatService.listConversations()
@@ -93,34 +103,47 @@ export default function MessagesPage() {
       sendReadReceipt({ conversationId: activeId!, lastReadMessageId: event.message.id });
     }
     if (event.eventType === 'CHAT_MESSAGE') {
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === event.conversationId
-            ? { ...c, lastMessage: event.message.content ?? event.message.fileName, lastMessageAt: event.message.createdAt }
-            : c
-        )
-      );
+      setConversations((prev) => sortByLastMessageAt(
+        prev.map((c) => {
+          if (c.id !== event.conversationId) return c;
+          const isActiveConversation = c.id === activeId;
+          const isOwnMessage = event.message.senderId === currentUserId;
+
+          return {
+            ...c,
+            lastMessage: event.message.content ?? event.message.fileName,
+            lastMessageAt: event.message.createdAt,
+            unreadCount: isActiveConversation || isOwnMessage ? 0 : c.unreadCount + 1,
+          };
+        })
+      ));
     }
   }, [activeId, currentUserId]);
 
   const handleNotification = useCallback((e: NotificationEvent) => {
-    if (!e.notification) return;
-    if (e.notification.type === 'MESSAGE') {
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === e.notification!.referenceId
-            ? { ...c, unreadCount: c.id === activeId ? 0 : c.unreadCount + 1 }
-            : c
-        )
-      );
-    }
-  }, [activeId]);
+    if (e.eventType === 'NOTIFICATION_COUNT') return;
+  }, []);
 
   const { sendMessage, sendReadReceipt } = useRecruitProWebSocket({
-    conversationIds: activeId ? [activeId] : [],
+    conversationIds,
     onChatEvent: handleChatEvent,
     onNotification: handleNotification,
   });
+
+  useEffect(() => {
+    if (!activeId || loadingMsgs || messages.length === 0) return;
+    const latest = messages[messages.length - 1];
+    const syncKey = `${activeId}:${latest.id}`;
+    if (lastReadSyncRef.current === syncKey) return;
+
+    const sent = sendReadReceipt({ conversationId: activeId, lastReadMessageId: latest.id });
+    if (!sent) return;
+
+    lastReadSyncRef.current = syncKey;
+    setConversations((prev) =>
+      prev.map((c) => (c.id === activeId ? { ...c, unreadCount: 0 } : c))
+    );
+  }, [activeId, loadingMsgs, messages, sendReadReceipt]);
 
   const activeConv = conversations.find((c) => c.id === activeId);
   const canReply = (activeConv?.isInitiated ?? false) || messages.length > 0;
@@ -204,30 +227,46 @@ export default function MessagesPage() {
             filtered.map((conv) => {
               const colors = avatarColor(conv.id);
               const isActive = conv.id === activeId;
+              const isUnread = conv.unreadCount > 0;
               return (
                 <button
                   key={conv.id}
                   onClick={() => handleSelectConv(conv.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all duration-150 border-b border-gray-50/60 ${
+                  className={`relative w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all duration-150 border-b border-gray-50/60 ${
                     isActive
-                      ? 'bg-white border-l-2 border-l-primary'
-                      : 'hover:bg-white border-l-2 border-l-transparent'
+                      ? 'bg-amber-50 ring-1 ring-inset ring-amber-200 border-l-2 border-l-transparent shadow-sm'
+                      : isUnread
+                        ? 'bg-blue-50/70 hover:bg-blue-50 border-l-2 border-l-primary'
+                        : 'hover:bg-white border-l-2 border-l-transparent'
                   }`}
                 >
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 ${colors.bg} ${colors.text}`}>
+                  {isActive && (
+                    <span className="absolute left-0 top-2 bottom-2 w-1.5 rounded-r-full bg-amber-500 shadow-sm" />
+                  )}
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                    isActive
+                      ? 'bg-amber-500 text-white shadow-sm'
+                      : isUnread
+                        ? 'bg-primary text-white shadow-sm'
+                        : `${colors.bg} ${colors.text}`
+                  }`}>
                     {getInitials(conv.staffName)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1">
-                      <span className={`text-sm truncate ${conv.unreadCount > 0 ? 'font-bold text-gray-900' : 'font-medium text-gray-700'}`}>
+                      <span className={`text-sm truncate ${isActive ? 'font-bold text-amber-950' : isUnread ? 'font-bold text-gray-950' : 'font-medium text-gray-700'}`}>
                         {conv.staffName ?? 'Recruiter'}
                       </span>
-                      <span className="text-[11px] text-gray-400 flex-shrink-0 ml-2">{formatTime(conv.lastMessageAt)}</span>
+                      <span className={`text-[11px] flex-shrink-0 ml-2 ${isActive ? 'font-semibold text-amber-600' : isUnread ? 'font-semibold text-primary' : 'text-gray-400'}`}>
+                        {formatTime(conv.lastMessageAt)}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs text-gray-400 truncate">{conv.lastMessage || 'Start a conversation'}</span>
-                      {conv.unreadCount > 0 && (
-                        <span className="ml-2 flex-shrink-0 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
+                      <span className={`text-xs truncate ${isActive ? 'font-medium text-amber-700' : isUnread ? 'font-semibold text-gray-700' : 'text-gray-400'}`}>
+                        {conv.lastMessage || 'Start a conversation'}
+                      </span>
+                      {isUnread && (
+                        <span className="ml-2 flex-shrink-0 min-w-5 h-5 rounded-full bg-primary px-1.5 text-white text-[10px] font-bold flex items-center justify-center shadow-sm">
                           {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
                         </span>
                       )}

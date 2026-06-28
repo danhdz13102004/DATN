@@ -65,9 +65,19 @@ public class ChatController {
         } else {
             var seeker = jobSeekerRepository.findByUserId(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("Job seeker profile not found"));
-            result = conversationService.listForJobSeeker(seeker.getId());
+            result = conversationService.listForJobSeeker(seeker.getId(), userId);
         }
         return ResponseEntity.ok(ApiResponse.ok(result));
+    }
+
+    /** Total unread chat messages for the authenticated user */
+    @GetMapping("/unread-count")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse<Map<String, Long>>> unreadCount(
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        long count = conversationService.unreadCountForUser(UUID.fromString(principal.getId()));
+        return ResponseEntity.ok(ApiResponse.ok(Map.of("unreadCount", count)));
     }
 
     /** Paginated message history for a conversation */

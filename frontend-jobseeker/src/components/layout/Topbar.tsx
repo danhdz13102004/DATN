@@ -40,11 +40,26 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
 
   useRecruitProWebSocket({
     onNotification: (e: NotificationEvent) => {
-      console.log('Received notification event:', e);
       setUnreadCount(e.unreadCount);
       if (!e.notification) return;
       if (latestToastNotifIdRef.current === e.notification.id) return;
       latestToastNotifIdRef.current = e.notification.id;
+
+      if (e.notification.type === 'MESSAGE' && location.pathname.startsWith(ROUTES.MESSAGES)) {
+        return;
+      }
+
+      if (e.notification.type === 'MESSAGE') {
+        const senderName = e.notification.title?.replace(/^New message from\s+/i, '').trim() || 'Someone';
+        const content = e.notification.content || 'Sent you a message';
+        toast.show({
+          title: 'New msg',
+          message: `${senderName}\n${content}`,
+          type: 'info',
+          duration: 4500,
+        });
+        return;
+      }
 
       const text = e.notification.title || e.notification.content || 'You have a new notification';
       toast.info(text, 3500);
@@ -85,7 +100,7 @@ export default function Topbar({ onMenuClick }: TopbarProps) {
         <button
           onClick={onMenuClick}
           style={{ ...btnStyle('menu'), display: 'flex' }}
-          className="lg:hidden"
+          title="Toggle sidebar"
           onMouseEnter={() => setHoveredBtn('menu')}
           onMouseLeave={() => setHoveredBtn(null)}
         >

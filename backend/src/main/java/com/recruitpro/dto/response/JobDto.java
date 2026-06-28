@@ -10,6 +10,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -34,6 +35,7 @@ public class JobDto {
     private Integer salaryMax;
     private JobType jobType;
     private JobStatus status;
+    private LocalDate closeDate;
     private Set<Skill> skills;
     private Instant createdAt;
     private Instant updatedAt;
@@ -44,6 +46,7 @@ public class JobDto {
     // Company name for list view (populated from company lookup)
     private String companyName;
     private String logoUrl;
+    private long applicationCount;
 
     @JsonProperty("isSaved")
     private boolean isSaved;

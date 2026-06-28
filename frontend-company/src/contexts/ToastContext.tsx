@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useCallback, ReactNode } fr
 type ToastType = 'success' | 'error' | 'info';
 
 interface ToastOptions {
+  title?: string;
   message: string;
   type?: ToastType;
   duration?: number;
@@ -29,6 +30,7 @@ export const useToast = () => {
 
 interface Toast {
   id: number;
+  title?: string;
   message: string;
   type: ToastType;
 }
@@ -36,9 +38,9 @@ interface Toast {
 export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const addToast = useCallback((message: string, type: ToastType = 'info', duration: number = 3000) => {
+  const addToast = useCallback((message: string, type: ToastType = 'info', duration: number = 3000, title?: string) => {
     const id = Date.now();
-    setToasts((prev) => [...prev, { id, message, type }]);
+    setToasts((prev) => [...prev, { id, title, message, type }]);
 
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -49,7 +51,7 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     success: (message: string, duration?: number) => addToast(message, 'success', duration),
     error: (message: string, duration?: number) => addToast(message, 'error', duration),
     info: (message: string, duration?: number) => addToast(message, 'info', duration),
-    show: ({ message, type = 'info', duration }: ToastOptions) => addToast(message, type, duration),
+    show: ({ title, message, type = 'info', duration }: ToastOptions) => addToast(message, type, duration, title),
   };
 
   return (
@@ -76,7 +78,12 @@ export const ToastProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                 'fa-info-circle'
               }`} />
             </div>
-            {t.message}
+            <div className="min-w-0">
+              {t.title && <div className="text-sm font-bold leading-5">{t.title}</div>}
+              <div className={`${t.title ? 'text-xs font-medium opacity-80' : ''} leading-snug whitespace-pre-line`}>
+                {t.message}
+              </div>
+            </div>
           </div>
         ))}
       </div>

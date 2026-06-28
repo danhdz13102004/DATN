@@ -26,7 +26,14 @@ export function useRecruitProWebSocket({
 }: UseWebSocketOptions) {
   const clientRef = useRef<Client | null>(null);
   const reconnectDelay = useRef(2000);
+  const onChatEventRef = useRef(onChatEvent);
+  const onNotificationRef = useRef(onNotification);
   const accessToken = useAuthStore((s) => s.accessToken);
+
+  useEffect(() => {
+    onChatEventRef.current = onChatEvent;
+    onNotificationRef.current = onNotification;
+  }, [onChatEvent, onNotification]);
 
   const connect = useCallback(() => {
     if (!accessToken) return;
@@ -45,7 +52,7 @@ export function useRecruitProWebSocket({
           client.subscribe(`/topic/chat.${convId}`, (msg: IMessage) => {
             try {
               const event: ChatEvent = JSON.parse(msg.body);
-              onChatEvent?.(event);
+              onChatEventRef.current?.(event);
             } catch { /* ignore */ }
           });
         });
@@ -53,7 +60,7 @@ export function useRecruitProWebSocket({
         client.subscribe('/user/queue/notification', (msg: IMessage) => {
           try {
             const event: NotificationEvent = JSON.parse(msg.body);
-            onNotification?.(event);
+            onNotificationRef.current?.(event);
           } catch { /* ignore */ }
         });
       },
@@ -83,18 +90,28 @@ export function useRecruitProWebSocket({
   }, [connect]);
 
   const sendMessage = useCallback((payload: SendMessagePayload) => {
+    if (!clientRef.current?.connected) return false;
+
     clientRef.current?.publish({
       destination: '/app/chat.send',
       body: JSON.stringify(payload),
     });
+    return true;
   }, []);
 
   const sendReadReceipt = useCallback((payload: ReadReceiptPayload) => {
+    if (!clientRef.current?.connected) return false;
+
     clientRef.current?.publish({
       destination: '/app/chat.read',
       body: JSON.stringify(payload),
     });
+    return true;
   }, []);
 
-  return { sendMessage, sendReadReceipt };
+  return {
+    sendMessage,
+    sendReadReceipt,
+    isConnected: () => clientRef.current?.connected ?? false,
+  };
 }

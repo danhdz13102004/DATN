@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import Topbar from '../../components/layout/Topbar';
 import { useCompanyJobs, useDeleteJob, useChangeJobStatus } from '../../hooks/useJobs';
@@ -9,17 +9,46 @@ import JobCard from '../../components/common/JobCard';
 import PageHeader from '../../components/common/PageHeader';
 import EmptyState from '../../components/common/EmptyState';
 import LoadingSkeleton, { JobCardSkeleton } from '../../components/common/LoadingSkeleton';
+import ConfirmActionModal from '../../components/common/ConfirmActionModal';
 
 type ViewMode = 'grid' | 'table';
+type ConfirmAction =
+  | { type: 'close'; jobId: string; jobTitle?: string }
+  | { type: 'delete'; jobId: string; jobTitle?: string };
+
+const todayDateInputValue = () => {
+  const now = new Date();
+  const offsetMs = now.getTimezoneOffset() * 60_000;
+  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10);
+};
+
+const getEffectiveStatus = (job: { status: string; closeDate?: string | null }) => {
+  if (job.status === 'CLOSED') return 'CLOSED';
+  return job.closeDate && job.closeDate < todayDateInputValue() ? 'CLOSED' : job.status;
+};
+
+const getDateTime = (value?: string | null) => {
+  const timestamp = value ? new Date(value).getTime() : 0;
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+};
 
 export default function JobsPage() {
   const { onMenuToggle } = useOutletContext<{ onMenuToggle: () => void }>();
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
   const { data: jobs, isLoading } = useCompanyJobs(filters);
   const deleteJob = useDeleteJob();
   const changeStatus = useChangeJobStatus();
+  const sortedJobs = useMemo(
+    () =>
+      [...(jobs ?? [])].sort(
+        (a, b) => getDateTime(b.createdAt) - getDateTime(a.createdAt)
+      ),
+    [jobs]
+  );
 
   const handleSearch = () => {
     setFilters((prev) => ({ ...prev, search }));
@@ -41,19 +70,53 @@ export default function JobsPage() {
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length + (search ? 1 : 0);
 
-  const handleDelete = (jobId: string) => {
-    if (confirm('Delete this job? This action cannot be undone.')) {
-      deleteJob.mutate(jobId);
-    }
+  const requestDelete = (jobId: string) => {
+    const jobTitle = sortedJobs.find((job) => job.id === jobId)?.title;
+    setConfirmAction({ type: 'delete', jobId, jobTitle });
   };
 
-  const handleClose = (jobId: string) => {
-    changeStatus.mutate({ id: jobId, status: 'CLOSED' });
+  const requestClose = (jobId: string) => {
+    const jobTitle = sortedJobs.find((job) => job.id === jobId)?.title;
+    setConfirmAction({ type: 'close', jobId, jobTitle });
   };
 
   const handlePublish = (jobId: string) => {
     changeStatus.mutate({ id: jobId, status: 'PUBLISHED' });
   };
+
+  const handleConfirmAction = async () => {
+    if (!confirmAction) return;
+
+    try {
+      setIsConfirming(true);
+      if (confirmAction.type === 'delete') {
+        await deleteJob.mutateAsync(confirmAction.jobId);
+      } else {
+        await changeStatus.mutateAsync({ id: confirmAction.jobId, status: 'CLOSED' });
+      }
+      setConfirmAction(null);
+    } catch (err) {
+      console.error('Job action failed:', err);
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const modalCopy = confirmAction?.type === 'delete'
+    ? {
+        title: 'Delete this job?',
+        message: `Deleting${confirmAction.jobTitle ? ` "${confirmAction.jobTitle}"` : ' this job'} removes it from your company workspace. This is only allowed when the job has no applicants.`,
+        confirmLabel: 'Delete Job',
+        icon: 'fa-trash',
+        tone: 'danger' as const,
+      }
+    : {
+        title: 'Close this job?',
+        message: `Closing${confirmAction?.jobTitle ? ` "${confirmAction.jobTitle}"` : ' this job'} will expire it immediately and job seekers will no longer be able to view or apply to it.`,
+        confirmLabel: 'Close Job',
+        icon: 'fa-circle-xmark',
+        tone: 'warning' as const,
+      };
 
   return (
     <>
@@ -160,7 +223,7 @@ export default function JobsPage() {
           {activeFilterCount > 0 && (
             <div className="flex items-center justify-between">
               <p className="text-xs text-gray-400">
-                <span className="font-semibold text-gray-600">{jobs?.length ?? 0}</span> job{jobs?.length !== 1 ? 's' : ''} found
+                <span className="font-semibold text-gray-600">{sortedJobs.length}</span> job{sortedJobs.length !== 1 ? 's' : ''} found
                 <span className="ml-1 text-primary">({activeFilterCount} filter{activeFilterCount !== 1 ? 's' : ''} active)</span>
               </p>
               <button
@@ -184,7 +247,7 @@ export default function JobsPage() {
                 </div>
               ))}
             </div>
-          ) : !jobs?.length ? (
+          ) : !sortedJobs.length ? (
             <EmptyState
               icon="fa-briefcase"
               title="No jobs found"
@@ -194,15 +257,15 @@ export default function JobsPage() {
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-              {jobs.map((job, idx) => (
-                <div key={job.id} className="animate-fadeSlideUp" style={{ animationDelay: `${idx * 60}ms` }}>
+              {sortedJobs.map((job, idx) => (
+                <div key={job.id} className="h-full animate-fadeSlideUp" style={{ animationDelay: `${idx * 60}ms` }}>
                   <JobCard
-                    job={job}
+                    job={{ ...job, status: getEffectiveStatus(job) as typeof job.status }}
                     onView={(id) => window.location.href = `/jobs/${id}`}
                     onEdit={(id) => window.location.href = `/jobs/${id}/edit`}
-                    onDelete={handleDelete}
+                    onDelete={requestDelete}
                     onPublish={handlePublish}
-                    onClose={handleClose}
+                    onClose={requestClose}
                   />
                 </div>
               ))}
@@ -217,7 +280,7 @@ export default function JobsPage() {
               <div className="p-6">
                 <LoadingSkeleton variant="table-row" count={6} />
               </div>
-            ) : !jobs?.length ? (
+            ) : !sortedJobs.length ? (
               <EmptyState
                 icon="fa-briefcase"
                 title="No jobs found"
@@ -241,20 +304,23 @@ export default function JobsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {jobs.map((job) => (
-                      <tr
-                        key={job.id}
-                        className="border-b border-gray-50 last:border-0 hover:bg-gray-50/60 transition-colors duration-150 group"
-                      >
-                        {/* Title */}
-                        <td className="px-5 py-4">
-                          <Link
-                            to={`/jobs/${job.id}`}
-                            className="text-sm font-bold text-gray-900 hover:text-primary transition-colors no-underline whitespace-nowrap"
-                          >
-                            {job.title}
-                          </Link>
-                        </td>
+                    {sortedJobs.map((job) => {
+                      const effectiveStatus = getEffectiveStatus(job);
+                      const hasApplicants = (job.applicationCount ?? 0) > 0;
+                      return (
+                        <tr
+                          key={job.id}
+                          className="border-b border-gray-50 last:border-0 hover:bg-gray-50/60 transition-colors duration-150 group"
+                        >
+                          {/* Title */}
+                          <td className="px-5 py-4">
+                            <Link
+                              to={`/jobs/${job.id}`}
+                              className="text-sm font-bold text-gray-900 hover:text-primary transition-colors no-underline whitespace-nowrap"
+                            >
+                              {job.title}
+                            </Link>
+                          </td>
 
                         {/* Type */}
                         <td className="px-5 py-4">
@@ -286,7 +352,7 @@ export default function JobsPage() {
 
                         {/* Status */}
                         <td className="px-5 py-4">
-                          <StatusBadge status={job.status} size="sm" />
+                          <StatusBadge status={effectiveStatus} size="sm" />
                         </td>
 
                         {/* Applications */}
@@ -313,23 +379,25 @@ export default function JobsPage() {
                             >
                               <i className="fas fa-eye text-xs" />
                             </Link>
-                            <Link
-                              to={`/jobs/${job.id}/edit`}
-                              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-all duration-150 hover:scale-105"
-                              title="Edit"
-                            >
-                              <i className="fas fa-pen text-xs" />
-                            </Link>
-                            {job.status === 'PUBLISHED' && (
+                            {effectiveStatus !== 'CLOSED' && !hasApplicants && (
+                              <Link
+                                to={`/jobs/${job.id}/edit`}
+                                className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-all duration-150 hover:scale-105"
+                                title="Edit"
+                              >
+                                <i className="fas fa-pen text-xs" />
+                              </Link>
+                            )}
+                            {effectiveStatus === 'PUBLISHED' && (
                               <button
-                                onClick={() => handleClose(job.id)}
+                                onClick={() => requestClose(job.id)}
                                 className="w-8 h-8 flex items-center justify-center rounded-lg text-amber-400 hover:bg-amber-50 hover:text-amber-600 transition-all duration-150 hover:scale-105"
                                 title="Close job"
                               >
                                 <i className="fas fa-times-circle text-xs" />
                               </button>
                             )}
-                            {job.status === 'DRAFT' && (
+                            {effectiveStatus === 'DRAFT' && (
                               <button
                                 onClick={() => handlePublish(job.id)}
                                 className="w-8 h-8 flex items-center justify-center rounded-lg text-emerald-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all duration-150 hover:scale-105"
@@ -338,17 +406,20 @@ export default function JobsPage() {
                                 <i className="fas fa-rocket text-xs" />
                               </button>
                             )}
-                            <button
-                              onClick={() => handleDelete(job.id)}
-                              className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-red-50 hover:text-red-500 transition-all duration-150 hover:scale-105"
-                              title="Delete"
-                            >
-                              <i className="fas fa-trash text-xs" />
-                            </button>
+                            {!hasApplicants && (
+                              <button
+                                onClick={() => requestDelete(job.id)}
+                                className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-red-50 hover:text-red-500 transition-all duration-150 hover:scale-105"
+                                title="Delete"
+                              >
+                                <i className="fas fa-trash text-xs" />
+                              </button>
+                            )}
                           </div>
                         </td>
-                      </tr>
-                    ))}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -356,6 +427,19 @@ export default function JobsPage() {
           </div>
         )}
       </div>
+      {confirmAction && (
+        <ConfirmActionModal
+          open
+          title={modalCopy.title}
+          message={modalCopy.message}
+          confirmLabel={modalCopy.confirmLabel}
+          icon={modalCopy.icon}
+          tone={modalCopy.tone}
+          isLoading={isConfirming}
+          onClose={() => setConfirmAction(null)}
+          onConfirm={handleConfirmAction}
+        />
+      )}
     </>
   );
 }

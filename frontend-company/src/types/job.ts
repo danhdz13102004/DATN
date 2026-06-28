@@ -20,6 +20,7 @@ export interface Job {
   salaryMin: number | null;
   salaryMax: number | null;
   status: JobStatus;
+  closeDate?: string | null;
   skills: Skill[];
   niceToHaveSkills: string[];
   applicationCount: number;
@@ -44,6 +45,7 @@ export interface JobFormData {
   skillIds: string[];
   niceToHaveSkills: string[];
   status: JobStatus;
+  closeDate?: string | null;
   attachmentUrl?: string;
 }
 

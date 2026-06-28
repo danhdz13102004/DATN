@@ -39,6 +39,7 @@ export interface Job {
   salaryMax: number | null;
   jobType: string;
   status: string;
+  closeDate?: string | null;
   skills: Skill[];
   createdAt: string;
   updatedAt: string;

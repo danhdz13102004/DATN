@@ -34,6 +34,11 @@ export const chatService = {
     });
     return res.data.data as { fileKey: string };
   },
+
+  unreadCount: async (): Promise<number> => {
+    const res = await api.get(`${BASE}/unread-count`);
+    return res.data.data.unreadCount;
+  },
 };
 
 // ── Notifications ──────────────────────────────────────────────────────────

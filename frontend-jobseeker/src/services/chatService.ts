@@ -20,6 +20,11 @@ export const chatService = {
     });
     return res.data.data;
   },
+
+  unreadCount: async (): Promise<number> => {
+    const res = await api.get(`${BASE}/unread-count`);
+    return res.data.data.unreadCount;
+  },
 };
 
 export const notificationService = {

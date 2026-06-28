@@ -10,6 +10,7 @@ import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -90,6 +91,9 @@ public class Job {
     @Column(nullable = false, columnDefinition = "job_status")
     private JobStatus status;
 
+    @Column(name = "close_date")
+    private LocalDate closeDate;
+
     // embedding is managed by AI service — not mapped as JPA column to avoid pgvector deps in JPA
     // Use @Column(columnDefinition = "vector(384)") when pgvector JPA support is added
 
@@ -113,6 +117,9 @@ public class Job {
 
     @Column(name = "attachment_url", length = 1024)
     private String attachmentUrl;
+
+    @Transient
+    private long applicationCount;
 
     @PrePersist
     protected void onCreate() {

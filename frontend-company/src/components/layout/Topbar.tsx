@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { notificationService } from '../../services/chatService';
 import { useRecruitProWebSocket } from '../../hooks/useWebSocket';
 import type { NotificationEvent } from '../../types/chat';
@@ -14,6 +14,7 @@ interface TopbarProps {
 export default function Topbar({ title, breadcrumbs, onMenuToggle }: TopbarProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const latestToastNotifIdRef = useRef<string | null>(null);
 
@@ -28,6 +29,22 @@ export default function Topbar({ title, breadcrumbs, onMenuToggle }: TopbarProps
       if (latestToastNotifIdRef.current === e.notification.id) return;
       latestToastNotifIdRef.current = e.notification.id;
 
+      if (e.notification.type === 'MESSAGE' && location.pathname.startsWith('/messages')) {
+        return;
+      }
+
+      if (e.notification.type === 'MESSAGE') {
+        const senderName = e.notification.title?.replace(/^New message from\s+/i, '').trim() || 'Someone';
+        const content = e.notification.content || 'Sent you a message';
+        toast.show({
+          title: 'New msg',
+          message: `${senderName}\n${content}`,
+          type: 'info',
+          duration: 4500,
+        });
+        return;
+      }
+
       const text = e.notification.title || e.notification.content || 'You have a new notification';
       toast.info(text, 3500);
     },
@@ -36,10 +53,10 @@ export default function Topbar({ title, breadcrumbs, onMenuToggle }: TopbarProps
   return (
     <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-gray-100/80 px-6 py-3.5 flex items-center justify-between transition-all duration-200" style={{ boxShadow: '0 1px 8px rgba(0,0,0,0.04)' }}>
       <div className="flex items-center gap-3">
-        {/* Mobile menu button */}
         <button
-          className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all"
+          className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-all"
           onClick={onMenuToggle}
+          title="Toggle sidebar"
         >
           <i className="fas fa-bars" />
         </button>

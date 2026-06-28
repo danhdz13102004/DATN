@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useLocation, useParams, useNavigate, Link } from 'react-router-dom';
 import EmptyState from '../../components/common/EmptyState';
 import { jobService } from '../../services/jobService';
 import { resumeService } from '../../services/resumeService';
@@ -184,11 +184,11 @@ function JobDetailSkeleton() {
 // ============================================================
 // BREADCRUMB
 // ============================================================
-function Breadcrumb() {
+function Breadcrumb({ jobsPath = '/jobs' }: { jobsPath?: string }) {
   return (
     <nav style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24, fontSize: 14 }}>
       <Link
-        to="/jobs"
+        to={jobsPath}
         style={{
           color: c.text2,
           textDecoration: 'none',
@@ -756,7 +756,10 @@ function CvMatchModal({
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const state = location.state as { from?: string } | null;
+  const jobsPath = state?.from?.startsWith('/jobs') ? state.from : '/jobs';
 
   const [job, setJob] = useState<Job | null>(null);
   const [resumes, setResumes] = useState<Resume[]>([]);
@@ -962,12 +965,12 @@ export default function JobDetailPage() {
   if (!job) {
     return (
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-        <Breadcrumb />
+        <Breadcrumb jobsPath={jobsPath} />
         <EmptyState
           icon="fa-briefcase"
           title="Job not found"
           description="This job posting may have been removed or is no longer available."
-          action={{ label: 'Browse Other Jobs', onClick: () => navigate('/jobs') }}
+          action={{ label: 'Browse Other Jobs', onClick: () => navigate(jobsPath) }}
         />
       </div>
     );
@@ -1437,7 +1440,7 @@ export default function JobDetailPage() {
                     View My Applications
                   </button>
                   <button
-                    onClick={() => navigate('/jobs')}
+                    onClick={() => navigate(jobsPath)}
                     style={{
                       width: '100%', padding: '13px 20px',
                       borderRadius: 12,

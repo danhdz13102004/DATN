@@ -150,6 +150,11 @@ export default function NotificationsPage() {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
+                className={`inline-flex items-center gap-1.5 ${
+                  isActive
+                    ? 'active !bg-primary !text-white shadow-sm ring-1 ring-primary/20'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
               >
                 {tab.label}
                 {count > 0 && (

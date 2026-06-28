@@ -33,7 +33,7 @@ export const jobService = {
     api.get<{ data: { isSaved: boolean } }>(`/jobs/${jobId}/save/status`).then(r => r.data.data.isSaved),
 
   getSavedJobs: (page = 1, size = 20) =>
-    api.get<{ data: SavedJobDto[]; meta: any }>(`/jobseeker/saved-jobs?page=${page - 1}&size=${size}`).then(r => r.data),
+    api.get<{ data: Array<SavedJobDto | null>; meta: any }>(`/jobseeker/saved-jobs?page=${page - 1}&size=${size}`).then(r => r.data),
 
   // ── Interactions ───────────────────────────────────────────────────────────
 
@@ -50,4 +50,3 @@ export const jobService = {
     api.get<{ data: string[] }>(`/jobseeker/applications/applied-job-ids`)
       .then(r => (r.data.data as string[]).map(id => String(id))),
 };
-

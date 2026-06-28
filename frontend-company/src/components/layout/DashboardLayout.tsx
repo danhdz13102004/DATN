@@ -1,4 +1,4 @@
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import ChangePasswordModal from '../ui/ChangePasswordModal';
@@ -14,10 +14,20 @@ const ContentLoader = () => (
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isLg, setIsLg] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { data: user } = useUserProfile();
   const { pathname } = useLocation();
+
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)');
+    setIsLg(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsLg(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const userName = user?.fullName || 'Loading...';
   const userRole = user?.companyRole || '';
@@ -32,7 +42,8 @@ export default function DashboardLayout() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-background to-emerald-50/30">
       <Sidebar
         isOpen={sidebarOpen}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
+        isCollapsed={sidebarCollapsed}
+        onClose={() => setSidebarOpen(false)}
         userName={userName}
         userRole={userRole}
         userInitials={userInitials}
@@ -40,10 +51,21 @@ export default function DashboardLayout() {
         onLogout={() => setShowLogoutModal(true)}
       />
 
-      <div className="lg:ml-[260px] flex flex-col min-h-screen">
+      <div
+        className="flex flex-col min-h-screen transition-all duration-300"
+        style={{ marginLeft: isLg ? (sidebarCollapsed ? '84px' : '272px') : 0 }}
+      >
         <Suspense fallback={<ContentLoader />}>
           <div key={pathname} className="flex flex-col flex-1 animate-fade-in">
-            <Outlet context={{ onMenuToggle: () => setSidebarOpen(!sidebarOpen), user }} />
+            <Outlet
+              context={{
+                onMenuToggle: () => {
+                  if (isLg) setSidebarCollapsed((collapsed) => !collapsed);
+                  else setSidebarOpen((open) => !open);
+                },
+                user,
+              }}
+            />
           </div>
         </Suspense>
       </div>

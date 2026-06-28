@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import { chatService } from '../../services/chatService';
@@ -18,6 +18,14 @@ function formatTime(iso?: string) {
   if (d.toDateString() === now.toDateString())
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   return d.toLocaleDateString();
+}
+
+function sortByLastMessageAt(list: Conversation[]) {
+  return [...list].sort((a, b) => {
+    const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+    const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+    return bTime - aTime;
+  });
 }
 
 const AVATAR_STYLES = [
@@ -46,6 +54,8 @@ export default function MessagesPage() {
   const [loadingConvs, setLoadingConvs] = useState(true);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const lastReadSyncRef = useRef<string | null>(null);
+  const conversationIds = useMemo(() => conversations.map((c) => c.id), [conversations]);
 
   useEffect(() => {
     chatService.listConversations()
@@ -98,33 +108,47 @@ export default function MessagesPage() {
       sendReadReceipt({ conversationId: activeId!, lastReadMessageId: event.message.id });
     }
     if (event.eventType === 'CHAT_MESSAGE') {
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === event.conversationId
-            ? { ...c, lastMessage: event.message.content ?? event.message.fileName, lastMessageAt: event.message.createdAt }
-            : c
-        )
-      );
+      setConversations((prev) => sortByLastMessageAt(
+        prev.map((c) => {
+          if (c.id !== event.conversationId) return c;
+          const isActiveConversation = c.id === activeId;
+          const isOwnMessage = event.message.senderId === currentUserId;
+
+          return {
+            ...c,
+            lastMessage: event.message.content ?? event.message.fileName,
+            lastMessageAt: event.message.createdAt,
+            unreadCount: isActiveConversation || isOwnMessage ? 0 : c.unreadCount + 1,
+          };
+        })
+      ));
     }
   }, [activeId, currentUserId]);
 
   const handleNotification = useCallback((e: NotificationEvent) => {
-    if (e.notification?.type === 'MESSAGE') {
-      setConversations((prev) =>
-        prev.map((c) =>
-          c.id === e.notification?.referenceId
-            ? { ...c, unreadCount: c.id === activeId ? 0 : c.unreadCount + 1 }
-            : c
-        )
-      );
-    }
-  }, [activeId]);
+    if (e.eventType === 'NOTIFICATION_COUNT') return;
+  }, []);
 
   const { sendMessage, sendReadReceipt } = useRecruitProWebSocket({
-    conversationIds: activeId ? [activeId] : [],
+    conversationIds,
     onChatEvent: handleChatEvent,
     onNotification: handleNotification,
   });
+
+  useEffect(() => {
+    if (!activeId || loadingMsgs || messages.length === 0) return;
+    const latest = messages[messages.length - 1];
+    const syncKey = `${activeId}:${latest.id}`;
+    if (lastReadSyncRef.current === syncKey) return;
+
+    const sent = sendReadReceipt({ conversationId: activeId, lastReadMessageId: latest.id });
+    if (!sent) return;
+
+    lastReadSyncRef.current = syncKey;
+    setConversations((prev) =>
+      prev.map((c) => (c.id === activeId ? { ...c, unreadCount: 0 } : c))
+    );
+  }, [activeId, loadingMsgs, messages, sendReadReceipt]);
 
   const handleSend = () => {
     if (!input.trim() || !activeId) return;
@@ -208,38 +232,51 @@ export default function MessagesPage() {
           ) : (
             filtered.map((conv) => {
               const avStyle = avatarStyle(conv.id);
+              const isActive = conv.id === activeId;
+              const isUnread = conv.unreadCount > 0;
               return (
                 <button
                   key={conv.id}
                   id={`conv-item-${conv.id}`}
                   onClick={() => handleSelectConv(conv.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all duration-150 hover:bg-gray-50 border-l-3 ${
-                    conv.id === activeId
-                      ? 'border-l-primary bg-primary/5'
-                      : 'border-l-transparent'
+                  className={`relative w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all duration-150 border-l-3 ${
+                    isActive
+                      ? 'border-l-transparent bg-amber-50 ring-1 ring-inset ring-amber-200 shadow-sm'
+                      : isUnread
+                        ? 'border-l-primary bg-emerald-50/70 hover:bg-emerald-50'
+                        : 'border-l-transparent hover:bg-gray-50'
                   }`}
                 >
+                  {isActive && (
+                    <span className="absolute left-0 top-2 bottom-2 w-1.5 rounded-r-full bg-amber-500 shadow-sm" />
+                  )}
                   {/* Avatar */}
-                  <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${avStyle} flex items-center justify-center text-xs font-bold shadow-sm shrink-0 flex-shrink-0`}>
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold shadow-sm shrink-0 flex-shrink-0 ${
+                    isActive
+                      ? 'bg-amber-500 text-white'
+                      : isUnread
+                        ? 'bg-primary text-white'
+                        : `bg-gradient-to-br ${avStyle}`
+                  }`}>
                     {getInitials(conv.jobSeekerName)}
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <span className={`text-sm truncate ${conv.unreadCount > 0 ? 'font-bold text-gray-900' : 'font-semibold text-gray-800'}`}>
+                      <span className={`text-sm truncate ${isActive ? 'font-bold text-amber-950' : isUnread ? 'font-bold text-gray-950' : 'font-semibold text-gray-800'}`}>
                         {conv.jobSeekerName ?? 'Job Seeker'}
                       </span>
-                      <span className="text-[10px] text-gray-400 shrink-0">
+                      <span className={`text-[10px] shrink-0 ${isActive ? 'font-semibold text-amber-600' : isUnread ? 'font-semibold text-primary' : 'text-gray-400'}`}>
                         {formatTime(conv.lastMessageAt)}
                       </span>
                     </div>
                     <div className="flex items-center justify-between mt-0.5 gap-2">
-                      <span className={`text-xs truncate ${conv.unreadCount > 0 ? 'text-gray-600 font-medium' : 'text-gray-400'}`}>
+                      <span className={`text-xs truncate ${isActive ? 'text-amber-700 font-medium' : isUnread ? 'text-gray-700 font-semibold' : 'text-gray-400'}`}>
                         {conv.lastMessage ?? (conv.isInitiated ? '—' : 'Start a conversation')}
                       </span>
-                      {conv.unreadCount > 0 && (
-                        <span className="shrink-0 w-5 h-5 bg-primary text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                      {isUnread && (
+                        <span className="shrink-0 min-w-5 h-5 bg-primary px-1.5 text-white text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">
                           {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
                         </span>
                       )}
@@ -330,8 +367,8 @@ export default function MessagesPage() {
           </div>
 
           {/* Input */}
-          <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0 bg-white">
-            <div className="flex items-end gap-2 bg-gray-50 border border-gray-100 rounded-2xl px-4 py-2.5 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+          <div className="px-4 py-2 border-t border-gray-100 flex-shrink-0 bg-white">
+            <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-2xl px-3.5 py-1.5 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 transition-all">
               <textarea
                 id="chat-input"
                 rows={1}
@@ -339,13 +376,13 @@ export default function MessagesPage() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Type a message… (Enter to send)"
-                className="flex-1 bg-transparent text-sm text-gray-800 resize-none !border-0 !shadow-none outline-none focus:!border-0 focus:!shadow-none focus:!ring-0 max-h-32 placeholder:text-gray-400 leading-relaxed"
+                className="flex-1 bg-transparent text-sm text-gray-800 resize-none !border-0 !shadow-none outline-none focus:!border-0 focus:!shadow-none focus:!ring-0 max-h-32 placeholder:text-gray-400 leading-6"
               />
               <button
                 id="send-btn"
                 onClick={handleSend}
                 disabled={!input.trim()}
-                className="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center hover:bg-primary-hover hover:-translate-y-px hover:shadow-md transition-all duration-200 disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:shadow-none flex-shrink-0 shadow-sm"
+                className="w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center hover:bg-primary-hover hover:-translate-y-px hover:shadow-md transition-all duration-200 disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:shadow-none flex-shrink-0 shadow-sm"
               >
                 <i className="fas fa-paper-plane text-sm" />
               </button>

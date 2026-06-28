@@ -6,6 +6,7 @@ import {
   useStaff, useCreateStaff, useUpdateStaffName, useDeleteStaff,
 } from '../../../hooks/useStaff';
 import type { StaffMember, CreateStaffRequest, UpdateStaffRequest } from '../../../types/staff';
+import type { UserProfile } from '../../../types/company';
 import PageHeader from '../../../components/common/PageHeader';
 import EmptyState from '../../../components/common/EmptyState';
 
@@ -36,13 +37,14 @@ function avatarGradient(name: string | null | undefined) {
 }
 
 export default function StaffManagementPage() {
-  const { onMenuToggle } = useOutletContext<{ onMenuToggle: () => void }>();
+  const { onMenuToggle, user } = useOutletContext<{ onMenuToggle: () => void; user?: UserProfile }>();
   const { data: members, isLoading, isError, error } = useStaff();
   const createStaff = useCreateStaff();
   const updateStaffName = useUpdateStaffName();
   const deleteStaff = useDeleteStaff();
 
   const [inviteModal, setInviteModal] = useState(false);
+  const [showInvitePassword, setShowInvitePassword] = useState(false);
   const [editModal, setEditModal] = useState<{ open: boolean; member?: StaffMember }>({ open: false });
   const [deleteModal, setDeleteModal] = useState<{ open: boolean; member?: StaffMember }>({ open: false });
 
@@ -78,6 +80,7 @@ export default function StaffManagementPage() {
     hr: members?.filter((m: StaffMember) => m.role === 'HR').length || 0,
     recruiters: members?.filter((m: StaffMember) => m.role === 'RECRUITER').length || 0,
   };
+  const isOwner = user?.companyRole === 'OWNER';
 
   return (
     <>
@@ -88,13 +91,15 @@ export default function StaffManagementPage() {
           title="Staff Management"
           description="Manage your company's team members and their roles"
           action={
-            <button
-              onClick={() => { setInviteModal(true); inviteReset(); }}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover hover:-translate-y-px hover:shadow-md transition-all duration-200 shadow-sm"
-            >
-              <i className="fas fa-user-plus text-xs" />
-              Invite Member
-            </button>
+            isOwner ? (
+              <button
+                onClick={() => { setInviteModal(true); setShowInvitePassword(false); inviteReset(); }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover hover:-translate-y-px hover:shadow-md transition-all duration-200 shadow-sm"
+              >
+                <i className="fas fa-user-plus text-xs" />
+                Invite Member
+              </button>
+            ) : null
           }
         />
 
@@ -158,9 +163,9 @@ export default function StaffManagementPage() {
             <EmptyState
               icon="fa-users"
               title="No team members yet"
-              description="Invite your first team member to collaborate."
-              actionLabel="Invite Member"
-              onAction={() => { setInviteModal(true); inviteReset(); }}
+              description={isOwner ? 'Invite your first team member to collaborate.' : 'No team members have been added yet.'}
+              actionLabel={isOwner ? 'Invite Member' : undefined}
+              onAction={isOwner ? () => { setInviteModal(true); setShowInvitePassword(false); inviteReset(); } : undefined}
             />
           ) : (
             <div className="overflow-x-auto">
@@ -315,12 +320,23 @@ export default function StaffManagementPage() {
                 <label className="block text-sm font-semibold text-gray-700">
                   Password <span className="text-xs text-gray-400 font-normal bg-gray-100 px-1.5 py-0.5 rounded">optional</span>
                 </label>
-                <input
-                  type="password"
-                  className="w-full px-4 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                  placeholder="Leave blank for default: 12345678"
-                  {...inviteRegister('password')}
-                />
+                <div className="relative">
+                  <input
+                    type={showInvitePassword ? 'text' : 'password'}
+                    className="w-full px-4 py-2.5 pr-11 border-[1.5px] border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-300 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                    placeholder="Leave blank for default: 12345678"
+                    {...inviteRegister('password')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowInvitePassword((show) => !show)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-50 hover:text-gray-600 transition-colors"
+                    aria-label={showInvitePassword ? 'Hide password' : 'Show password'}
+                    title={showInvitePassword ? 'Hide password' : 'Show password'}
+                  >
+                    <i className={`fas ${showInvitePassword ? 'fa-eye-slash' : 'fa-eye'} text-xs`} />
+                  </button>
+                </div>
                 <p className="text-xs text-gray-400">Default is <strong>12345678</strong></p>
               </div>
 

@@ -316,8 +316,12 @@ export default function ApplicationsPage() {
                       </Link>
                       <Link
                         to={`${ROUTES.INTERVIEW_SCHEDULE}?applicationId=${app.id}`}
-                        className="w-9 h-9 flex items-center justify-center rounded-xl bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all duration-150 shadow-sm hover:scale-105"
+                        className={`w-9 h-9 flex items-center justify-center rounded-xl bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all duration-150 shadow-sm hover:scale-105 ${
+                          app.hasScheduledInterview ? 'invisible pointer-events-none' : ''
+                        }`}
                         title="Schedule Interview"
+                        aria-hidden={app.hasScheduledInterview}
+                        tabIndex={app.hasScheduledInterview ? -1 : undefined}
                       >
                         <i className="fas fa-calendar-plus text-sm" />
                       </Link>

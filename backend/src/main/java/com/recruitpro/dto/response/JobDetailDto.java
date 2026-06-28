@@ -10,6 +10,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -56,7 +57,9 @@ public class JobDetailDto {
     // ============================================================
     private JobType jobType;
     private JobStatus status;
+    private LocalDate closeDate;
     private Set<Skill> skills;
+    private long applicationCount;
     private Instant createdAt;
     private Instant updatedAt;
 

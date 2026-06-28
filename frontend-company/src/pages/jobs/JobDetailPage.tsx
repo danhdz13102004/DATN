@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
 import Topbar from '../../components/layout/Topbar';
@@ -8,12 +9,24 @@ import { useToast } from '../../contexts/ToastContext';
 import StatusBadge from '../../components/common/StatusBadge';
 import InfoGrid from '../../components/common/InfoGrid';
 import EmptyState from '../../components/common/EmptyState';
+import ConfirmActionModal from '../../components/common/ConfirmActionModal';
 
 const JOB_TYPE_LABELS: Record<string, string> = {
   FULLTIME: 'Full-time',
   PARTTIME: 'Part-time',
   REMOTE: 'Remote',
   HYBRID: 'Hybrid',
+};
+
+const todayDateInputValue = () => {
+  const now = new Date();
+  const offsetMs = now.getTimezoneOffset() * 60_000;
+  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10);
+};
+
+const getEffectiveStatus = (job: { status: string; closeDate?: string | null }) => {
+  if (job.status === 'CLOSED') return 'CLOSED';
+  return job.closeDate && job.closeDate < todayDateInputValue() ? 'CLOSED' : job.status;
 };
 
 export default function JobDetailPage() {
@@ -24,17 +37,35 @@ export default function JobDetailPage() {
   const changeStatus = useChangeJobStatus();
   const deleteJob = useDeleteJob();
   const toast = useToast();
+  const [confirmAction, setConfirmAction] = useState<null | 'close' | 'delete'>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const handleDelete = async () => {
-    if (confirm('Are you sure you want to delete this job? This cannot be undone.')) {
-      try {
-        await deleteJob.mutateAsync(id!);
-        toast.success('Job deleted successfully');
-        navigate(ROUTES.JOBS);
-      } catch (err: unknown) {
-        const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || 'Failed to delete job';
-        toast.error(msg);
-      }
+    try {
+      setIsConfirming(true);
+      await deleteJob.mutateAsync(id!);
+      toast.success('Job deleted successfully');
+      setConfirmAction(null);
+      navigate(ROUTES.JOBS);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || 'Failed to delete job';
+      toast.error(msg);
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  const handleCloseJob = async () => {
+    try {
+      setIsConfirming(true);
+      await changeStatus.mutateAsync({ id: id!, status: 'CLOSED' });
+      toast.success('Job closed successfully');
+      setConfirmAction(null);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || 'Failed to close job';
+      toast.error(msg);
+    } finally {
+      setIsConfirming(false);
     }
   };
 
@@ -66,6 +97,10 @@ export default function JobDetailPage() {
     </>
   );
 
+  const effectiveStatus = getEffectiveStatus(job);
+  const isClosed = effectiveStatus === 'CLOSED';
+  const hasApplicants = (job.applicationCount ?? 0) > 0;
+
   const infoItems = [
     { label: 'Job Type', value: JOB_TYPE_LABELS[job.jobType] ?? job.jobType, icon: 'fa-clock' },
     { label: 'Level', value: job.experienceLevels?.map((l) => l.charAt(0) + l.slice(1).toLowerCase()).join(', ') || '—', icon: 'fa-signal' },
@@ -80,6 +115,7 @@ export default function JobDetailPage() {
       highlight: true,
     },
     { label: 'Created', value: formatDate(job.createdAt), icon: 'fa-calendar-plus' },
+    { label: 'Close Date', value: job.closeDate ? formatDate(job.closeDate) : 'No close date', icon: 'fa-calendar-xmark' },
     {
       label: 'Applications',
       value: `${job.applicationCount ?? 0} applicant${(job.applicationCount ?? 0) !== 1 ? 's' : ''}`,
@@ -111,7 +147,7 @@ export default function JobDetailPage() {
                     {job.title}
                   </h2>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
-                    <StatusBadge status={job.status} size="sm" />
+                    <StatusBadge status={effectiveStatus} size="sm" />
                     <span className="text-sm text-gray-400">
                       <i className="fas fa-calendar-alt mr-1 text-gray-300" />
                       Posted {formatRelativeDate(job.createdAt)}
@@ -122,25 +158,19 @@ export default function JobDetailPage() {
 
               {/* Action buttons */}
               <div className="flex flex-wrap items-center gap-2">
-                <Link
-                  to={`/jobs/${id}/edit`}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 hover:-translate-y-px hover:shadow-sm transition-all duration-200 no-underline"
-                >
-                  <i className="fas fa-pen text-xs text-gray-400" />
-                  Edit
-                </Link>
+                {!isClosed && !hasApplicants && (
+                  <Link
+                    to={`/jobs/${id}/edit`}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-50 hover:-translate-y-px hover:shadow-sm transition-all duration-200 no-underline"
+                  >
+                    <i className="fas fa-pen text-xs text-gray-400" />
+                    Edit
+                  </Link>
+                )}
 
-                {job.status === 'PUBLISHED' && (
+                {effectiveStatus === 'PUBLISHED' && (
                   <button
-                    onClick={async () => {
-                      try {
-                        await changeStatus.mutateAsync({ id: id!, status: 'CLOSED' });
-                        toast.success('Job closed successfully');
-                      } catch (err: unknown) {
-                        const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message || 'Failed to close job';
-                        toast.error(msg);
-                      }
-                    }}
+                    onClick={() => setConfirmAction('close')}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 text-amber-600 rounded-xl text-sm font-semibold hover:bg-amber-100 hover:-translate-y-px hover:shadow-sm transition-all duration-200"
                   >
                     <i className="fas fa-times-circle text-xs" />
@@ -148,7 +178,7 @@ export default function JobDetailPage() {
                   </button>
                 )}
 
-                {job.status === 'DRAFT' && (
+                {effectiveStatus === 'DRAFT' && (
                   <button
                     onClick={async () => {
                       try {
@@ -166,13 +196,15 @@ export default function JobDetailPage() {
                   </button>
                 )}
 
-                <button
-                  onClick={handleDelete}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-100 text-red-500 rounded-xl text-sm font-medium hover:bg-red-100 hover:-translate-y-px hover:shadow-sm transition-all duration-200"
-                >
-                  <i className="fas fa-trash text-xs" />
-                  Delete
-                </button>
+                {!hasApplicants && (
+                  <button
+                    onClick={() => setConfirmAction('delete')}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-100 text-red-500 rounded-xl text-sm font-medium hover:bg-red-100 hover:-translate-y-px hover:shadow-sm transition-all duration-200"
+                  >
+                    <i className="fas fa-trash text-xs" />
+                    Delete
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -391,6 +423,23 @@ export default function JobDetailPage() {
           )}
         </div> */}
       </div>
+      {confirmAction && (
+        <ConfirmActionModal
+          open
+          title={confirmAction === 'delete' ? 'Delete this job?' : 'Close this job?'}
+          message={
+            confirmAction === 'delete'
+              ? `Deleting "${job.title}" removes it from your company workspace. This is only allowed when the job has no applicants.`
+              : `Closing "${job.title}" will expire it immediately and job seekers will no longer be able to view or apply to it.`
+          }
+          confirmLabel={confirmAction === 'delete' ? 'Delete Job' : 'Close Job'}
+          icon={confirmAction === 'delete' ? 'fa-trash' : 'fa-circle-xmark'}
+          tone={confirmAction === 'delete' ? 'danger' : 'warning'}
+          isLoading={isConfirming}
+          onClose={() => setConfirmAction(null)}
+          onConfirm={confirmAction === 'delete' ? handleDelete : handleCloseJob}
+        />
+      )}
     </>
   );
 }

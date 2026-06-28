@@ -202,6 +202,7 @@ public class JobSearchIndexService {
                 .salaryMin(job.getSalaryMin())
                 .salaryMax(job.getSalaryMax())
                 .status(job.getStatus() != null ? job.getStatus().name() : JobStatus.DRAFT.name())
+                .closeDate(job.getCloseDate() != null ? job.getCloseDate().toString() : null)
                 .createdAt(job.getCreatedAt() != null ? job.getCreatedAt().toEpochMilli() : null)
                 .updatedAt(job.getUpdatedAt() != null ? job.getUpdatedAt().toEpochMilli() : null)
                 .title(job.getTitle())
@@ -250,6 +251,7 @@ public class JobSearchIndexService {
                     "salaryMin": { "type": "integer" },
                     "salaryMax": { "type": "integer" },
                     "status": { "type": "keyword" },
+                    "closeDate": { "type": "date" },
                     "createdAt": { "type": "date" },
                     "updatedAt": { "type": "date" },
                     "title": {

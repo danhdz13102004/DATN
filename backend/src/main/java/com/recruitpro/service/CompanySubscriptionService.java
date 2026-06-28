@@ -31,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -73,10 +74,10 @@ public class CompanySubscriptionService {
 
     // ── Current Subscription ───────────────────────────────────────────────────
 
+    @Transactional
     public Optional<CompanySubscriptionDto> getCurrentSubscription(UUID companyId) {
-        // First try to find an ACTIVE subscription
-        return subscriptionRepository
-                .findFirstByCompanyIdAndStatusOrderByCreatedAtDesc(companyId, SubscriptionStatus.ACTIVE)
+        expireOverdueSubscriptions();
+        return findCurrentActiveSubscription(companyId)
                 .or(() -> subscriptionRepository.findFirstByCompanyIdOrderByCreatedAtDesc(companyId))
                 .map(this::toSubscriptionDto);
     }
@@ -260,8 +261,7 @@ public class CompanySubscriptionService {
      * the company has not exceeded the limit. autoFillLimit = 0 means disabled.
      */
     public boolean canUseAutoFill(UUID companyId) {
-        return subscriptionRepository
-                .findFirstByCompanyIdAndStatusOrderByCreatedAtDesc(companyId, SubscriptionStatus.ACTIVE)
+        return findCurrentActiveSubscription(companyId)
                 .map(sub -> {
                     int limit = sub.getPlan().getAutoFillLimit();
                     if (limit == 0) return false;
@@ -274,8 +274,7 @@ public class CompanySubscriptionService {
      * Checks whether the given company can view AI matching scores on applications.
      */
     public boolean canUseAiMatching(UUID companyId) {
-        return subscriptionRepository
-                .findFirstByCompanyIdAndStatusOrderByCreatedAtDesc(companyId, SubscriptionStatus.ACTIVE)
+        return findCurrentActiveSubscription(companyId)
                 .map(Subscription::isAllowUseAiMatching)
                 .orElse(false);
     }
@@ -284,8 +283,7 @@ public class CompanySubscriptionService {
      * Checks whether the company can publish another job in the current subscription period.
      */
     public boolean canPostJob(UUID companyId) {
-        return subscriptionRepository
-                .findFirstByCompanyIdAndStatusOrderByCreatedAtDesc(companyId, SubscriptionStatus.ACTIVE)
+        return findCurrentActiveSubscription(companyId)
                 .map(sub -> sub.getJobsPostedCount() < sub.getPlan().getJobPostLimit())
                 .orElse(false);
     }
@@ -294,9 +292,8 @@ public class CompanySubscriptionService {
      * Throws a clear error when the company has no active subscription or has reached its job post limit.
      */
     public void ensureCanPostJob(UUID companyId) {
-        Subscription sub = subscriptionRepository
-                .findFirstByCompanyIdAndStatusOrderByCreatedAtDesc(companyId, SubscriptionStatus.ACTIVE)
-                .orElseThrow(() -> new BadRequestException("No active subscription found. Please subscribe to a plan before publishing jobs."));
+        Subscription sub = findCurrentActiveSubscription(companyId)
+                .orElseThrow(() -> new BadRequestException("No active subscription found or your subscription has expired. Please subscribe to a plan before publishing jobs."));
 
         if (sub.getJobsPostedCount() >= sub.getPlan().getJobPostLimit()) {
             throw new BadRequestException("Job post limit reached. Please upgrade your plan to publish more jobs.");
@@ -308,8 +305,7 @@ public class CompanySubscriptionService {
      */
     @Transactional
     public void incrementJobPostUsage(UUID companyId) {
-        subscriptionRepository
-                .findFirstByCompanyIdAndStatusOrderByCreatedAtDesc(companyId, SubscriptionStatus.ACTIVE)
+        findCurrentActiveSubscription(companyId)
                 .ifPresent(sub -> {
                     sub.setJobsPostedCount(sub.getJobsPostedCount() + 1);
                     subscriptionRepository.save(sub);
@@ -321,12 +317,33 @@ public class CompanySubscriptionService {
      */
     @Transactional
     public void incrementAutoFillUsage(UUID companyId) {
-        subscriptionRepository
-                .findFirstByCompanyIdAndStatusOrderByCreatedAtDesc(companyId, SubscriptionStatus.ACTIVE)
+        findCurrentActiveSubscription(companyId)
                 .ifPresent(sub -> {
                     sub.setAutoFillUsageCount(sub.getAutoFillUsageCount() + 1);
                     subscriptionRepository.save(sub);
                 });
+    }
+
+    @Scheduled(cron = "0 * * * * *")
+    @Transactional
+    public void expireOverdueSubscriptions() {
+        log.debug("Running overdue subscription expiration job");
+        int expired = subscriptionRepository.expireOverdueActiveSubscriptions(
+                SubscriptionStatus.ACTIVE,
+                SubscriptionStatus.EXPIRED,
+                Instant.now()
+        );
+        if (expired > 0) {
+            log.info("Expired {} overdue subscription(s)", expired);
+        }
+    }
+
+    private Optional<Subscription> findCurrentActiveSubscription(UUID companyId) {
+        return subscriptionRepository.findFirstByCompanyIdAndStatusAndEndDateAfterOrderByCreatedAtDesc(
+                companyId,
+                SubscriptionStatus.ACTIVE,
+                Instant.now()
+        );
     }
 
     // ── Mapping ────────────────────────────────────────────────────────────────

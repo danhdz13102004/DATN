@@ -6,6 +6,7 @@ import com.recruitpro.dto.JobAutoFillDto;
 import com.recruitpro.dto.request.JobCreateRequest;
 import com.recruitpro.dto.request.JobUpdateRequest;
 import com.recruitpro.dto.response.ApiResponse;
+import com.recruitpro.dto.response.JobDetailDto;
 import com.recruitpro.dto.response.JobSelectOptionDto;
 import com.recruitpro.dto.response.PaginationMeta;
 import com.recruitpro.exception.BadRequestException;
@@ -36,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.time.LocalDate;
 
 /**
  * Company-scoped job management endpoints under /api/v1/company/jobs.
@@ -71,6 +73,14 @@ public class CompanyJobController {
                 .total(page.getTotalElements())
                 .build();
         return ResponseEntity.ok(ApiResponse.ok(page.getContent(), meta));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<JobDetailDto>> getCompanyJobDetail(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(jobService.findByIdAsCompanyJobDetailDto(id, principal)));
     }
 
     /** JSON-only request (no file attachment). */
@@ -205,6 +215,7 @@ public class CompanyJobController {
                 .salaryMax(body.salaryMax())
                 .jobType(body.jobType())
                 .status(body.status() != null ? body.status() : JobStatus.DRAFT)
+                .closeDate(body.closeDate())
                 .build();
 
         if (body.industryId() != null && !body.industryId().isBlank()) {
@@ -235,6 +246,7 @@ public class CompanyJobController {
                 .salaryMax(body.salaryMax())
                 .jobType(body.jobType())
                 .status(body.status())
+                .closeDate(body.closeDate())
                 .build();
 
         if (body.industryId() != null && !body.industryId().isBlank()) {
@@ -271,6 +283,7 @@ public class CompanyJobController {
                 .salaryMax(body.get("salaryMax") != null ? ((Number) body.get("salaryMax")).intValue() : null)
                 .jobType(body.get("jobType") != null ? JobType.valueOf((String) body.get("jobType")) : null)
                 .status(status)
+                .closeDate(parseCloseDate(body.get("closeDate")))
                 .build();
 
         Object addressIdRaw = body.get("addressId");
@@ -310,6 +323,13 @@ public class CompanyJobController {
         Object val = body.get(key);
         if (val == null) return null;
         return ((List<String>) val).toArray(new String[0]);
+    }
+
+    private LocalDate parseCloseDate(Object raw) {
+        if (raw == null) return null;
+        String value = String.valueOf(raw);
+        if (value.isBlank()) return null;
+        return LocalDate.parse(value);
     }
 
     /**

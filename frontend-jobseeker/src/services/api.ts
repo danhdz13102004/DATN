@@ -15,6 +15,9 @@ const api = axios.create({
   timeout: 15000,
 });
 
+const isPublicJobsPage = () =>
+  window.location.pathname === '/jobs' || window.location.pathname.startsWith('/jobs/');
+
 // ── Request interceptor: attach access token ──
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
@@ -79,7 +82,9 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         useAuthStore.getState().logout();
-        window.location.href = '/login';
+        if (!isPublicJobsPage()) {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

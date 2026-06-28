@@ -19,7 +19,11 @@ public interface SavedJobRepository extends JpaRepository<SavedJob, UUID> {
 
     Optional<SavedJob> findByJobSeekerIdAndJobId(UUID jobSeekerId, UUID jobId);
 
-    Page<SavedJob> findAllByJobSeekerId(UUID jobSeekerId, Pageable pageable);
+    @Query(
+            value = "SELECT s FROM SavedJob s WHERE s.jobSeekerId = :jobSeekerId AND EXISTS (SELECT j.id FROM Job j WHERE j.id = s.jobId)",
+            countQuery = "SELECT COUNT(s) FROM SavedJob s WHERE s.jobSeekerId = :jobSeekerId AND EXISTS (SELECT j.id FROM Job j WHERE j.id = s.jobId)"
+    )
+    Page<SavedJob> findAllExistingByJobSeekerId(@Param("jobSeekerId") UUID jobSeekerId, Pageable pageable);
 
     void deleteByJobSeekerIdAndJobId(UUID jobSeekerId, UUID jobId);
 

@@ -24,12 +24,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class InterviewService {
+    private static final DateTimeFormatter NOTIFICATION_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("MMM d, yyyy 'at' HH:mm").withZone(ZoneId.of("Asia/Ho_Chi_Minh"));
 
     private final InterviewRepository interviewRepository;
     private final ApplicationRepository applicationRepository;
@@ -202,9 +206,10 @@ public class InterviewService {
                     application.getJobSeeker().getUser().getId(),
                     NotificationType.INTERVIEW_INVITE,
                     "Interview scheduled",
-                    "Your interview for \"" + jobTitle + "\" has been scheduled.",
-                    interview.getId(),
-                    "INTERVIEW"
+                    "Your interview for \"" + jobTitle + "\" is scheduled for "
+                            + NOTIFICATION_TIME_FORMATTER.format(interview.getScheduledTime()) + ".",
+                    application.getId(),
+                    "APPLICATION_INTERVIEW"
             );
         } catch (Exception e) {
             log.warn("Could not create interview notification: {}", e.getMessage());

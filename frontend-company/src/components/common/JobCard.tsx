@@ -24,6 +24,17 @@ function formatSalary(min: number | null | undefined, max: number | null | undef
   return `Up to $${max!.toLocaleString()}`;
 }
 
+const todayDateInputValue = () => {
+  const now = new Date();
+  const offsetMs = now.getTimezoneOffset() * 60_000;
+  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10);
+};
+
+function getEffectiveStatus(job: Job) {
+  if (job.status === 'CLOSED') return 'CLOSED';
+  return job.closeDate && job.closeDate < todayDateInputValue() ? 'CLOSED' : job.status;
+}
+
 const LEVEL_COLORS: Record<string, { text: string; bg: string; border: string }> = {
   INTERN:  { text: '#7C3AED', bg: '#EDE9FE', border: 'rgba(124,58,237,0.15)' },
   FRESHER: { text: '#059669', bg: '#D1FAE5', border: 'rgba(5,150,105,0.15)' },
@@ -43,13 +54,15 @@ export default function JobCard({
 }: JobCardProps) {
   const primaryLevel = job.experienceLevels?.[0] ?? '';
   const levelStyle = primaryLevel ? (LEVEL_COLORS[primaryLevel] ?? LEVEL_COLORS['MIDDLE']) : null;
+  const effectiveStatus = getEffectiveStatus(job);
+  const hasApplicants = (job.applicationCount ?? 0) > 0;
 
   // Company logo: show first letter of company name or job title
   const companyInitial = 'C';
 
   return (
     <article
-      className="job-card group relative flex flex-col bg-white border border-gray-100 rounded-2xl p-6 cursor-pointer"
+      className="job-card group relative flex h-full min-h-[356px] flex-col bg-white border border-gray-100 rounded-2xl p-6 cursor-pointer"
       style={{
         boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.01)',
         transition: 'transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease',
@@ -66,7 +79,7 @@ export default function JobCard({
       />
 
       {/* Header: Logo + Title + Actions */}
-      <div className="flex items-start gap-4 mb-5">
+      <div className="flex min-h-[56px] items-start gap-4 mb-5">
         {/* Company Logo */}
         <div
           className="card-logo"
@@ -113,7 +126,7 @@ export default function JobCard({
 
         {/* Inline action buttons (appear on hover) */}
         <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          {onEdit && (
+          {onEdit && effectiveStatus !== 'CLOSED' && !hasApplicants && (
             <button
               className="action-btn-edit"
               onClick={(e) => { e.stopPropagation(); onEdit(job.id); }}
@@ -143,7 +156,7 @@ export default function JobCard({
               <i className="fas fa-pen" style={{ fontSize: '0.8rem' }} />
             </button>
           )}
-          {job.status === 'PUBLISHED' && onClose && (
+          {effectiveStatus === 'PUBLISHED' && onClose && (
             <button
               className="action-btn-close"
               onClick={(e) => { e.stopPropagation(); onClose(job.id); }}
@@ -171,7 +184,7 @@ export default function JobCard({
               <i className="fas fa-times-circle" style={{ fontSize: '0.8rem' }} />
             </button>
           )}
-          {job.status === 'DRAFT' && onPublish && (
+          {effectiveStatus === 'DRAFT' && onPublish && (
             <button
               className="action-btn-publish"
               onClick={(e) => { e.stopPropagation(); onPublish(job.id); }}
@@ -199,7 +212,7 @@ export default function JobCard({
               <i className="fas fa-rocket" style={{ fontSize: '0.8rem' }} />
             </button>
           )}
-          {onDelete && (
+          {onDelete && !hasApplicants && (
             <button
               className="action-btn-delete"
               onClick={(e) => { e.stopPropagation(); onDelete(job.id); }}
@@ -233,29 +246,35 @@ export default function JobCard({
       </div>
 
       {/* Status badge */}
-      <div className="mb-3">
-        {job.status === 'PUBLISHED' && (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            Published
-          </span>
-        )}
-        {job.status === 'DRAFT' && (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-600 ring-1 ring-amber-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-            Draft
-          </span>
-        )}
-        {job.status === 'CLOSED' && (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-500 ring-1 ring-gray-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-            Closed
-          </span>
-        )}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div>
+          {effectiveStatus === 'PUBLISHED' && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Published
+            </span>
+          )}
+          {effectiveStatus === 'DRAFT' && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-600 ring-1 ring-amber-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              Draft
+            </span>
+          )}
+          {effectiveStatus === 'CLOSED' && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-500 ring-1 ring-gray-200">
+              <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+              Closed
+            </span>
+          )}
+        </div>
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-sky-50 text-sky-700 ring-1 ring-sky-100">
+          <i className="fas fa-users text-[10px] text-sky-500" />
+          {job.applicationCount ?? 0} applicant{(job.applicationCount ?? 0) === 1 ? '' : 's'}
+        </span>
       </div>
 
       {/* Badges row */}
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="flex min-h-[72px] flex-wrap content-start gap-2 mb-4 overflow-hidden">
         {job.location && (
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -286,6 +305,21 @@ export default function JobCard({
             {JOB_TYPE_LABELS[job.jobType] ?? job.jobType}
           </span>
         )}
+        {job.closeDate && (
+          <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 5,
+            padding: '5px 11px',
+            background: '#f8fafc',
+            border: '1px solid #e2e7f0',
+            borderRadius: 8,
+            fontSize: '0.8rem',
+            color: '#475569',
+            fontWeight: 500,
+          }}>
+            <i className="fas fa-calendar-xmark" style={{ color: '#64748b', fontSize: '0.7rem' }} />
+            Closes {job.closeDate}
+          </span>
+        )}
         {primaryLevel && levelStyle && (
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -304,43 +338,41 @@ export default function JobCard({
       </div>
 
       {/* Skills */}
-      {job.skills && job.skills.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {job.skills.slice(0, 3).map((skill) => (
-            <span
-              key={skill.id}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                padding: '4px 11px',
-                borderRadius: 50,
-                fontSize: '0.78rem',
-                fontWeight: 500,
-                background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)',
-                color: '#0a8a22',
-                border: '1px solid #bbf7d0',
-                letterSpacing: '0.01em',
-              }}
-            >
-              {skill.name}
-            </span>
-          ))}
-          {job.skills.length > 3 && (
-            <span style={{
+      <div className="flex min-h-[28px] flex-wrap content-start gap-2 mb-4 overflow-hidden">
+        {job.skills?.slice(0, 3).map((skill) => (
+          <span
+            key={skill.id}
+            style={{
               display: 'inline-flex',
               alignItems: 'center',
               padding: '4px 11px',
               borderRadius: 50,
               fontSize: '0.78rem',
               fontWeight: 500,
-              background: '#f1f5f9',
-              color: '#64748b',
-            }}>
-              +{job.skills.length - 3}
-            </span>
-          )}
-        </div>
-      )}
+              background: 'linear-gradient(135deg, #f0fdf4, #ecfdf5)',
+              color: '#0a8a22',
+              border: '1px solid #bbf7d0',
+              letterSpacing: '0.01em',
+            }}
+          >
+            {skill.name}
+          </span>
+        ))}
+        {(job.skills?.length ?? 0) > 3 && (
+          <span style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            padding: '4px 11px',
+            borderRadius: 50,
+            fontSize: '0.78rem',
+            fontWeight: 500,
+            background: '#f1f5f9',
+            color: '#64748b',
+          }}>
+            +{(job.skills?.length ?? 0) - 3}
+          </span>
+        )}
+      </div>
 
       {/* Footer: salary + CTA */}
       <div style={{

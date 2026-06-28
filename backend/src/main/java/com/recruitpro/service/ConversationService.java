@@ -9,6 +9,7 @@ import com.recruitpro.model.enums.UserRole;
 import com.recruitpro.repository.ApplicationRepository;
 import com.recruitpro.repository.ConversationRepository;
 import com.recruitpro.repository.JobSeekerRepository;
+import com.recruitpro.repository.MessageRepository;
 import com.recruitpro.repository.StaffRepository;
 import com.recruitpro.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class ConversationService {
     private final StaffRepository        staffRepository;
     private final JobSeekerRepository    jobSeekerRepository;
     private final UserRepository         userRepository;
+    private final MessageRepository      messageRepository;
 
     @Transactional
     public Conversation createConversation(UUID applicationId, UUID staffUserId) {
@@ -114,16 +116,41 @@ public class ConversationService {
         var staff = staffRepository.findByUserId(staffUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
         return conversationRepository.findByStaffIdOrderByUpdatedAtDesc(staff.getId())
-                .stream().map(this::toDto).collect(Collectors.toList());
+                .stream().map(c -> toDto(c, staffUserId)).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public List<ConversationResponseDto> listForJobSeeker(UUID jobSeekerProfileId) {
+    public List<ConversationResponseDto> listForJobSeeker(UUID jobSeekerProfileId, UUID userId) {
         return conversationRepository.findByJobSeekerIdOrderByUpdatedAtDesc(jobSeekerProfileId)
-                .stream().map(this::toDto).collect(Collectors.toList());
+                .stream().map(c -> toDto(c, userId)).collect(Collectors.toList());
     }
 
-    private ConversationResponseDto toDto(Conversation c) {
+    @Transactional(readOnly = true)
+    public long unreadCountForUser(UUID userId) {
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        List<Conversation> conversations;
+        if (user.getRole() == UserRole.COMPANY) {
+            var staff = staffRepository.findByUserId(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
+            conversations = conversationRepository.findByStaffIdOrderByUpdatedAtDesc(staff.getId());
+        } else if (user.getRole() == UserRole.JOBSEEKER) {
+            var seeker = jobSeekerRepository.findByUserId(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Job seeker profile not found"));
+            conversations = conversationRepository.findByJobSeekerIdOrderByUpdatedAtDesc(seeker.getId());
+        } else {
+            return 0;
+        }
+
+        return conversations.stream()
+                .mapToLong(c -> messageRepository.countUnreadForUser(c.getId(), userId))
+                .sum();
+    }
+
+    private ConversationResponseDto toDto(Conversation c, UUID currentUserId) {
+        var lastMessage = messageRepository.findFirstByConversationIdOrderByCreatedAtDesc(c.getId());
+
         return ConversationResponseDto.builder()
                 .id(c.getId())
                 .applicationId(c.getApplicationId())
@@ -131,7 +158,13 @@ public class ConversationService {
                 .jobSeekerId(c.getJobSeekerId())
                 .isInitiated(c.isInitiated())
                 .createdAt(c.getCreatedAt())
-                .lastMessageAt(c.getUpdatedAt())
+                .lastMessage(lastMessage
+                        .map(m -> m.getContent() != null && !m.getContent().isBlank()
+                                ? m.getContent()
+                                : m.getFileName())
+                        .orElse(null))
+                .lastMessageAt(lastMessage.map(m -> m.getCreatedAt()).orElse(c.getUpdatedAt()))
+                .unreadCount(messageRepository.countUnreadForUser(c.getId(), currentUserId))
                 .staffName(resolveStaffName(c.getStaffId()))
                 .jobSeekerName(resolveJobSeekerName(c.getJobSeekerId()))
                 .build();

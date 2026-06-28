@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { jobService } from '../../services/jobService';
 import { resumeService } from '../../services/resumeService';
 import { locationService } from '../../services/locationService';
@@ -16,6 +16,65 @@ import { JobsEmptyState, RecommendedEmptyState } from '../../components/jobs/Job
 import { JobsGridSkeleton, RecommendedGridSkeleton } from '../../components/jobs/JobsLoadingSkeleton';
 
 type ViewMode = 'all' | 'recommended' | 'saved';
+
+const DEFAULT_FILTERS: JobFilter = { page: 1, size: 12 };
+const VALID_VIEW_MODES: ViewMode[] = ['all', 'recommended', 'saved'];
+
+function readNumberParam(params: URLSearchParams, key: string) {
+  const value = params.get(key);
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function filtersFromSearchParams(params: URLSearchParams): JobFilter {
+  const filters: JobFilter = {
+    page: readNumberParam(params, 'page') ?? DEFAULT_FILTERS.page,
+    size: readNumberParam(params, 'size') ?? DEFAULT_FILTERS.size,
+  };
+
+  const keyword = params.get('keyword');
+  const jobType = params.get('jobType');
+  const experienceLevels = params.getAll('experienceLevels').filter(Boolean);
+
+  if (keyword) filters.keyword = keyword;
+  if (jobType) filters.jobType = jobType;
+  if (experienceLevels.length) filters.experienceLevels = experienceLevels;
+
+  const countryId = readNumberParam(params, 'countryId');
+  const cityId = readNumberParam(params, 'cityId');
+  const salaryMin = readNumberParam(params, 'salaryMin');
+  const salaryMax = readNumberParam(params, 'salaryMax');
+
+  if (countryId != null) filters.countryId = countryId;
+  if (cityId != null) filters.cityId = cityId;
+  if (salaryMin != null) filters.salaryMin = salaryMin;
+  if (salaryMax != null) filters.salaryMax = salaryMax;
+
+  return filters;
+}
+
+function viewModeFromSearchParams(params: URLSearchParams): ViewMode {
+  const tab = params.get('tab') as ViewMode | null;
+  return tab && VALID_VIEW_MODES.includes(tab) ? tab : 'all';
+}
+
+function searchParamsFromState(filters: JobFilter, viewMode: ViewMode) {
+  const params = new URLSearchParams();
+
+  if (viewMode !== 'all') params.set('tab', viewMode);
+  if (filters.keyword) params.set('keyword', filters.keyword);
+  if (filters.jobType) params.set('jobType', filters.jobType);
+  filters.experienceLevels?.forEach(level => params.append('experienceLevels', level));
+  if (filters.countryId != null) params.set('countryId', String(filters.countryId));
+  if (filters.cityId != null) params.set('cityId', String(filters.cityId));
+  if (filters.salaryMin != null) params.set('salaryMin', String(filters.salaryMin));
+  if (filters.salaryMax != null) params.set('salaryMax', String(filters.salaryMax));
+  if ((filters.page ?? DEFAULT_FILTERS.page) !== DEFAULT_FILTERS.page) params.set('page', String(filters.page));
+  if ((filters.size ?? DEFAULT_FILTERS.size) !== DEFAULT_FILTERS.size) params.set('size', String(filters.size));
+
+  return params;
+}
 
 function JobGridItem({
   saved,
@@ -196,14 +255,16 @@ function JobGridItem({
 
 export default function JobsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalJobs, setTotalJobs] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [draftFilters, setDraftFilters] = useState<JobFilter>({ page: 1, size: 12 });
-  const [filters, setFilters] = useState<JobFilter>({ page: 1, size: 12 });
-  const [viewMode, setViewMode] = useState<ViewMode>('all');
+  const [draftFilters, setDraftFilters] = useState<JobFilter>(() => filtersFromSearchParams(searchParams));
+  const [filters, setFilters] = useState<JobFilter>(() => filtersFromSearchParams(searchParams));
+  const [viewMode, setViewMode] = useState<ViewMode>(() => viewModeFromSearchParams(searchParams));
   const [savedJobs, setSavedJobs] = useState<SavedJobDto[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
   const [savedTotal, setSavedTotal] = useState(0);
@@ -216,9 +277,12 @@ export default function JobsPage() {
   const [recommendError, setRecommendError] = useState<string | null>(null);
   const [recommendMode, setRecommendMode] = useState(true); // true = resume, false = activities
   const [recommendMeta, setRecommendMeta] = useState<Record<string, unknown>>({});
+  const currentJobsPath = `${location.pathname}${location.search}`;
 
   // Auto-detect user's country by IP on mount
   useEffect(() => {
+    if (searchParams.toString()) return;
+
     locationService.detectCountryByIp()
       .then(res => {
         if (res.data.data) {
@@ -226,7 +290,22 @@ export default function JobsPage() {
         }
       })
       .catch(() => { /* silent — no country auto-selected */ });
-  }, []);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const nextFilters = filtersFromSearchParams(searchParams);
+    const nextViewMode = viewModeFromSearchParams(searchParams);
+    setFilters(nextFilters);
+    setDraftFilters(nextFilters);
+    setViewMode(nextViewMode);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const nextParams = searchParamsFromState(filters, viewMode);
+    if (nextParams.toString() !== searchParams.toString()) {
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [filters, viewMode, searchParams, setSearchParams]);
 
   const fetchJobs = (f: JobFilter) => {
     setLoading(true);
@@ -243,8 +322,11 @@ export default function JobsPage() {
   const fetchSavedJobs = () => {
     setSavedLoading(true);
     jobService.getSavedJobs().then((res) => {
-      setSavedJobs(res.data ?? []);
-      setSavedTotal(res.meta?.total ?? 0);
+      const validSavedJobs = (res.data ?? []).filter(
+        (saved): saved is SavedJobDto => Boolean(saved?.savedJobId && saved.jobId)
+      );
+      setSavedJobs(validSavedJobs);
+      setSavedTotal(res.meta?.total ?? validSavedJobs.length);
     }).catch(console.error)
       .finally(() => setSavedLoading(false));
   };
@@ -262,6 +344,11 @@ export default function JobsPage() {
   };
 
   useEffect(() => {
+    if (!isAuthenticated && viewMode !== 'all') {
+      setViewMode('all');
+      return;
+    }
+
     if (viewMode === 'recommended') {
       resumeService.listResumes()
         .then(list => {
@@ -271,13 +358,13 @@ export default function JobsPage() {
         })
         .catch(() => setResumes([]));
     }
-  }, [viewMode]);
+  }, [isAuthenticated, viewMode]);
 
   useEffect(() => {
-    if (viewMode === 'recommended' && selectedResumeId) {
+    if (isAuthenticated && viewMode === 'recommended' && selectedResumeId) {
       fetchRecommendations(selectedResumeId, recommendMode);
     }
-  }, [viewMode, selectedResumeId, recommendMode]);
+  }, [isAuthenticated, viewMode, selectedResumeId, recommendMode]);
 
   // Auto-select a resume when switching to activities mode
   useEffect(() => {
@@ -297,13 +384,13 @@ export default function JobsPage() {
   }, [isAuthenticated]);
 
   useEffect(() => {
-    if (viewMode === 'saved') fetchSavedJobs();
-  }, [viewMode]);
+    if (isAuthenticated && viewMode === 'saved') fetchSavedJobs();
+  }, [isAuthenticated, viewMode]);
 
   const handleToggleSave = async (jobId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isAuthenticated) {
-      navigate('/login', { state: { from: '/jobs' } });
+      navigate('/login', { state: { from: currentJobsPath } });
       return;
     }
     if (savePendingId === jobId) return;
@@ -351,8 +438,8 @@ export default function JobsPage() {
   };
 
   const handleResetFilters = () => {
-    setDraftFilters({ page: 1, size: 12 });
-    setFilters({ page: 1, size: 12 });
+    setDraftFilters(DEFAULT_FILTERS);
+    setFilters(DEFAULT_FILTERS);
   };
 
   const gridStyle: React.CSSProperties = {
@@ -403,7 +490,7 @@ export default function JobsPage() {
                       key={job.id}
                       job={job}
                       isApplied={appliedJobIds.has(job.id)}
-                      onClick={() => navigate(`/jobs/${job.id}`)}
+                      onClick={() => navigate(`/jobs/${job.id}`, { state: { from: currentJobsPath } })}
                       onToggleSave={handleToggleSave}
                       savePendingId={savePendingId}
                     />
@@ -790,7 +877,7 @@ export default function JobsPage() {
                   isApplied={appliedJobIds.has(job.id)}
                   score={score}
                   showMatchScore={recommendMode}
-                  onClick={() => navigate(`/jobs/${job.id}`)}
+                  onClick={() => navigate(`/jobs/${job.id}`, { state: { from: currentJobsPath } })}
                   onToggleSave={handleToggleSave}
                   savePendingId={savePendingId}
                 />
@@ -817,7 +904,7 @@ export default function JobsPage() {
                     <JobGridItem
                       key={saved.savedJobId}
                       saved={saved}
-                      onNavigate={id => navigate(`/jobs/${id}`)}
+                      onNavigate={id => navigate(`/jobs/${id}`, { state: { from: currentJobsPath } })}
                       onUnsave={handleUnsaveSavedJob}
                       savePendingId={savePendingId}
                     />

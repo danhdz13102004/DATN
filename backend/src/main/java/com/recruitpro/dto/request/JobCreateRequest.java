@@ -6,6 +6,7 @@ import com.recruitpro.model.enums.JobType;
 
 import java.util.Set;
 import java.util.UUID;
+import java.time.LocalDate;
 
 public record JobCreateRequest(
         String title,
@@ -21,5 +22,6 @@ public record JobCreateRequest(
         JobType jobType,
         Set<ExperienceLevel> levels,
         Set<UUID> skillIds,
-        JobStatus status
+        JobStatus status,
+        LocalDate closeDate
 ) {}

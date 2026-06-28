@@ -14,7 +14,7 @@ export function useCompanyJobs(filters?: Record<string, string>) {
 
 export function useJobDetail(id: string) {
   return useQuery({
-    queryKey: ['jobs', id],
+    queryKey: ['company', 'jobs', id],
     queryFn: async () => {
       const { data } = await jobService.getJobDetail(id);
       return data.data;
@@ -42,7 +42,7 @@ export function useUpdateJob() {
       jobService.updateJob(id, data, attachmentFile),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['company', 'jobs'] });
-      queryClient.invalidateQueries({ queryKey: ['jobs', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['company', 'jobs', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['company', 'subscription', 'current'] });
     },
   });
@@ -65,7 +65,7 @@ export function useChangeJobStatus() {
       jobService.changeStatus(id, status),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['company', 'jobs'] });
-      queryClient.invalidateQueries({ queryKey: ['jobs', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ['company', 'jobs', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['company', 'subscription', 'current'] });
     },
   });

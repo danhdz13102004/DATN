@@ -36,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -45,6 +46,7 @@ import java.util.stream.Collectors;
 public class JobService {
 
     private final JobRepository jobRepository;
+    private final ApplicationRepository applicationRepository;
     private final SkillRepository skillRepository;
     private final SavedJobRepository savedJobRepository;
     private final AiServiceClient aiServiceClient;
@@ -150,6 +152,15 @@ public class JobService {
         return toJobDetailDto(findById(id), false);
     }
 
+    /**
+     * Company detail view can inspect its own jobs, including drafts and closed jobs.
+     */
+    public JobDetailDto findByIdAsCompanyJobDetailDto(UUID id, UserPrincipal principal) {
+        Job job = findById(id);
+        verifyCompanyOwnership(job, principal);
+        return toJobDetailDto(job, false);
+    }
+
     private JobDetailDto toJobDetailDto(Job job, boolean isSaved) {
         // Fetch company info
         JobDetailDto.CompanyDetailDto companyDto = null;
@@ -200,8 +211,10 @@ public class JobService {
                 .salaryMin(job.getSalaryMin())
                 .salaryMax(job.getSalaryMax())
                 .jobType(job.getJobType())
-                .status(job.getStatus())
+                .status(effectiveStatus(job))
+                .closeDate(job.getCloseDate())
                 .skills(job.getSkills())
+                .applicationCount(applicationRepository.countByJobId(job.getId()))
                 .createdAt(job.getCreatedAt())
                 .updatedAt(job.getUpdatedAt())
                 .attachmentUrl(storageService.getPublicUrl(job.getAttachmentUrl()))
@@ -239,8 +252,10 @@ public class JobService {
                 .salaryMin(job.getSalaryMin())
                 .salaryMax(job.getSalaryMax())
                 .jobType(job.getJobType())
-                .status(job.getStatus())
+                .status(effectiveStatus(job))
+                .closeDate(job.getCloseDate())
                 .skills(job.getSkills())
+                .applicationCount(applicationRepository.countByJobId(job.getId()))
                 .createdAt(job.getCreatedAt())
                 .updatedAt(job.getUpdatedAt())
                 .attachmentUrl(storageService.getPublicUrl(job.getAttachmentUrl()))
@@ -298,7 +313,9 @@ public class JobService {
                 .and(jobType != null ? hasJobType(jobType) : Specification.where(null))
                 .and(level != null ? hasLevel(level) : Specification.where(null))
                 .and(search != null && !search.isBlank() ? titleContains(search) : Specification.where(null));
-        return jobRepository.findAll(spec, pageable);
+        Page<Job> page = jobRepository.findAll(spec, pageable);
+        page.getContent().forEach(this::populateApplicationCount);
+        return page;
     }
 
     private static Specification<Job> hasCompanyId(UUID companyId) {
@@ -313,7 +330,24 @@ public class JobService {
     }
 
     private static Specification<Job> hasStatus(JobStatus status) {
-        return (root, query, cb) -> cb.equal(root.get("status"), status);
+        return (root, query, cb) -> {
+            if (status == JobStatus.CLOSED) {
+                return cb.or(
+                        cb.equal(root.get("status"), JobStatus.CLOSED),
+                        cb.lessThan(root.<LocalDate>get("closeDate"), LocalDate.now())
+                );
+            }
+            if (status == JobStatus.PUBLISHED) {
+                return cb.and(
+                        cb.equal(root.get("status"), JobStatus.PUBLISHED),
+                        cb.or(
+                                cb.isNull(root.get("closeDate")),
+                                cb.greaterThanOrEqualTo(root.<LocalDate>get("closeDate"), LocalDate.now())
+                        )
+                );
+            }
+            return cb.equal(root.get("status"), status);
+        };
     }
 
     private static Specification<Job> hasJobType(JobType jobType) {
@@ -342,6 +376,7 @@ public class JobService {
         if (job.getStatus() == null) {
             job.setStatus(JobStatus.DRAFT);
         }
+        validateCloseDateForStatus(job.getStatus(), job.getCloseDate());
         if (job.getStatus() == JobStatus.PUBLISHED) {
             subscriptionService.ensureCanPostJob(companyId);
         }
@@ -377,8 +412,15 @@ public class JobService {
     public Job update(UUID id, Job updates, Set<UUID> skillIds, UserPrincipal principal, String attachmentUrl) {
         Job job = findById(id);
         verifyCompanyOwnership(job, principal);
+        ensureJobCanBeUpdated(job);
+        ensureJobHasNoApplicants(job, "Jobs with applicants cannot be updated");
         JobStatus oldStatus = job.getStatus();
         boolean publishesJob = oldStatus != JobStatus.PUBLISHED && updates.getStatus() == JobStatus.PUBLISHED;
+
+        validateCloseDateForStatus(
+                updates.getStatus() != null ? updates.getStatus() : job.getStatus(),
+                updates.getCloseDate() != null ? updates.getCloseDate() : job.getCloseDate()
+        );
 
         if (publishesJob) {
             subscriptionService.ensureCanPostJob(job.getCompanyId());
@@ -407,6 +449,7 @@ public class JobService {
         if (updates.getSalaryMax() != null) job.setSalaryMax(updates.getSalaryMax());
         if (updates.getJobType() != null) job.setJobType(updates.getJobType());
         if (updates.getStatus() != null) job.setStatus(updates.getStatus());
+        if (updates.getCloseDate() != null) job.setCloseDate(updates.getCloseDate());
         if (attachmentUrl != null) job.setAttachmentUrl(attachmentUrl);
 
         if (skillIds != null) {
@@ -435,9 +478,14 @@ public class JobService {
 
         if (oldStatus != JobStatus.PUBLISHED && newStatus == JobStatus.PUBLISHED) {
             subscriptionService.ensureCanPostJob(job.getCompanyId());
+            validateCloseDateForStatus(newStatus, job.getCloseDate());
         }
 
-        job.setStatus(newStatus);
+        if (newStatus == JobStatus.CLOSED) {
+            job.setCloseDate(LocalDate.now().minusDays(1));
+        } else {
+            job.setStatus(newStatus);
+        }
         log.info("Job status changed: {} -> {} (id={})", oldStatus, newStatus, id);
         Job saved = jobRepository.save(job);
 
@@ -458,6 +506,7 @@ public class JobService {
     public void delete(UUID id, UserPrincipal principal) {
         Job job = findById(id);
         verifyCompanyOwnership(job, principal);
+        ensureJobHasNoApplicants(job, "Jobs with applicants cannot be deleted");
 
         job.setDeletedAt(Instant.now());
         jobRepository.save(job);
@@ -507,6 +556,38 @@ public class JobService {
         if (principal.getCompanyId() == null ||
             !job.getCompanyId().toString().equals(principal.getCompanyId())) {
             throw new ForbiddenException("You do not have permission to manage this job");
+        }
+    }
+
+    private boolean isClosedByDate(Job job) {
+        return job.getCloseDate() != null && job.getCloseDate().isBefore(LocalDate.now());
+    }
+
+    private JobStatus effectiveStatus(Job job) {
+        return job.getStatus() == JobStatus.CLOSED || isClosedByDate(job)
+                ? JobStatus.CLOSED
+                : job.getStatus();
+    }
+
+    private void ensureJobCanBeUpdated(Job job) {
+        if (job.getStatus() == JobStatus.CLOSED || isClosedByDate(job)) {
+            throw new BadRequestException("Closed jobs cannot be updated");
+        }
+    }
+
+    private void ensureJobHasNoApplicants(Job job, String message) {
+        if (applicationRepository.countByJobId(job.getId()) > 0) {
+            throw new BadRequestException(message);
+        }
+    }
+
+    private void populateApplicationCount(Job job) {
+        job.setApplicationCount(applicationRepository.countByJobId(job.getId()));
+    }
+
+    private void validateCloseDateForStatus(JobStatus status, LocalDate closeDate) {
+        if (status == JobStatus.PUBLISHED && closeDate != null && closeDate.isBefore(LocalDate.now())) {
+            throw new BadRequestException("Close date must be today or later for published jobs");
         }
     }
 

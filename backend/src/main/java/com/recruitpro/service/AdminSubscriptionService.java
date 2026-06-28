@@ -22,6 +22,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -35,7 +36,9 @@ public class AdminSubscriptionService {
 
     // ── Plans ──────────────────────────────────────────────────────────────────
 
+    @Transactional
     public List<PlanResponseDto> listPlans() {
+        expireOverdueSubscriptions();
         return planRepository.findAll(Sort.by(Sort.Direction.ASC, "price")).stream()
                 .map(this::toPlanDto)
                 .collect(Collectors.toList());
@@ -84,7 +87,9 @@ public class AdminSubscriptionService {
 
     // ── Subscriptions ──────────────────────────────────────────────────────────
 
+    @Transactional
     public Page<SubscriptionListItemDto> listSubscriptions(UUID planId, SubscriptionStatus status, Pageable pageable) {
+        expireOverdueSubscriptions();
         Specification<Subscription> spec = Specification.where(planId != null ? hasPlanId(planId) : Specification.where(null))
                 .and(status != null ? hasStatus(status) : Specification.where(null));
         return subscriptionRepository.findAll(spec, pageable)
@@ -109,7 +114,8 @@ public class AdminSubscriptionService {
     // ── Mapping helpers ────────────────────────────────────────────────────────
 
     private PlanResponseDto toPlanDto(Plan plan) {
-        long activeCount = subscriptionRepository.countByPlanIdAndStatus(plan.getId(), SubscriptionStatus.ACTIVE);
+        long activeCount = subscriptionRepository.countByPlanIdAndStatusAndEndDateAfter(
+                plan.getId(), SubscriptionStatus.ACTIVE, Instant.now());
         return PlanResponseDto.builder()
                 .id(plan.getId())
                 .name(plan.getName())
@@ -136,5 +142,13 @@ public class AdminSubscriptionService {
                 .jobsPostedCount(sub.getJobsPostedCount())
                 .createdAt(sub.getCreatedAt())
                 .build();
+    }
+
+    private void expireOverdueSubscriptions() {
+        subscriptionRepository.expireOverdueActiveSubscriptions(
+                SubscriptionStatus.ACTIVE,
+                SubscriptionStatus.EXPIRED,
+                Instant.now()
+        );
     }
 }

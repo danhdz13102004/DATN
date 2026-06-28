@@ -8,6 +8,7 @@ import { useAuthStore } from '../../store/authStore';
 
 export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLg, setIsLg] = useState(false);
@@ -32,6 +33,7 @@ export default function MainLayout() {
     >
       <Sidebar
         isOpen={sidebarOpen}
+        isCollapsed={sidebarCollapsed}
         onClose={() => setSidebarOpen(false)}
         onChangePassword={() => setShowPasswordModal(true)}
         onLogout={() => setShowLogoutModal(true)}
@@ -39,10 +41,15 @@ export default function MainLayout() {
 
       {/* Main content area */}
       <div
-        style={{ marginLeft: isLg ? '272px' : 0 }}
+        style={{ marginLeft: isLg ? (sidebarCollapsed ? '84px' : '272px') : 0 }}
         className="min-h-screen flex flex-col transition-all duration-300"
       >
-        <Topbar onMenuClick={() => setSidebarOpen(true)} />
+        <Topbar
+          onMenuClick={() => {
+            if (isLg) setSidebarCollapsed((collapsed) => !collapsed);
+            else setSidebarOpen(true);
+          }}
+        />
 
         {/* Page content */}
         <main

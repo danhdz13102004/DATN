@@ -43,6 +43,18 @@ const buildSkillLookup = (availableSkills: Skill[]) => {
 const findSkillByName = (lookup: Map<string, Skill>, name: string) =>
   lookup.get(normalizeSkillName(name));
 
+const todayDateInputValue = () => {
+  const now = new Date();
+  const offsetMs = now.getTimezoneOffset() * 60_000;
+  return new Date(now.getTime() - offsetMs).toISOString().slice(0, 10);
+};
+
+const isJobClosed = (job?: { status?: string; closeDate?: string | null }) => {
+  if (!job) return false;
+  if (job.status === 'CLOSED') return true;
+  return !!job.closeDate && job.closeDate < todayDateInputValue();
+};
+
 export default function JobCreatePage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -55,9 +67,11 @@ export default function JobCreatePage() {
   const createJob = useCreateJob();
   const updateJob = useUpdateJob();
   const autoFillFromFile = useAutoFillJobFromFile();
-  const { data: subscription } = useCurrentSubscription();
+  const { data: subscription, isLoading: isSubscriptionLoading } = useCurrentSubscription();
   const queryClient = useQueryClient();
   const toast = useToast();
+  const closedJob = isEdit && isJobClosed(job);
+  const hasApplicants = isEdit && (job?.applicationCount ?? 0) > 0;
 
   // Compute auto-fill eligibility (independent of allowUseAiMatching — that's for CV ranking)
   const autoFillLimit = subscription?.autoFillLimit ?? 0;
@@ -66,6 +80,7 @@ export default function JobCreatePage() {
   const canUseAutoFill = autoFillLimit > 0 && autoFillRemaining > 0;
   const autoFillDepleted = autoFillLimit > 0 && autoFillRemaining <= 0;
   const autoFillLocked = !canUseAutoFill; // true when disabled: not in plan OR exhausted
+  const showAutoFillControls = !isEdit && !isSubscriptionLoading;
 
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<FormValues>();
   const [locationMode, setLocationMode] = useState<'saved' | 'custom'>(isEdit ? 'custom' : 'saved');
@@ -98,6 +113,7 @@ export default function JobCreatePage() {
         salaryMin: job.salaryMin ?? undefined,
         salaryMax: job.salaryMax ?? undefined,
         status: job.status,
+        closeDate: job.closeDate ?? undefined,
         addressId: job.companyAddressId || '',
       });
       setSelectedLevels(job.experienceLevels || []);
@@ -139,6 +155,11 @@ export default function JobCreatePage() {
   };
 
   const onSubmit = async (data: FormValues) => {
+    if (closedJob || hasApplicants) {
+      toast.error(closedJob ? 'Closed jobs cannot be updated.' : 'Jobs with applicants cannot be updated.');
+      return;
+    }
+
     if (selectedLevels.length === 0) {
       toast.error('Please select at least one experience level.');
       return;
@@ -157,6 +178,7 @@ export default function JobCreatePage() {
     try {
       const payload: JobFormData = {
         ...data,
+        closeDate: data.closeDate || undefined,
         location: locationMode === 'custom' ? data.location.trim() : '',
         addressId: locationMode === 'saved' ? data.addressId : '',
         levels: selectedLevels,
@@ -380,11 +402,24 @@ export default function JobCreatePage() {
       <div className="p-6 lg:p-8 max-w-full mx-32">
         <PageHeader
           title={isEdit ? 'Edit Job' : 'Create New Job'}
-          description={isEdit ? 'Update your job posting details below.' : 'Fill in the details below to create a new job posting.'}
         />
 
+        {closedJob && (
+          <div className="mb-5 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+            <i className="fas fa-lock mr-2 text-gray-400" />
+            This job is closed. You can view its details, but updates are disabled.
+          </div>
+        )}
+
+        {hasApplicants && (
+          <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+            <i className="fas fa-users mr-2 text-amber-500" />
+            This job already has applicants. You can view its details, but updates are disabled.
+          </div>
+        )}
+
         {/* Auto-fill upgrade banner — shown only when plan has no auto-fill at all */}
-        {autoFillLimit === 0 && !isEdit && (
+        {showAutoFillControls && autoFillLimit === 0 && (
           <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
             <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shrink-0 mt-0.5">
               <i className="fas fa-lock text-amber-500 text-sm" />
@@ -416,7 +451,7 @@ export default function JobCreatePage() {
               </div>
               <div className="flex items-center gap-3">
                 {/* Auto-fill usage badge */}
-                {autoFillLimit > 0 && (
+                {showAutoFillControls && autoFillLimit > 0 && (
                   <div className="flex items-center gap-1.5 text-xs">
                     {autoFillRemaining > 0 ? (
                       <span className="flex items-center gap-1 text-gray-400">
@@ -433,50 +468,52 @@ export default function JobCreatePage() {
                     )}
                   </div>
                 )}
-                <label
-                  className={`
-                    group relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold cursor-pointer
-                    transition-all duration-300 select-none
-                    ${!canUseAutoFill || autoFillDepleted
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : autoFillFromFile.isPending
+                {showAutoFillControls && (
+                  <label
+                    className={`
+                      group relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold cursor-pointer
+                      transition-all duration-300 select-none
+                      ${!canUseAutoFill || autoFillDepleted
                         ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-primary to-indigo-500 text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:-translate-y-0.5'
-                    }
-                  `}
-                >
-                  {autoFillFromFile.isPending ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin" />
-                      <span>Processing...</span>
-                    </>
-                  ) : autoFillDepleted ? (
-                    <>
-                      <i className="fas fa-ban text-xs" />
-                      <span>Limit Reached</span>
-                    </>
-                  ) : autoFillLocked ? (
-                    <>
-                      <i className="fas fa-lock text-xs" />
-                      <span>Auto-fill Locked</span>
-                    </>
-                  ) : (
-                    <>
-                      <i className="fas fa-wand-magic-sparkles text-xs" />
-                      <span>Auto-fill with AI</span>
-                    </>
-                  )}
-                  <input
-                    type="file"
-                    accept=".pdf,image/png,image/jpeg,image/jpg"
-                    className="sr-only"
-                    onChange={handleFileUpload}
-                    disabled={autoFillFromFile.isPending || autoFillLocked}
-                  />
-                  {!autoFillLocked && !autoFillFromFile.isPending && (
-                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full animate-pulse shadow-sm" />
-                  )}
-                </label>
+                        : autoFillFromFile.isPending
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-primary to-indigo-500 text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:-translate-y-0.5'
+                      }
+                    `}
+                  >
+                    {autoFillFromFile.isPending ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin" />
+                        <span>Processing...</span>
+                      </>
+                    ) : autoFillDepleted ? (
+                      <>
+                        <i className="fas fa-ban text-xs" />
+                        <span>Limit Reached</span>
+                      </>
+                    ) : autoFillLocked ? (
+                      <>
+                        <i className="fas fa-lock text-xs" />
+                        <span>Auto-fill Locked</span>
+                      </>
+                    ) : (
+                      <>
+                        <i className="fas fa-wand-magic-sparkles text-xs" />
+                        <span>Auto-fill with AI</span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept=".pdf,image/png,image/jpeg,image/jpg"
+                      className="sr-only"
+                      onChange={handleFileUpload}
+                      disabled={autoFillFromFile.isPending || autoFillLocked}
+                    />
+                    {!autoFillLocked && !autoFillFromFile.isPending && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-yellow-400 rounded-full animate-pulse shadow-sm" />
+                    )}
+                  </label>
+                )}
               </div>
             </div>
 
@@ -874,15 +911,31 @@ export default function JobCreatePage() {
               <h3 className="text-base font-bold text-gray-900">Publishing Options</h3>
             </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Status</label>
-              <select
-                className="w-full px-4 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all bg-white max-w-xs"
-                {...register('status')}
-              >
-                <option value="PUBLISHED">Published (make visible immediately)</option>
-                <option value="DRAFT">Draft (save for later)</option>
-              </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Status</label>
+                <select
+                  className="w-full px-4 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all bg-white"
+                  {...register('status')}
+                  disabled={closedJob || hasApplicants}
+                >
+                  <option value="PUBLISHED">Published (make visible immediately)</option>
+                  <option value="DRAFT">Draft (save for later)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Close Date</label>
+                <input
+                  type="date"
+                  min={todayDateInputValue()}
+                  className="w-full px-4 py-2.5 border-[1.5px] border-gray-200 rounded-xl text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                  {...register('closeDate')}
+                  disabled={closedJob || hasApplicants}
+                />
+                <p className="text-xs text-gray-400 mt-1.5">
+                  Jobs disappear from the jobseeker site after this date passes.
+                </p>
+              </div>
             </div>
 
             {/* Attachment Upload */}
@@ -954,7 +1007,7 @@ export default function JobCreatePage() {
             <button
               type="submit"
               className="px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover hover:-translate-y-px hover:shadow-md transition-all duration-200 flex items-center gap-2 disabled:opacity-60 shadow-sm shadow-primary/20"
-              disabled={createJob.isPending || updateJob.isPending}
+              disabled={createJob.isPending || updateJob.isPending || closedJob || hasApplicants}
             >
               {createJob.isPending || updateJob.isPending ? (
                 <>

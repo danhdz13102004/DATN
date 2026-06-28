@@ -217,7 +217,7 @@ function PlanFormModal({ plan, onClose }: PlanFormModalProps) {
               value={form.autoFillLimit}
               onChange={(e) => set('autoFillLimit', parseInt(e.target.value) || 0)}
             />
-            <p className="text-xs text-gray-400 mt-1">Set to 0 to disable auto-fill for this plan. Only applies if AI Matching is enabled.</p>
+            <p className="text-xs text-gray-400 mt-1">Set to 0 to disable auto-fill for this plan.</p>
           </div>
         </div>
 

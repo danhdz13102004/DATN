@@ -31,6 +31,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -186,7 +187,8 @@ public class JobSeekerApplicationService {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found"));
 
-        if (job.getStatus() != com.recruitpro.model.enums.JobStatus.PUBLISHED) {
+        if (job.getStatus() != com.recruitpro.model.enums.JobStatus.PUBLISHED ||
+                (job.getCloseDate() != null && job.getCloseDate().isBefore(LocalDate.now()))) {
             throw new BadRequestException("This job is not accepting applications");
         }
 

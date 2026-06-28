@@ -7,7 +7,7 @@ export const jobService = {
     api.get<ApiResponse<Job[]>>('/company/jobs', { params }),
 
   getJobDetail: (id: string) =>
-    api.get<ApiResponse<Job>>(`/jobs/${id}`),
+    api.get<ApiResponse<Job>>(`/company/jobs/${id}`),
 
   createJob: (data: JobFormData, attachmentFile?: File) => {
     if (!attachmentFile) return api.post<ApiResponse<Job>>('/company/jobs', data);

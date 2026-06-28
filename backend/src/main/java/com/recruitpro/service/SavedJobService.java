@@ -64,13 +64,8 @@ public class SavedJobService {
      * List all saved jobs for a seeker, paginated.
      */
     public Page<SavedJobDto> listSaved(UUID jobSeekerId, Pageable pageable) {
-        return savedJobRepository.findAllByJobSeekerId(jobSeekerId, pageable)
-                .map(savedJob -> {
-                    Job job = jobRepository.findById(savedJob.getJobId()).orElse(null);
-                    if (job == null) return null;
-                    return toDto(savedJob, job);
-                })
-                .map(dto -> dto); // filter nulls would require stream; keep simple
+        return savedJobRepository.findAllExistingByJobSeekerId(jobSeekerId, pageable)
+                .map(savedJob -> toDto(savedJob, jobRepository.findById(savedJob.getJobId()).orElseThrow()));
     }
 
     /**

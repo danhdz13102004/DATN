@@ -24,6 +24,7 @@ public class JobSearchDocument {
     private Integer salaryMin;
     private Integer salaryMax;
     private String status;
+    private String closeDate;
     private Long createdAt;
     private Long updatedAt;
 
