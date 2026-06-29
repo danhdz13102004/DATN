@@ -8,7 +8,6 @@ import com.recruitpro.security.UserPrincipal;
 import com.recruitpro.service.AuthService;
 import com.recruitpro.service.GoogleOAuth2Service;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -76,9 +75,9 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<ApiResponse<Map<String, String>>> forgotPassword(
-            @RequestParam @Email String email
+            @RequestBody @Valid ForgotPasswordRequestDto request
     ) {
-        authService.forgotPassword(email);
+        authService.forgotPassword(request.getEmail());
         return ResponseEntity.ok(ApiResponse.ok(Map.of("message", "If an account exists with this email, a reset code has been sent.")));
     }
 

@@ -4,20 +4,25 @@ import com.recruitpro.dto.request.*;
 import com.recruitpro.dto.response.AuthResponseDto;
 import com.recruitpro.dto.response.UserInfoResponseDto;
 import com.recruitpro.exception.DuplicateResourceException;
+import com.recruitpro.exception.BadRequestException;
 import com.recruitpro.exception.RateLimitException;
 import com.recruitpro.exception.ResourceNotFoundException;
 import com.recruitpro.exception.UnauthorizedException;
 import com.recruitpro.model.Company;
 import com.recruitpro.model.JobSeeker;
 import com.recruitpro.model.Otp;
+import com.recruitpro.model.Plan;
 import com.recruitpro.model.Staff;
+import com.recruitpro.model.Subscription;
 import com.recruitpro.model.User;
 import com.recruitpro.model.enums.*;
 import com.recruitpro.cache.CacheService;
 import com.recruitpro.repository.CompanyRepository;
 import com.recruitpro.repository.JobSeekerRepository;
 import com.recruitpro.repository.OtpRepository;
+import com.recruitpro.repository.PlanRepository;
 import com.recruitpro.repository.StaffRepository;
+import com.recruitpro.repository.SubscriptionRepository;
 import com.recruitpro.repository.UserRepository;
 import com.recruitpro.security.JwtUtil;
 import com.recruitpro.security.UserPrincipal;
@@ -30,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -43,6 +49,8 @@ public class AuthService {
     private final OtpRepository otpRepository;
     private final CompanyRepository companyRepository;
     private final JobSeekerRepository jobSeekerRepository;
+    private final PlanRepository planRepository;
+    private final SubscriptionRepository subscriptionRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
@@ -89,6 +97,8 @@ public class AuthService {
                     .role(CompanyUserRole.OWNER)
                     .build();
             staffRepository.save(staff);
+
+            createFreeSubscription(company);
 
             log.info("Company '{}' created for user: {}", companyName, user.getEmail());
         }
@@ -185,28 +195,13 @@ public class AuthService {
     @Transactional
     public void verifyOtp(VerifyOtpRequestDto request) {
         OtpType type = OtpType.valueOf(request.getType());
-        Otp otp = otpRepository
-                .findTopByEmailAndTypeAndUsedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
-                        request.getEmail(), type, Instant.now()
-                )
-                .orElseThrow(() -> new UnauthorizedException("Invalid or expired OTP"));
-
-        if (otp.getAttempts() >= 5) {
-            throw new UnauthorizedException("OTP verification attempts exceeded. Please request a new code.");
-        }
-
-        if (!otp.getCode().equals(request.getCode())) {
-            otp.setAttempts(otp.getAttempts() + 1);
-            otpRepository.save(otp);
-            throw new UnauthorizedException("Incorrect OTP code");
-        }
-
-        // Mark OTP as used
-        otp.setUsed(true);
-        otpRepository.save(otp);
+        Otp otp = validateOtp(request.getEmail(), type, request.getCode());
 
         // If verifying account, activate user and verify company (if applicable)
         if (type == OtpType.VERIFY_ACCOUNT) {
+            otp.setUsed(true);
+            otpRepository.save(otp);
+
             User user = userRepository.findByEmail(request.getEmail())
                     .orElseThrow(() -> new ResourceNotFoundException("User not found"));
             user.setStatus(UserStatus.ACTIVE);
@@ -271,12 +266,9 @@ public class AuthService {
 
     @Transactional
     public void resetPassword(ResetPasswordRequestDto request) {
-        // First verify the OTP
-        VerifyOtpRequestDto verifyRequest = new VerifyOtpRequestDto();
-        verifyRequest.setEmail(request.getEmail());
-        verifyRequest.setCode(request.getCode());
-        verifyRequest.setType(OtpType.RESET_PASSWORD.name());
-        verifyOtp(verifyRequest);
+        Otp otp = validateOtp(request.getEmail(), OtpType.RESET_PASSWORD, request.getCode());
+        otp.setUsed(true);
+        otpRepository.save(otp);
 
         // Update password
         User user = userRepository.findByEmail(request.getEmail())
@@ -373,6 +365,44 @@ public class AuthService {
                         throw new UnauthorizedException("Company account is blocked");
                     });
         });
+    }
+
+    private void createFreeSubscription(Company company) {
+        Plan freePlan = planRepository.findByName("Free")
+                .orElseThrow(() -> new BadRequestException("Free subscription plan is not configured"));
+
+        Instant now = Instant.now();
+        Subscription subscription = Subscription.builder()
+                .company(company)
+                .plan(freePlan)
+                .startDate(now)
+                .endDate(now.plus(freePlan.getDurationDays(), ChronoUnit.DAYS))
+                .status(SubscriptionStatus.ACTIVE)
+                .jobsPostedCount(0)
+                .allowUseAiMatching(freePlan.isAllowUseAiMatching())
+                .autoFillUsageCount(0)
+                .build();
+        subscriptionRepository.save(subscription);
+    }
+
+    private Otp validateOtp(String email, OtpType type, String code) {
+        Otp otp = otpRepository
+                .findTopByEmailAndTypeAndUsedFalseAndExpiresAtAfterOrderByCreatedAtDesc(
+                        email, type, Instant.now()
+                )
+                .orElseThrow(() -> new UnauthorizedException("Invalid or expired OTP"));
+
+        if (otp.getAttempts() >= 5) {
+            throw new UnauthorizedException("OTP verification attempts exceeded. Please request a new code.");
+        }
+
+        if (!otp.getCode().equals(code)) {
+            otp.setAttempts(otp.getAttempts() + 1);
+            otpRepository.save(otp);
+            throw new UnauthorizedException("Incorrect OTP code");
+        }
+
+        return otp;
     }
 
     private void sendOtpInternal(String email, OtpType type) {

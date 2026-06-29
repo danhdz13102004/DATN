@@ -16,9 +16,5 @@ public class ResetPasswordRequestDto {
 
     @NotBlank(message = "New password is required")
     @Size(min = 8, message = "Password must be at least 8 characters")
-    @Pattern(
-        regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]+$",
-        message = "Password must contain at least 1 uppercase, 1 lowercase, 1 digit, and 1 special character"
-    )
     private String newPassword;
 }

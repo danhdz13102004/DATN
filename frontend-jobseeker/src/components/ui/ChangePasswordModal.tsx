@@ -74,7 +74,6 @@ export default function ChangePasswordModal({ userName, userEmail, userInitials,
                       required: `${label} is required`,
                       ...(field === 'new' && {
                         minLength: { value: 8, message: 'Minimum 8 characters' },
-                        pattern: { value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/, message: 'Must include uppercase, lowercase, number and special character' }
                       }),
                       ...(field === 'confirm' && {
                         validate: (val: string) => val === watch('newPassword') || 'Passwords do not match'
@@ -85,7 +84,7 @@ export default function ChangePasswordModal({ userName, userEmail, userInitials,
                     <i className={`fas ${showPwd[field] ? 'fa-eye-slash' : 'fa-eye'}`} />
                   </button>
                 </div>
-                {field === 'new' && <div className="text-xs text-gray-400 mt-1">Minimum 8 characters with uppercase, lowercase, number, and special character</div>}
+                {field === 'new' && <div className="text-xs text-gray-400 mt-1">Minimum 8 characters</div>}
                 {errors[fieldName] && <span className="text-red-500 text-xs mt-0.5 block">{errors[fieldName]?.message}</span>}
               </div>
             );

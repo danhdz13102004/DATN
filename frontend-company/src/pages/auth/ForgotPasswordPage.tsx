@@ -11,6 +11,7 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(60);
   const [canResend, setCanResend] = useState(false);
+  const [showPassword, setShowPassword] = useState({ new: false, confirm: false });
 
   // Step 1 form
   const emailForm = useForm<{ email: string }>();
@@ -169,12 +170,22 @@ export default function ForgotPasswordPage() {
               <form onSubmit={pwdForm.handleSubmit(handleResetPassword)} className="space-y-4">
                 <div>
                   <label className="block font-medium text-sm mb-1.5">New Password <span className="text-red-500">*</span></label>
-                  <input type="password" className="w-full px-3.5 py-3 border-[1.5px] border-border rounded-[10px] text-sm font-sans focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10" placeholder="Enter new password" {...pwdForm.register('newPassword', { required: true, minLength: 8 })} />
-                  <div className="text-xs text-text-light mt-1">Minimum 8 characters with at least one uppercase letter and one number</div>
+                  <div className="relative">
+                    <input type={showPassword.new ? 'text' : 'password'} className="w-full px-3.5 py-3 pr-[42px] border-[1.5px] border-border rounded-[10px] text-sm font-sans focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10" placeholder="Enter new password" {...pwdForm.register('newPassword', { required: true, minLength: 8 })} />
+                    <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer text-text-light text-sm p-1" onClick={() => setShowPassword((prev) => ({ ...prev, new: !prev.new }))}>
+                      <i className={`fas ${showPassword.new ? 'fa-eye-slash' : 'fa-eye'}`} />
+                    </button>
+                  </div>
+                  <div className="text-xs text-text-light mt-1">Minimum 8 characters</div>
                 </div>
                 <div>
                   <label className="block font-medium text-sm mb-1.5">Confirm New Password <span className="text-red-500">*</span></label>
-                  <input type="password" className="w-full px-3.5 py-3 border-[1.5px] border-border rounded-[10px] text-sm font-sans focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10" placeholder="Confirm new password" {...pwdForm.register('confirmPassword', { required: true })} />
+                  <div className="relative">
+                    <input type={showPassword.confirm ? 'text' : 'password'} className="w-full px-3.5 py-3 pr-[42px] border-[1.5px] border-border rounded-[10px] text-sm font-sans focus:outline-none focus:border-primary focus:ring-[3px] focus:ring-primary/10" placeholder="Confirm new password" {...pwdForm.register('confirmPassword', { required: true })} />
+                    <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer text-text-light text-sm p-1" onClick={() => setShowPassword((prev) => ({ ...prev, confirm: !prev.confirm }))}>
+                      <i className={`fas ${showPassword.confirm ? 'fa-eye-slash' : 'fa-eye'}`} />
+                    </button>
+                  </div>
                 </div>
                 <button type="submit" className="w-full py-3.5 bg-primary text-white rounded-[10px] text-[0.95rem] font-semibold flex items-center justify-center gap-2 hover:bg-primary-hover transition-all disabled:opacity-60" disabled={loading}>
                   <i className="fas fa-save" /> Reset Password
