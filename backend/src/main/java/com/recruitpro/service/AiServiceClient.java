@@ -3,6 +3,7 @@ package com.recruitpro.service;
 import com.recruitpro.config.AiServiceConfig;
 import com.recruitpro.dto.AiMatchingResult;
 import com.recruitpro.dto.ResumeDataStructure;
+import com.recruitpro.exception.AiServiceException;
 import com.recruitpro.model.Job;
 import com.recruitpro.model.enums.InteractionEventType;
 import com.recruitpro.repository.ApplicationRepository;
@@ -28,7 +29,7 @@ import java.util.stream.Collectors;
  *
  * <p>Rules:
  * <ul>
- *   <li>Every method is {@code @Async} — callers are never blocked by AI latency.</li>
+ *   <li>Most fire-and-forget methods are {@code @Async}; strict upload sync uses explicit synchronous methods.</li>
  *   <li>All exceptions are caught and logged — AI failures must NOT break user-facing flows.</li>
  *   <li>Uses the dedicated {@code aiRestTemplate} bean (timeouts configured in AiServiceConfig).</li>
  * </ul>
@@ -66,7 +67,20 @@ public class AiServiceClient {
      */
     @Async
     public void addResumeNode(UUID resumeId, String text, UUID jobSeekerId) {
-        sendAddNode(resumeId.toString(), text, "resume", jobSeekerId.toString());
+        sendAddNode(resumeId.toString(), text, "resume", jobSeekerId != null ? jobSeekerId.toString() : null);
+    }
+
+    /**
+     * Registers a resume node and blocks until the AI service confirms success.
+     * Used by CV upload because that API must not finish until graph sync succeeds.
+     */
+    public void addResumeNodeSync(UUID resumeId, String text, UUID jobSeekerId) {
+        sendAddNodeOrThrow(
+                resumeId.toString(),
+                text,
+                "resume",
+                jobSeekerId != null ? jobSeekerId.toString() : null
+        );
     }
 
     /**
@@ -286,6 +300,38 @@ public class AiServiceClient {
         } catch (RestClientException ex) {
             log.error("[AI] Failed to register node (id={}, type={}): {}", nodeId, nodeType, ex.getMessage());
             // Graceful degradation — do not rethrow
+        }
+    }
+
+    private void sendAddNodeOrThrow(String nodeId, String text, String nodeType, String userId) {
+        String url = aiServiceConfig.getAiServiceUrl() + "/api/v1/add_node";
+        Map<String, Object> body = new HashMap<>();
+        body.put("node_id", nodeId);
+        body.put("text", text);
+        body.put("node_type", nodeType);
+        if (userId != null) {
+            body.put("user_id", userId);
+        }
+
+        try {
+            ResponseEntity<Map<String, Object>> response =
+                    restTemplate.postForEntity(url, body, generify(Map.class));
+            if (!response.getStatusCode().is2xxSuccessful()) {
+                throw new AiServiceException("AI service returned " + response.getStatusCode()
+                        + " for /add_node (id=" + nodeId + ", type=" + nodeType + ")");
+            }
+
+            Map<String, Object> responseBody = response.getBody();
+            if (responseBody == null || !Boolean.TRUE.equals(responseBody.get("success"))) {
+                throw new AiServiceException("AI service did not confirm graph sync for /add_node (id="
+                        + nodeId + ", type=" + nodeType + ")");
+            }
+
+            log.info("[AI] Node registered synchronously: id={}, type={}, userId={}",
+                    nodeId, nodeType, userId);
+        } catch (RestClientException ex) {
+            throw new AiServiceException("Failed to register node in AI graph (id="
+                    + nodeId + ", type=" + nodeType + ")", ex);
         }
     }
 

@@ -74,9 +74,8 @@ public class ResumeService {
         Resume saved = resumeRepository.save(resume);
         log.info("Resume uploaded: {} (seekerId={}, label={})", saved.getId(), jobSeekerId, label);
 
-        // Async: download the PDF from MinIO, extract text with PDFBox,
-        // persist parsedText, then register the node in the AI graph.
-        // This runs in a background thread — the HTTP response returns immediately.
+        // Download the PDF, extract text, persist parsedText, and register the
+        // node in the AI graph before returning success to the client.
         String fallback = (label != null && !label.isBlank()) ? label : "resume";
         resumePdfParser.extractAndRegister(saved.getId(), key, fallback);
 
@@ -95,6 +94,7 @@ public class ResumeService {
             throw new ForbiddenException("You do not own this resume");
         }
 
+        String newFileKey = null;
         if (file != null && !file.isEmpty()) {
             String key = storageService.upload(
                     "resumes", file.getOriginalFilename(),
@@ -102,6 +102,7 @@ public class ResumeService {
             );
             resume.setFileUrl(key);
             resume.setFileSize(file.getSize());
+            newFileKey = key;
         }
 
         if (label != null) {
@@ -109,6 +110,14 @@ public class ResumeService {
         }
 
         Resume saved = resumeRepository.save(resume);
+
+        if (newFileKey != null) {
+            String fallback = (saved.getLabel() != null && !saved.getLabel().isBlank())
+                    ? saved.getLabel()
+                    : "resume";
+            resumePdfParser.extractAndRegister(saved.getId(), newFileKey, fallback);
+        }
+
         log.info("Resume replaced: {} (seekerId={})", id, jobSeekerId);
         return saved;
     }

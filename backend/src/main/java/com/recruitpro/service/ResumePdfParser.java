@@ -8,7 +8,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,18 +17,18 @@ import java.util.Base64;
 import java.util.UUID;
 
 /**
- * Runs PDF text-extraction in a separate thread ({@code @Async}) so the
- * resume-upload HTTP response is never delayed by parsing or AI latency.
+ * Extracts resume PDF text and registers the resume node in the AI graph.
  *
- * <p>Flow (background thread):
+ * <p>Flow:
  * <ol>
  *   <li>Fetch the raw PDF bytes from MinIO.</li>
  *   <li>Use Apache PDFBox to strip all text.</li>
  *   <li>Persist {@code parsedText} on the {@link Resume} entity.</li>
- *   <li>Call {@link AiServiceClient#addResumeNode} with the real extracted text.</li>
+ *   <li>Call {@link AiServiceClient#addResumeNodeSync} with the extracted text.</li>
  * </ol>
  *
- * <p>Any exception is caught and logged — failures must NOT affect the user-facing flow.
+ * <p>The graph sync is strict: upload must not finish successfully unless the
+ * resume node is registered in the AI graph.
  */
 @Slf4j
 @Service
@@ -45,17 +44,15 @@ public class ResumePdfParser {
     private final OpenAiResumeStructuringService openAiResumeStructuringService;
 
     /**
-     * Extracts text from a PDF resume and sends it to the AI service.
-     * This method runs in Spring's async task executor thread pool.
+     * Extracts text from a PDF resume and blocks until graph registration succeeds.
      *
      * @param resumeId UUID of the persisted {@link Resume}
      * @param fileKey  MinIO storage key (e.g. {@code "resumes/abc123.pdf"})
      * @param fallback Fallback text to use if extraction fails (label or "resume")
      */
-    @Async
     @Transactional
     public void extractAndRegister(UUID resumeId, String fileKey, String fallback) {
-        log.info("[PDF] Starting async extraction: resumeId={}, key={}", resumeId, fileKey);
+        log.info("[PDF] Starting extraction: resumeId={}, key={}", resumeId, fileKey);
 
         String extractedText = fallback;
 
@@ -68,8 +65,8 @@ public class ResumePdfParser {
                     resumeId, fileKey, e.getMessage());
             // Still register the node with fallback text so the graph isn't missing the node
             resumeRepository.findById(resumeId).ifPresentOrElse(
-                resume -> aiServiceClient.addResumeNode(resumeId, fallback, resume.getJobSeekerId()),
-                () -> aiServiceClient.addResumeNode(resumeId, fallback, null)
+                resume -> aiServiceClient.addResumeNodeSync(resumeId, fallback, resume.getJobSeekerId()),
+                () -> aiServiceClient.addResumeNodeSync(resumeId, fallback, null)
             );
             return;
         }
@@ -133,7 +130,7 @@ public class ResumePdfParser {
         }
 
         // ── Step 4: register resume node in the AI graph ───────────────────────
-        aiServiceClient.addResumeNode(resumeId, finalText, jobSeekerId[0]);
+        aiServiceClient.addResumeNodeSync(resumeId, finalText, jobSeekerId[0]);
     }
 
     /**

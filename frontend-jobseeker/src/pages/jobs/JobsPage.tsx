@@ -278,10 +278,11 @@ export default function JobsPage() {
   const [recommendMode, setRecommendMode] = useState(true); // true = resume, false = activities
   const [recommendMeta, setRecommendMeta] = useState<Record<string, unknown>>({});
   const currentJobsPath = `${location.pathname}${location.search}`;
+  const searchParamsString = searchParams.toString();
 
   // Auto-detect user's country by IP on mount
   useEffect(() => {
-    if (searchParams.toString()) return;
+    if (searchParamsString) return;
 
     locationService.detectCountryByIp()
       .then(res => {
@@ -290,22 +291,16 @@ export default function JobsPage() {
         }
       })
       .catch(() => { /* silent — no country auto-selected */ });
-  }, [searchParams]);
+  }, [searchParamsString]);
 
   useEffect(() => {
-    const nextFilters = filtersFromSearchParams(searchParams);
-    const nextViewMode = viewModeFromSearchParams(searchParams);
+    const nextSearchParams = new URLSearchParams(searchParamsString);
+    const nextFilters = filtersFromSearchParams(nextSearchParams);
+    const nextViewMode = viewModeFromSearchParams(nextSearchParams);
     setFilters(nextFilters);
     setDraftFilters(nextFilters);
     setViewMode(nextViewMode);
-  }, [searchParams]);
-
-  useEffect(() => {
-    const nextParams = searchParamsFromState(filters, viewMode);
-    if (nextParams.toString() !== searchParams.toString()) {
-      setSearchParams(nextParams, { replace: true });
-    }
-  }, [filters, viewMode, searchParams, setSearchParams]);
+  }, [searchParamsString]);
 
   const fetchJobs = (f: JobFilter) => {
     setLoading(true);
@@ -346,6 +341,10 @@ export default function JobsPage() {
   useEffect(() => {
     if (!isAuthenticated && viewMode !== 'all') {
       setViewMode('all');
+      const nextParams = searchParamsFromState(filters, 'all');
+      if (nextParams.toString() !== searchParamsString) {
+        setSearchParams(nextParams, { replace: true });
+      }
       return;
     }
 
@@ -358,7 +357,7 @@ export default function JobsPage() {
         })
         .catch(() => setResumes([]));
     }
-  }, [isAuthenticated, viewMode]);
+  }, [filters, isAuthenticated, searchParamsString, setSearchParams, viewMode]);
 
   useEffect(() => {
     if (isAuthenticated && viewMode === 'recommended' && selectedResumeId) {
@@ -433,13 +432,29 @@ export default function JobsPage() {
     }
   };
 
+  const handleFiltersChange = (nextFilters: JobFilter) => {
+    setFilters(nextFilters);
+    const nextParams = searchParamsFromState(nextFilters, viewMode);
+    if (nextParams.toString() !== searchParamsString) {
+      setSearchParams(nextParams, { replace: true });
+    }
+  };
+
   const handleApplyFilters = (nextFilters?: JobFilter) => {
-    setFilters({ ...(nextFilters ?? draftFilters), page: 1, size: filters.size ?? 12 });
+    handleFiltersChange({ ...(nextFilters ?? draftFilters), page: 1, size: filters.size ?? 12 });
   };
 
   const handleResetFilters = () => {
     setDraftFilters(DEFAULT_FILTERS);
-    setFilters(DEFAULT_FILTERS);
+    handleFiltersChange(DEFAULT_FILTERS);
+  };
+
+  const handleViewModeChange = (nextViewMode: ViewMode) => {
+    setViewMode(nextViewMode);
+    const nextParams = searchParamsFromState(filters, nextViewMode);
+    if (nextParams.toString() !== searchParamsString) {
+      setSearchParams(nextParams, { replace: true });
+    }
   };
 
   const gridStyle: React.CSSProperties = {
@@ -456,7 +471,7 @@ export default function JobsPage() {
       {/* Tab switcher */}
       <JobTabs
         activeTab={viewMode}
-        onTabChange={setViewMode}
+        onTabChange={handleViewModeChange}
         savedCount={savedTotal}
         isAuthenticated={isAuthenticated}
         jobsCount={jobs.length}
@@ -500,7 +515,7 @@ export default function JobsPage() {
                 {totalPages > 1 && (
                   <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                     <button
-                      onClick={() => setFilters(f => ({ ...f, page: Math.max(1, f.page! - 1) }))}
+                      onClick={() => handleFiltersChange({ ...filters, page: Math.max(1, filters.page! - 1) })}
                       disabled={filters.page === 1}
                       style={{
                         width: 44, height: 44, borderRadius: 12,
@@ -536,7 +551,7 @@ export default function JobsPage() {
                         ? <span key={`ellipsis-${idx}`} style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94A3B8', fontSize: '0.9rem', fontWeight: 600 }}>…</span>
                         : <button
                             key={p}
-                            onClick={() => setFilters(f => ({ ...f, page: p as number }))}
+                            onClick={() => handleFiltersChange({ ...filters, page: p as number })}
                             className="page-btn"
                             style={{
                               width: 44, height: 44, borderRadius: 12,
@@ -571,7 +586,7 @@ export default function JobsPage() {
                     })()}
 
                     <button
-                      onClick={() => setFilters(f => ({ ...f, page: Math.min(totalPages, f.page! + 1) }))}
+                      onClick={() => handleFiltersChange({ ...filters, page: Math.min(totalPages, filters.page! + 1) })}
                       disabled={filters.page === totalPages}
                       style={{
                         width: 44, height: 44, borderRadius: 12,
@@ -841,7 +856,7 @@ export default function JobsPage() {
                 Start clicking or saving jobs to see recommendations based on your browsing activity.
               </p>
               <button
-                onClick={() => setViewMode('all')}
+                onClick={() => handleViewModeChange('all')}
                 style={{
                   padding: '14px 28px',
                   background: 'linear-gradient(135deg, #D97706, #F59E0B)',
@@ -896,7 +911,7 @@ export default function JobsPage() {
                 icon="fa-bookmark"
                 title="No saved jobs"
                 description="Save jobs you're interested in to review them later."
-                action={{ label: 'Browse jobs', onClick: () => setViewMode('all') }}
+                action={{ label: 'Browse jobs', onClick: () => handleViewModeChange('all') }}
               />
             : <>
                 <div style={gridStyle}>
