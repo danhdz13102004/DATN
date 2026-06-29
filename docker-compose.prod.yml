@@ -26,6 +26,8 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+      ai-service:
+        condition: service_healthy
     networks:
       - app-network
     restart: unless-stopped
